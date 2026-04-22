@@ -73,6 +73,11 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* Slide up — for hero text (no translateX offset) */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 /* Heartbeat */
 @keyframes heartbeat {
   0%, 100% { transform: scale(1); }

@@ -84,16 +84,16 @@ export default function HomePage() {
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4a7d6e', display: 'inline-block', animation: 'heartbeat 2.5s ease-in-out infinite' }} />
             <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: '#1e3d2e', letterSpacing: '0.06em' }}>NUEVA PLATAFORMA — ABRIL 2026</span>
           </div>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 36 : isTablet ? 46 : 54, fontWeight: 600, lineHeight: 1.12, margin: '0 0 20px', color: 'oklch(16% 0.022 50)', animation: 'fadeUp .7s .1s both' }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 36 : isTablet ? 46 : 54, fontWeight: 600, lineHeight: 1.12, margin: '0 0 20px', color: 'oklch(16% 0.022 50)', animation: 'slideUp .7s .1s both' }}>
             Cosé con propósito,<br />
             <span style={{ background: 'linear-gradient(90deg, #5e9e8a, #97ceb8, #5e9e8a)', backgroundSize: '200% 100%', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', animation: 'shimmer 3s linear infinite' }}>
               transformá tu mundo
             </span>
           </h1>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 15 : 17, lineHeight: 1.78, color: 'oklch(45% 0.018 50)', marginBottom: 32, maxWidth: 480, animation: 'fadeUp .7s .25s both' }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 15 : 17, lineHeight: 1.78, color: 'oklch(45% 0.018 50)', marginBottom: 32, maxWidth: 480, animation: 'slideUp .7s .25s both' }}>
             Talleres online, moldes digitales y una comunidad de costureras que aprenden juntas. Descubrí la nueva plataforma VeCKA.
           </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', animation: 'fadeUp .7s .38s both' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', animation: 'slideUp .7s .38s both' }}>
             {/* CTA with pulse ring */}
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'absolute', inset: -4, borderRadius: 12, border: '2px solid #5e9e8a', animation: 'pulseRing 2s ease-out infinite', pointerEvents: 'none' }} />
@@ -103,7 +103,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'flex', gap: isMobile ? 20 : 36, marginTop: isMobile ? 32 : 52, paddingTop: isMobile ? 24 : 32, borderTop: '1px solid oklch(88% 0.016 60)', flexWrap: 'wrap', animation: 'fadeUp .7s .5s both' }}>
+          <div style={{ display: 'flex', gap: isMobile ? 20 : 36, marginTop: isMobile ? 32 : 52, paddingTop: isMobile ? 24 : 32, borderTop: '1px solid oklch(88% 0.016 60)', flexWrap: 'wrap', animation: 'slideUp .7s .5s both' }}>
             {[['5400', '5.400+', 'Alumnas activas'], ['48', '48', 'Talleres online'], ['200', '200+', 'Moldes digitales'], ['8', '8 años', 'Experiencia']].map(([raw, display, label]) => (
               <div key={label}>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 22 : 30, fontWeight: 700, color: '#5e9e8a', lineHeight: 1 }}>
