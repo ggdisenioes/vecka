@@ -18,8 +18,10 @@ export default function EscuelaPage() {
   return (
     <div style={{ paddingTop: isMobile ? 60 : 108 }}>
       {/* Hero */}
-      <div style={{ background: 'oklch(16% 0.022 50)', padding: isMobile ? '44px 20px 40px' : `64px ${px} 60px` }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', ...fadeUpStyle(true, 0) }}>
+      <div style={{ background: 'linear-gradient(135deg, #1e3d2e 0%, #2a5244 50%, #1a3530 100%)', padding: isMobile ? '44px 20px 48px' : `72px ${px} 68px`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -60, right: -40, width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(151,206,184,.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -80, left: '30%', width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(224,168,187,.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', ...fadeUpStyle(true, 0) }}>
           <SectionHeader eyebrow="Escuela VeCKA" title="Aprendé a coser, de verdad" subtitle="Talleres online pensados para mujeres reales. A tu ritmo, con paciencia y sin frustraciones." light />
         </div>
       </div>
