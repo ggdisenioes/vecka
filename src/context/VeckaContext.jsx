@@ -106,7 +106,7 @@ export const COURSES = [
   },
 ];
 
-export const PRODUCTS = [
+const INITIAL_PRODUCTS = [
   { id: 101, title: 'Molde Remera Básica Adulto', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 1800, priceUSD: 2, format: 'PDF', sizes: 'XS-XXL', color: '#f4e4d4', badge: null },
   { id: 102, title: 'Molde Vestido Camisero', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 2200, priceUSD: 2.5, format: 'PDF', sizes: 'XS-XXL', color: '#e8d5e8', badge: 'Nuevo' },
   { id: 103, title: 'Molde Pantalón Palazzo', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 2000, priceUSD: 2, format: 'PDF', sizes: 'XS-XXL', color: '#d4e8d4', badge: null },
@@ -117,6 +117,8 @@ export const PRODUCTS = [
   { id: 108, title: 'Set Agujas Schmetz x10', category: 'Mercería VeCKA', subcategory: 'Mercería', price: 3200, priceUSD: 3.5, format: 'Físico', sizes: 'Surtido', color: '#f4e4d4', badge: null },
   { id: 109, title: 'Kit Entretelas Surtidas', category: 'Mercería VeCKA', subcategory: 'Mercería', price: 4800, priceUSD: 5, format: 'Físico', sizes: '50cm x 100cm', color: '#e4ecd4', badge: null },
 ];
+
+export const PRODUCTS = INITIAL_PRODUCTS;
 
 const MOCK_USER_STUDENT = {
   id: 1, name: 'María González', email: 'maria@gmail.com',
@@ -143,6 +145,7 @@ export function VeckaProvider({ children }) {
   const [user, setUser] = useState(null);
   const [currency, setCurrency] = useState('ARS');
   const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
@@ -172,6 +175,32 @@ export function VeckaProvider({ children }) {
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
   const cartTotal = cart.reduce((s, c) => s + (currency === 'ARS' ? c.price : c.priceUSD), 0);
 
+  const createProduct = (payload) => {
+    const id = Math.max(0, ...products.map(p => Number(p.id) || 0)) + 1;
+    const baseCategory = payload.productType === 'downloadable' ? 'Moldes Digitales' : 'Mercería VeCKA';
+    const next = {
+      id,
+      title: payload.title.trim(),
+      category: payload.category || baseCategory,
+      subcategory: payload.subcategory.trim() || (payload.productType === 'downloadable' ? 'Descargable' : 'Producto Físico'),
+      price: Number(payload.price),
+      priceUSD: Number(payload.priceUSD),
+      format: payload.productType === 'downloadable' ? 'PDF' : 'Físico',
+      sizes: payload.sizes.trim() || 'Único',
+      color: payload.color || '#f4e4d4',
+      badge: payload.badge?.trim() || null,
+      productType: payload.productType,
+      deliveryMethod: payload.productType === 'physical' ? 'correo' : 'descarga',
+      shippingCost: payload.productType === 'physical' ? Number(payload.shippingCost || 0) : 0,
+      shippingDays: payload.productType === 'physical' ? payload.shippingDays.trim() : '',
+      downloadUrl: payload.productType === 'downloadable' ? payload.downloadUrl.trim() : '',
+    };
+
+    setProducts(prev => [next, ...prev]);
+    return next;
+  };
+
+
   const login = (role) => {
     setUser(role === 'admin' ? MOCK_USER_ADMIN : MOCK_USER_STUDENT);
     setAuthModal(null);
@@ -196,7 +225,8 @@ export function VeckaProvider({ children }) {
       notification,
       selectedCourse, setSelectedCourse,
       courses: COURSES,
-      products: PRODUCTS,
+      products,
+      createProduct,
       fmt, notify,
     }}>
       {children}
