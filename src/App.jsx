@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { VeckaProvider, useVecka } from './context/VeckaContext';
 import Header from './components/Header';
 import CartSidebar from './components/CartSidebar';
@@ -13,6 +14,25 @@ import SobreMiPage from './pages/SobreMiPage';
 import ContactoPage from './pages/ContactoPage';
 import CuentaPage from './pages/CuentaPage';
 import AdminPage from './pages/AdminPage';
+
+function PaymentReturnBanner() {
+  const { paymentReturn, setPaymentReturn, notify } = useVecka();
+
+  useEffect(() => {
+    if (!paymentReturn) return;
+    const { status, orderId } = paymentReturn;
+    if (status === 'success') {
+      notify(`¡Pago confirmado! Orden ${orderId}. Revisá "Mis Compras" para descargar tus moldes.`);
+    } else if (status === 'failure') {
+      notify(`El pago no pudo procesarse (${orderId}). Podés intentarlo de nuevo.`, 'error');
+    } else if (status === 'pending') {
+      notify(`Tu pago está pendiente de acreditación (${orderId}). Te avisamos por email cuando esté confirmado.`);
+    }
+    setPaymentReturn(null);
+  }, [paymentReturn]);
+
+  return null;
+}
 
 function AppContent() {
   const { page, notification } = useVecka();
@@ -42,6 +62,7 @@ function AppContent() {
       <CartSidebar />
       <AuthModal />
       <Toast notification={notification} />
+      <PaymentReturnBanner />
     </>
   );
 }

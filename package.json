@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backend": "cd backend && node server.js",
+    "backend:dev": "cd backend && nodemon server.js",
+    "backend:install": "cd backend && npm install",
+    "setup": "npm install && cd backend && npm install && cp -n .env.example .env; cp -n ../.env.example ../.env"
   },
   "dependencies": {
     "react": "^19.2.5",

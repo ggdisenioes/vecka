@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../services/api';
 
 export const COURSES = [
   {
@@ -118,35 +119,62 @@ export const PRODUCTS = [
   { id: 109, title: 'Kit Entretelas Surtidas', category: 'Mercería VeCKA', subcategory: 'Mercería', price: 4800, priceUSD: 5, format: 'Físico', sizes: '50cm x 100cm', color: '#e4ecd4', badge: null },
 ];
 
-const MOCK_USER_STUDENT = {
-  id: 1, name: 'María González', email: 'maria@gmail.com',
-  avatar: 'MG', role: 'student', memberSince: 'Marzo 2024',
-  coursesEnrolled: 3, completedLessons: 28, certificates: 0,
-  purchases: [
-    { id: 'ORD-001', date: '15 Mar 2026', items: 'Molde Remera Básica Adulto', total: 1800, status: 'Completado', currency: 'ARS' },
-    { id: 'ORD-002', date: '02 Feb 2026', items: 'Cose desde Cero + Indumentaria Femenina', total: 40500, status: 'Completado', currency: 'ARS' },
-    { id: 'ORD-003', date: '10 Ene 2026', items: 'Club VeCKA — Enero', total: 8500, status: 'Completado', currency: 'ARS' },
-  ],
-};
-
-export const MOCK_USER_STUDENT_DATA = MOCK_USER_STUDENT;
-
-const MOCK_USER_ADMIN = {
-  id: 99, name: 'Vero (Admin)', email: 'vero@vecka.com.ar',
-  avatar: 'V', role: 'admin',
-};
-
 const VeckaContext = createContext(null);
 
 export function VeckaProvider({ children }) {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [currency, setCurrency] = useState('ARS');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vecka_cart') || '[]'); } catch { return []; }
+  });
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [paymentReturn, setPaymentReturn] = useState(null); // { status, orderId }
+
+  // Persistir carrito
+  useEffect(() => {
+    localStorage.setItem('vecka_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  // Restaurar sesión desde JWT al cargar
+  useEffect(() => {
+    const token = localStorage.getItem('vecka_token');
+    if (!token) { setAuthLoading(false); return; }
+    api.me()
+      .then(u => setUser(u))
+      .catch(() => localStorage.removeItem('vecka_token'))
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  // Detectar retorno de MercadoPago o token de descarga
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const order = params.get('order');
+    const download = params.get('download');
+
+    if (payment && order) {
+      setPaymentReturn({ status: payment, orderId: order });
+      // Limpiar URL sin recargar
+      window.history.replaceState({}, '', window.location.pathname);
+      if (payment === 'success') {
+        setCart([]);
+        localStorage.removeItem('vecka_cart');
+        setPage('cuenta');
+      }
+    }
+
+    if (download) {
+      window.history.replaceState({}, '', window.location.pathname);
+      // Redirigir al download endpoint
+      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/downloads/${download}`;
+      window.location.href = url;
+    }
+  }, []);
 
   const navigate = (p, extra = {}) => {
     setPage(p);
@@ -170,16 +198,50 @@ export function VeckaProvider({ children }) {
   };
 
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
+  const clearCart = () => { setCart([]); localStorage.removeItem('vecka_cart'); };
   const cartTotal = cart.reduce((s, c) => s + (currency === 'ARS' ? c.price : c.priceUSD), 0);
 
-  const login = (role) => {
-    setUser(role === 'admin' ? MOCK_USER_ADMIN : MOCK_USER_STUDENT);
+  // Login real con API
+  const loginWithApi = async (email, password) => {
+    const data = await api.login(email, password);
+    localStorage.setItem('vecka_token', data.token);
+    setUser(data.user);
     setAuthModal(null);
-    notify(`¡Bienvenida, ${role === 'admin' ? 'Vero' : 'María'}!`);
+    notify(`¡Bienvenida, ${data.user.name.split(' ')[0]}!`);
+    if (data.user.role === 'admin') navigate('admin');
+    else navigate('cuenta');
+    return data.user;
+  };
+
+  // Register real con API
+  const registerWithApi = async (name, email, password, phone) => {
+    const data = await api.register(name, email, password, phone);
+    localStorage.setItem('vecka_token', data.token);
+    setUser(data.user);
+    setAuthModal(null);
+    notify(`¡Bienvenida, ${data.user.name.split(' ')[0]}!`);
+    navigate('cuenta');
+    return data.user;
+  };
+
+  // Login demo (sin API, para desarrollo)
+  const login = (role) => {
+    const demoUser = role === 'admin'
+      ? { id: 99, name: 'Vero (Admin)', email: 'vero@vecka.com.ar', avatar: 'V', role: 'admin', isDemo: true }
+      : { id: 1, name: 'María González', email: 'maria@gmail.com', avatar: 'MG', role: 'student', isDemo: true, memberSince: 'Marzo 2024' };
+    setUser(demoUser);
+    setAuthModal(null);
+    notify(`¡Bienvenida, ${role === 'admin' ? 'Vero' : 'María'}! (modo demo)`);
     if (role === 'admin') navigate('admin');
     else navigate('cuenta');
   };
-  const logout = () => { setUser(null); navigate('home'); notify('Sesión cerrada'); };
+
+  const logout = () => {
+    localStorage.removeItem('vecka_token');
+    setUser(null);
+    navigate('home');
+    notify('Sesión cerrada');
+  };
 
   const fmt = (ars, usd) => currency === 'ARS'
     ? `$${Number(ars).toLocaleString('es-AR')}`
@@ -188,15 +250,17 @@ export function VeckaProvider({ children }) {
   return (
     <VeckaContext.Provider value={{
       page, navigate,
-      user, login, logout,
+      user, setUser, login, loginWithApi, registerWithApi, logout,
+      authLoading,
       currency, setCurrency,
-      cart, addToCart, removeFromCart, cartTotal,
+      cart, addToCart, removeFromCart, clearCart, cartTotal,
       cartOpen, setCartOpen,
       authModal, setAuthModal,
       notification,
       selectedCourse, setSelectedCourse,
       courses: COURSES,
       products: PRODUCTS,
+      paymentReturn, setPaymentReturn,
       fmt, notify,
     }}>
       {children}
