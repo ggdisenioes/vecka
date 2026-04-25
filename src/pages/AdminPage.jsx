@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useVecka } from '../context/VeckaContext';
 import { useResponsive } from '../hooks/useResponsive';
 import Icon from '../components/Icon';
-import { Btn, Badge } from '../components/Primitives';
+import { Btn, Badge, inputStyle, labelStyle } from '../components/Primitives';
 
 const RECENT_ORDERS = [
   { id: 'ORD-1124', student: 'María González', item: 'Cose desde Cero', amount: '$18.500', status: 'Completado', date: 'Hoy 14:32' },
@@ -14,10 +14,45 @@ const RECENT_ORDERS = [
 const statusBadge = (s) => ({ 'Completado': { color: '#4a7d6e', bg: '#d4f0e6' }, 'Pendiente': { color: 'oklch(40% 0.1 65)', bg: 'oklch(95% 0.04 65)' }, 'Enviado': { color: 'oklch(35% 0.09 240)', bg: 'oklch(91% 0.04 240)' } }[s] || { color: '#4a7d6e', bg: '#d4f0e6' });
 
 export default function AdminPage() {
-  const { user, navigate, courses, products, fmt, notify } = useVecka();
+  const {
+    user, navigate, courses, products, fmt, notify,
+    createProduct, updateProduct, deleteProduct,
+    createCourse, updateCourse, deleteCourse,
+  } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const [section, setSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [showNewCourse, setShowNewCourse] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [editingCourseId, setEditingCourseId] = useState(null);
+  const [productForm, setProductForm] = useState({
+    title: '',
+    category: '',
+    subcategory: '',
+    price: '',
+    priceUSD: '',
+    sizes: '',
+    badge: '',
+    productType: 'downloadable',
+    shippingCost: '',
+    shippingDays: '',
+    downloadUrl: '',
+    color: '#f4e4d4',
+  });
+  const [courseForm, setCourseForm] = useState({
+    title: '',
+    subtitle: '',
+    category: 'Costura Básica',
+    level: 'Principiante',
+    price: '',
+    priceUSD: '',
+    duration: '',
+    lessons: '',
+    description: '',
+    vimeoUrl: '',
+    color: '#f4e4d4',
+  });
 
   if (!user || user.role !== 'admin') { navigate('home'); return null; }
 
@@ -31,6 +66,62 @@ export default function AdminPage() {
   ];
 
   const sidebarW = isMobile ? 0 : 220;
+  const updateProductForm = (key, value) => setProductForm(prev => ({ ...prev, [key]: value }));
+  const resetProductForm = () => setProductForm({
+    title: '',
+    category: '',
+    subcategory: '',
+    price: '',
+    priceUSD: '',
+    sizes: '',
+    badge: '',
+    productType: 'downloadable',
+    shippingCost: '',
+    shippingDays: '',
+    downloadUrl: '',
+    color: '#f4e4d4',
+  });
+  const updateCourseForm = (key, value) => setCourseForm(prev => ({ ...prev, [key]: value }));
+  const resetCourseForm = () => setCourseForm({
+    title: '',
+    subtitle: '',
+    category: 'Costura Básica',
+    level: 'Principiante',
+    price: '',
+    priceUSD: '',
+    duration: '',
+    lessons: '',
+    description: '',
+    vimeoUrl: '',
+    color: '#f4e4d4',
+  });
+  const handleCreateProduct = () => {
+    if (!productForm.title.trim()) return notify('Completá el nombre del producto', 'error');
+    if (!productForm.price || Number(productForm.price) <= 0) return notify('Ingresá un precio en ARS válido', 'error');
+    if (!productForm.priceUSD || Number(productForm.priceUSD) <= 0) return notify('Ingresá un precio en USD válido', 'error');
+    if (productForm.productType === 'downloadable' && !productForm.downloadUrl.trim()) return notify('Agregá la URL de descarga para el producto digital', 'error');
+    if (productForm.productType === 'physical' && !productForm.shippingDays.trim()) return notify('Indicá el plazo de envío por correo', 'error');
+
+    const handler = editingProductId ? updateProduct : createProduct;
+    const newProduct = editingProductId ? handler(editingProductId, productForm) : handler(productForm);
+    notify(`Producto "${newProduct.title}" ${editingProductId ? 'actualizado' : 'creado'} correctamente`);
+    resetProductForm();
+    setEditingProductId(null);
+    setShowNewProduct(false);
+  };
+  const handleCreateCourse = () => {
+    if (!courseForm.title.trim()) return notify('Completá el nombre del curso', 'error');
+    if (!courseForm.price || Number(courseForm.price) <= 0) return notify('Ingresá un precio en ARS válido', 'error');
+    if (!courseForm.priceUSD || Number(courseForm.priceUSD) <= 0) return notify('Ingresá un precio en USD válido', 'error');
+    if (!courseForm.vimeoUrl.trim().includes('vimeo.com')) return notify('Ingresá una URL válida de Vimeo', 'error');
+
+    const handler = editingCourseId ? updateCourse : createCourse;
+    const course = editingCourseId ? handler(editingCourseId, courseForm) : handler(courseForm);
+    notify(`Curso "${course.title}" ${editingCourseId ? 'actualizado' : 'creado'} correctamente`);
+    resetCourseForm();
+    setEditingCourseId(null);
+    setShowNewCourse(false);
+  };
 
   return (
     <div style={{ paddingTop: isMobile ? 60 : 108, minHeight: '100vh', display: 'flex', background: '#faf5f8' }}>
@@ -144,8 +235,68 @@ export default function AdminPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 30, margin: 0 }}>Gestión de Cursos</h2>
-              <Btn icon="plus" size="sm" onClick={() => notify('Función de creación próximamente')}>Nuevo</Btn>
+              <Btn icon={showNewCourse ? 'x' : 'plus'} size="sm" onClick={() => setShowNewCourse(v => !v)}>
+                {showNewCourse ? 'Cerrar' : 'Nuevo'}
+              </Btn>
             </div>
+            {showNewCourse && (
+              <div style={{ background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 20, border: '1px solid oklch(88% 0.012 60)', marginBottom: 14 }}>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, margin: '0 0 14px' }}>
+                  {editingCourseId ? 'Editar curso' : 'Crear curso'}
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 12 }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Nombre del curso</label>
+                    <input value={courseForm.title} onChange={e => updateCourseForm('title', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Subtítulo</label>
+                    <input value={courseForm.subtitle} onChange={e => updateCourseForm('subtitle', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Nivel</label>
+                    <select value={courseForm.level} onChange={e => updateCourseForm('level', e.target.value)} style={inputStyle}>
+                      <option>Principiante</option>
+                      <option>Intermedio</option>
+                      <option>Avanzado</option>
+                      <option>Todos los niveles</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Categoría</label>
+                    <input value={courseForm.category} onChange={e => updateCourseForm('category', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Duración</label>
+                    <input value={courseForm.duration} onChange={e => updateCourseForm('duration', e.target.value)} placeholder="Ej: 8 semanas" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Precio ARS</label>
+                    <input type="number" min="1" value={courseForm.price} onChange={e => updateCourseForm('price', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Precio USD</label>
+                    <input type="number" min="1" step="0.1" value={courseForm.priceUSD} onChange={e => updateCourseForm('priceUSD', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Cantidad de lecciones</label>
+                    <input type="number" min="1" value={courseForm.lessons} onChange={e => updateCourseForm('lessons', e.target.value)} style={inputStyle} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>URL de Vimeo (se usará en las lecciones del curso)</label>
+                    <input value={courseForm.vimeoUrl} onChange={e => updateCourseForm('vimeoUrl', e.target.value)} placeholder="https://vimeo.com/..." style={inputStyle} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Descripción</label>
+                    <textarea value={courseForm.description} onChange={e => updateCourseForm('description', e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                  <Btn size="sm" variant="ghost" onClick={() => { resetCourseForm(); setShowNewCourse(false); setEditingCourseId(null); }}>Cancelar</Btn>
+                  <Btn size="sm" icon="plus" onClick={handleCreateCourse}>{editingCourseId ? 'Guardar cambios' : 'Guardar curso'}</Btn>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'grid', gap: 12 }}>
               {courses.map(c => (
                 <div key={c.id} style={{ background: '#fff', borderRadius: 12, padding: '16px 18px', border: '1px solid oklch(88% 0.012 60)', display: 'flex', alignItems: 'center', gap: 14, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
@@ -156,7 +307,24 @@ export default function AdminPage() {
                   </div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 700, color: '#5e9e8a', flexShrink: 0 }}>{fmt(c.price, c.priceUSD)}</div>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    <Btn size="sm" variant="outline" onClick={() => notify('Editor próximamente')}>Editar</Btn>
+                    <Btn size="sm" variant="outline" onClick={() => {
+                      setCourseForm({
+                        title: c.title,
+                        subtitle: c.subtitle || '',
+                        category: c.category || 'Costura Básica',
+                        level: c.level || 'Principiante',
+                        price: c.price,
+                        priceUSD: c.priceUSD,
+                        duration: c.duration || '',
+                        lessons: c.lessons || c.modules[0]?.lessons?.length || 1,
+                        description: c.description || '',
+                        vimeoUrl: c.modules[0]?.lessons?.[0]?.vimeoUrl || '',
+                        color: c.color || '#f4e4d4',
+                      });
+                      setEditingCourseId(c.id);
+                      setShowNewCourse(true);
+                    }}>Editar</Btn>
+                    <Btn size="sm" variant="ghost" onClick={() => { deleteCourse(c.id); notify(`Curso "${c.title}" eliminado`); }}>Eliminar</Btn>
                   </div>
                 </div>
               ))}
@@ -168,18 +336,115 @@ export default function AdminPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 30, margin: 0 }}>Productos</h2>
-              <Btn icon="plus" size="sm" onClick={() => notify('Editor próximamente')}>Nuevo</Btn>
+              <Btn icon={showNewProduct ? 'x' : 'plus'} size="sm" onClick={() => setShowNewProduct(v => !v)}>
+                {showNewProduct ? 'Cerrar' : 'Nuevo'}
+              </Btn>
             </div>
+            {showNewProduct && (
+              <div style={{ background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 20, border: '1px solid oklch(88% 0.012 60)', marginBottom: 14 }}>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, margin: '0 0 14px' }}>
+                  {editingProductId ? 'Editar producto' : 'Crear producto'}
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 12 }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Nombre del producto</label>
+                    <input value={productForm.title} onChange={e => updateProductForm('title', e.target.value)} placeholder="Ej: Molde Campera Oversize" style={inputStyle} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Tipo</label>
+                    <select value={productForm.productType} onChange={e => updateProductForm('productType', e.target.value)} style={inputStyle}>
+                      <option value="downloadable">Descargable</option>
+                      <option value="physical">Físico con envío por correo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Categoría</label>
+                    <select value={productForm.category} onChange={e => updateProductForm('category', e.target.value)} style={inputStyle}>
+                      <option value="">Automática según tipo</option>
+                      <option value="Moldes Digitales">Moldes Digitales</option>
+                      <option value="Moldes Impresos">Moldes Impresos</option>
+                      <option value="Mercería VeCKA">Mercería VeCKA</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Subcategoría</label>
+                    <input value={productForm.subcategory} onChange={e => updateProductForm('subcategory', e.target.value)} placeholder="Ej: Indumentaria Femenina" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Talles / presentación</label>
+                    <input value={productForm.sizes} onChange={e => updateProductForm('sizes', e.target.value)} placeholder="Ej: XS-XXL o Surtido" style={inputStyle} />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>Precio ARS</label>
+                    <input type="number" min="1" value={productForm.price} onChange={e => updateProductForm('price', e.target.value)} placeholder="0" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Precio USD</label>
+                    <input type="number" min="1" step="0.1" value={productForm.priceUSD} onChange={e => updateProductForm('priceUSD', e.target.value)} placeholder="0" style={inputStyle} />
+                  </div>
+
+                  {productForm.productType === 'downloadable' ? (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>URL de descarga</label>
+                      <input value={productForm.downloadUrl} onChange={e => updateProductForm('downloadUrl', e.target.value)} placeholder="https://..." style={inputStyle} />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Costo de envío por correo (ARS)</label>
+                        <input type="number" min="0" value={productForm.shippingCost} onChange={e => updateProductForm('shippingCost', e.target.value)} placeholder="0" style={inputStyle} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Plazo de envío</label>
+                        <input value={productForm.shippingDays} onChange={e => updateProductForm('shippingDays', e.target.value)} placeholder="Ej: 3 a 5 días hábiles" style={inputStyle} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                  <Btn size="sm" variant="ghost" onClick={() => { resetProductForm(); setShowNewProduct(false); setEditingProductId(null); }}>Cancelar</Btn>
+                  <Btn size="sm" icon="plus" onClick={handleCreateProduct}>{editingProductId ? 'Guardar cambios' : 'Guardar producto'}</Btn>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'grid', gap: 10 }}>
               {products.map(p => (
                 <div key={p.id} style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid oklch(88% 0.012 60)', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 8, background: p.color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(52% 0.018 50)' }}>{p.subcategory} · {p.format}</div>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(52% 0.018 50)' }}>
+                      {p.subcategory} · {p.format}
+                      {p.deliveryMethod === 'correo' && ` · Envío: ${fmt(p.shippingCost || 0, (p.shippingCost || 0) / 1000)} (${p.shippingDays || 'a definir'})`}
+                      {p.deliveryMethod === 'descarga' && p.downloadUrl && ' · Descarga digital'}
+                    </div>
                   </div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, color: '#5e9e8a', flexShrink: 0 }}>{fmt(p.price, p.priceUSD)}</div>
-                  <Btn size="sm" variant="ghost" onClick={() => notify('Editor próximamente')}>Editar</Btn>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Btn size="sm" variant="ghost" onClick={() => {
+                      setProductForm({
+                        title: p.title || '',
+                        category: p.category || '',
+                        subcategory: p.subcategory || '',
+                        price: p.price || '',
+                        priceUSD: p.priceUSD || '',
+                        sizes: p.sizes || '',
+                        badge: p.badge || '',
+                        productType: p.deliveryMethod === 'correo' ? 'physical' : 'downloadable',
+                        shippingCost: p.shippingCost || '',
+                        shippingDays: p.shippingDays || '',
+                        downloadUrl: p.downloadUrl || '',
+                        color: p.color || '#f4e4d4',
+                      });
+                      setEditingProductId(p.id);
+                      setShowNewProduct(true);
+                    }}>Editar</Btn>
+                    <Btn size="sm" variant="ghost" onClick={() => { deleteProduct(p.id); notify(`Producto "${p.title}" eliminado`); }}>Eliminar</Btn>
+                  </div>
                 </div>
               ))}
             </div>

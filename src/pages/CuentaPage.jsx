@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useVecka, MOCK_USER_STUDENT_DATA } from '../context/VeckaContext';
 import { useResponsive } from '../hooks/useResponsive';
 import Icon from '../components/Icon';
-import { Btn, Badge, ProgressBar, inputStyle } from '../components/Primitives';
+import { Btn, Badge, ProgressBar, inputStyle, labelStyle } from '../components/Primitives';
 import { CourseCard } from '../components/Cards';
 
 export default function CuentaPage() {

@@ -19,13 +19,18 @@ export default function CursoPage() {
   if (!course) { navigate('escuela'); return null; }
 
   const isEnrolled = course.enrolled;
-  const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
+  const totalLessons = course.modules.reduce((s, m) => s + (m.lessons?.length || 0), 0);
   const completedCount = Math.round((course.progress / 100) * totalLessons);
 
   // Player mode (enrolled)
   if (isEnrolled && course.modules.length > 0) {
     const mod = course.modules[activeModule];
     const lesson = mod?.lessons[activeLesson];
+    const lessonTitle = typeof lesson === 'string' ? lesson : lesson?.title;
+    const lessonVimeoUrl = typeof lesson === 'string' ? '' : lesson?.vimeoUrl;
+    const vimeoEmbedUrl = lessonVimeoUrl
+      ? lessonVimeoUrl.replace('vimeo.com/', 'player.vimeo.com/video/')
+      : '';
 
     return (
       <div style={{ paddingTop: isMobile ? 60 : 108, minHeight: '100vh', background: 'oklch(14% 0.02 50)', display: 'flex', flexDirection: 'column' }}>
@@ -80,7 +85,9 @@ export default function CursoPage() {
                             ? <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#5e9e8a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="check" size={9} color="#fff" /></div>
                             : <Icon name={isActive ? 'play' : 'lock'} size={12} color={isActive ? '#97ceb8' : 'oklch(45% 0.01 60)'} />
                           }
-                          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: isActive ? '#fff' : isCompleted ? 'oklch(70% 0.01 60)' : 'oklch(55% 0.01 60)' }}>{lesson}</span>
+                          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: isActive ? '#fff' : isCompleted ? 'oklch(70% 0.01 60)' : 'oklch(55% 0.01 60)' }}>
+                            {typeof lesson === 'string' ? lesson : lesson.title}
+                          </span>
                         </div>
                       );
                     })}
@@ -93,13 +100,22 @@ export default function CursoPage() {
           {/* Video */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <div style={{ background: '#000', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: isMobile ? 220 : 360 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div onClick={() => setPlaying(!playing)}
-                  style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: '0 auto 16px', border: '1px solid rgba(255,255,255,.2)', transition: 'background .2s' }}>
-                  <Icon name={playing ? 'x' : 'play'} size={24} color="#fff" />
+              {vimeoEmbedUrl ? (
+                <iframe
+                  src={vimeoEmbedUrl}
+                  title={lessonTitle}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <div onClick={() => setPlaying(!playing)}
+                    style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', margin: '0 auto 16px', border: '1px solid rgba(255,255,255,.2)', transition: 'background .2s' }}>
+                    <Icon name={playing ? 'x' : 'play'} size={24} color="#fff" />
+                  </div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 16 : 20, color: 'rgba(255,255,255,.65)', fontStyle: 'italic', padding: '0 16px' }}>{lessonTitle}</div>
                 </div>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 16 : 20, color: 'rgba(255,255,255,.65)', fontStyle: 'italic', padding: '0 16px' }}>{lesson}</div>
-              </div>
+              )}
               {/* Progress bar */}
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 20px', background: 'linear-gradient(transparent, rgba(0,0,0,.7))' }}>
                 <div style={{ height: 3, background: 'rgba(255,255,255,.2)', borderRadius: 2, marginBottom: 8, cursor: 'pointer' }}>
@@ -115,7 +131,7 @@ export default function CursoPage() {
             <div style={{ background: 'oklch(18% 0.02 50)', padding: `${isMobile ? 16 : 20}px ${isMobile ? 16 : 28}px`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'oklch(55% 0.01 60)', marginBottom: 4 }}>Módulo {activeModule + 1}</div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 18 : 22, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson}</h3>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 18 : 22, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lessonTitle}</h3>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <Btn size="sm" variant="ghost" style={{ color: '#fff', background: 'oklch(25% 0.02 50)' }}
@@ -198,7 +214,7 @@ export default function CursoPage() {
                   {mod.lessons.map((lesson, li) => (
                     <div key={li} style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 9, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(40% 0.018 50)' }}>
                       <Icon name="lock" size={12} color="oklch(72% 0.012 60)" />
-                      {lesson}
+                      {typeof lesson === 'string' ? lesson : lesson.title}
                     </div>
                   ))}
                 </div>

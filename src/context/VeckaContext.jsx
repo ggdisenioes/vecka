@@ -106,7 +106,19 @@ export const COURSES = [
   },
 ];
 
-export const PRODUCTS = [
+const normalizeCourse = (course) => ({
+  ...course,
+  modules: (course.modules || []).map((module) => ({
+    ...module,
+    lessons: (module.lessons || []).map((lesson) => (
+      typeof lesson === 'string'
+        ? { title: lesson, vimeoUrl: '' }
+        : { title: lesson.title, vimeoUrl: lesson.vimeoUrl || '' }
+    )),
+  })),
+});
+
+const INITIAL_PRODUCTS = [
   { id: 101, title: 'Molde Remera Básica Adulto', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 1800, priceUSD: 2, format: 'PDF', sizes: 'XS-XXL', color: '#f4e4d4', badge: null },
   { id: 102, title: 'Molde Vestido Camisero', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 2200, priceUSD: 2.5, format: 'PDF', sizes: 'XS-XXL', color: '#e8d5e8', badge: 'Nuevo' },
   { id: 103, title: 'Molde Pantalón Palazzo', category: 'Moldes Digitales', subcategory: 'Indumentaria Femenina', price: 2000, priceUSD: 2, format: 'PDF', sizes: 'XS-XXL', color: '#d4e8d4', badge: null },
@@ -117,6 +129,8 @@ export const PRODUCTS = [
   { id: 108, title: 'Set Agujas Schmetz x10', category: 'Mercería VeCKA', subcategory: 'Mercería', price: 3200, priceUSD: 3.5, format: 'Físico', sizes: 'Surtido', color: '#f4e4d4', badge: null },
   { id: 109, title: 'Kit Entretelas Surtidas', category: 'Mercería VeCKA', subcategory: 'Mercería', price: 4800, priceUSD: 5, format: 'Físico', sizes: '50cm x 100cm', color: '#e4ecd4', badge: null },
 ];
+
+export const PRODUCTS = INITIAL_PRODUCTS;
 
 const MOCK_USER_STUDENT = {
   id: 1, name: 'María González', email: 'maria@gmail.com',
@@ -143,6 +157,8 @@ export function VeckaProvider({ children }) {
   const [user, setUser] = useState(null);
   const [currency, setCurrency] = useState('ARS');
   const [cart, setCart] = useState([]);
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [courses, setCourses] = useState(COURSES.map(normalizeCourse));
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
@@ -172,6 +188,113 @@ export function VeckaProvider({ children }) {
   const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
   const cartTotal = cart.reduce((s, c) => s + (currency === 'ARS' ? c.price : c.priceUSD), 0);
 
+  const createProduct = (payload) => {
+    const id = Math.max(0, ...products.map(p => Number(p.id) || 0)) + 1;
+    const baseCategory = payload.productType === 'downloadable' ? 'Moldes Digitales' : 'Mercería VeCKA';
+    const next = {
+      id,
+      title: payload.title.trim(),
+      category: payload.category || baseCategory,
+      subcategory: payload.subcategory.trim() || (payload.productType === 'downloadable' ? 'Descargable' : 'Producto Físico'),
+      price: Number(payload.price),
+      priceUSD: Number(payload.priceUSD),
+      format: payload.productType === 'downloadable' ? 'PDF' : 'Físico',
+      sizes: payload.sizes.trim() || 'Único',
+      color: payload.color || '#f4e4d4',
+      badge: payload.badge?.trim() || null,
+      productType: payload.productType,
+      deliveryMethod: payload.productType === 'physical' ? 'correo' : 'descarga',
+      shippingCost: payload.productType === 'physical' ? Number(payload.shippingCost || 0) : 0,
+      shippingDays: payload.productType === 'physical' ? payload.shippingDays.trim() : '',
+      downloadUrl: payload.productType === 'downloadable' ? payload.downloadUrl.trim() : '',
+    };
+
+    setProducts(prev => [next, ...prev]);
+    return next;
+  };
+
+  const updateProduct = (id, payload) => {
+    let updated = null;
+    setProducts(prev => prev.map((p) => {
+      if (p.id !== id) return p;
+      updated = {
+        ...p,
+        ...payload,
+        title: payload.title?.trim() || p.title,
+        subcategory: payload.subcategory?.trim() || p.subcategory,
+        sizes: payload.sizes?.trim() || p.sizes,
+        badge: payload.badge?.trim() || null,
+      };
+      return updated;
+    }));
+    return updated;
+  };
+
+  const deleteProduct = (id) => setProducts(prev => prev.filter(p => p.id !== id));
+
+  const createCourse = (payload) => {
+    const id = Math.max(0, ...courses.map(c => Number(c.id) || 0)) + 1;
+    const lessonsCount = Math.max(1, Number(payload.lessons || 1));
+    const lessonTemplate = { title: 'Lección 1', vimeoUrl: payload.vimeoUrl?.trim() || '' };
+    const next = normalizeCourse({
+      id,
+      slug: payload.slug?.trim() || payload.title.toLowerCase().replace(/\s+/g, '-'),
+      title: payload.title.trim(),
+      subtitle: payload.subtitle.trim() || 'Nuevo curso',
+      category: payload.category || 'Costura Básica',
+      level: payload.level || 'Principiante',
+      price: Number(payload.price),
+      priceUSD: Number(payload.priceUSD),
+      duration: payload.duration.trim() || '4 semanas',
+      lessons: lessonsCount,
+      students: 0,
+      rating: 5,
+      reviews: 0,
+      color: payload.color || '#f4e4d4',
+      description: payload.description.trim() || 'Curso creado desde el panel de administración.',
+      modules: [{
+        title: 'Contenido principal',
+        lessons: Array.from({ length: lessonsCount }, (_, i) => ({ ...lessonTemplate, title: `Lección ${i + 1}` })),
+      }],
+      enrolled: false,
+      progress: 0,
+    });
+
+    setCourses(prev => [next, ...prev]);
+    return next;
+  };
+
+  const updateCourse = (id, payload) => {
+    let updated = null;
+    setCourses(prev => prev.map((course) => {
+      if (course.id !== id) return course;
+      const lessonsCount = Math.max(1, Number(payload.lessons || course.lessons || 1));
+      const currentLessons = course.modules[0]?.lessons || [];
+      const vimeoUrl = payload.vimeoUrl?.trim() ?? (currentLessons[0]?.vimeoUrl || '');
+      const rebuiltLessons = Array.from({ length: lessonsCount }, (_, i) => ({
+        title: currentLessons[i]?.title || `Lección ${i + 1}`,
+        vimeoUrl: currentLessons[i]?.vimeoUrl || vimeoUrl,
+      }));
+      updated = normalizeCourse({
+        ...course,
+        ...payload,
+        title: payload.title?.trim() || course.title,
+        subtitle: payload.subtitle?.trim() || course.subtitle,
+        description: payload.description?.trim() || course.description,
+        duration: payload.duration?.trim() || course.duration,
+        lessons: lessonsCount,
+        price: Number(payload.price ?? course.price),
+        priceUSD: Number(payload.priceUSD ?? course.priceUSD),
+        modules: [{ title: 'Contenido principal', lessons: rebuiltLessons }],
+      });
+      return updated;
+    }));
+    return updated;
+  };
+
+  const deleteCourse = (id) => setCourses(prev => prev.filter(c => c.id !== id));
+
+
   const login = (role) => {
     setUser(role === 'admin' ? MOCK_USER_ADMIN : MOCK_USER_STUDENT);
     setAuthModal(null);
@@ -195,8 +318,14 @@ export function VeckaProvider({ children }) {
       authModal, setAuthModal,
       notification,
       selectedCourse, setSelectedCourse,
-      courses: COURSES,
-      products: PRODUCTS,
+      courses,
+      createCourse,
+      updateCourse,
+      deleteCourse,
+      products,
+      createProduct,
+      updateProduct,
+      deleteProduct,
       fmt, notify,
     }}>
       {children}
