@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { env } from '@/lib/env'
 
-export function updateSession(request) {
+export async function updateSession(request) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -28,6 +28,10 @@ export function updateSession(request) {
     },
   )
 
-  supabase.auth.getUser()
+  // Supabase mutates the response cookies during this call when the session
+  // needs to be refreshed. If we don't await it, the updated cookies never
+  // make it into the response and the user appears logged out on the next
+  // request.
+  await supabase.auth.getUser()
   return response
 }
