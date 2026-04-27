@@ -13,6 +13,7 @@ export default function EscuelaPage() {
   const [filter, setFilter] = useState('Todos');
   const categories = ['Todos', 'Costura Básica', 'Indumentaria Femenina', 'Bebés y Niños', 'Accesorios y Deco', 'Membresía', 'Avanzado'];
   const filtered = filter === 'Todos' ? courses : courses.filter(c => c.category === filter);
+  const membershipCourse = courses.find(c => c.isMembership);
   const px = isMobile ? '16px' : isTablet ? '32px' : '80px';
 
   return (
@@ -41,20 +42,22 @@ export default function EscuelaPage() {
       {/* Grid */}
       <div ref={ref} style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '32px 16px 64px' : `48px ${px} 80px` }}>
         {/* Club banner */}
-        <div style={{ background: 'linear-gradient(135deg, #5e9e8a, #4a7d6e)', borderRadius: isMobile ? 16 : 20, padding: isMobile ? '28px 22px' : '36px 40px', display: 'flex', flexDirection: isTablet ? 'column' : 'row', justifyContent: 'space-between', alignItems: isTablet ? 'flex-start' : 'center', marginBottom: 36, gap: 20, ...fadeUpStyle(visible, 0) }}>
-          <div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#97ceb8', marginBottom: 8 }}>★ ACCESO ILIMITADO</div>
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 32, color: '#fff', margin: '0 0 8px' }}>Club VeCKA — Membresía Mensual</h3>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(88% 0.02 60)', margin: 0 }}>
-              Todos los talleres + molde exclusivo + comunidad. Un precio, todo incluido.
-            </p>
+        {membershipCourse && (
+          <div style={{ background: 'linear-gradient(135deg, #5e9e8a, #4a7d6e)', borderRadius: isMobile ? 16 : 20, padding: isMobile ? '28px 22px' : '36px 40px', display: 'flex', flexDirection: isTablet ? 'column' : 'row', justifyContent: 'space-between', alignItems: isTablet ? 'flex-start' : 'center', marginBottom: 36, gap: 20, ...fadeUpStyle(visible, 0) }}>
+            <div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#97ceb8', marginBottom: 8 }}>★ ACCESO ILIMITADO</div>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 32, color: '#fff', margin: '0 0 8px' }}>{membershipCourse.title}</h3>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(88% 0.02 60)', margin: 0 }}>
+                {membershipCourse.description}
+              </p>
+            </div>
+            <div style={{ textAlign: isTablet ? 'left' : 'right', flexShrink: 0 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 32 : 42, fontWeight: 700, color: '#fff' }}>{fmt(membershipCourse.price, membershipCourse.priceUSD)}</div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(80% 0.02 60)', marginBottom: 14 }}>por mes</div>
+              <Btn variant="white" onClick={() => navigate('curso', { course: membershipCourse })}>Suscribirme al Club</Btn>
+            </div>
           </div>
-          <div style={{ textAlign: isTablet ? 'left' : 'right', flexShrink: 0 }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 32 : 42, fontWeight: 700, color: '#fff' }}>{fmt(8500, 9)}</div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(80% 0.02 60)', marginBottom: 14 }}>por mes</div>
-            <Btn variant="white" onClick={() => navigate('curso', { course: courses.find(c => c.isMembership) })}>Suscribirme al Club</Btn>
-          </div>
-        </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 18 : 28 }}>
           {filtered.filter(c => !c.isMembership).map((c, i) => (

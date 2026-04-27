@@ -1,15 +1,20 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 
 export const COURSES = [
   {
-    id: 1, slug: 'cose-desde-cero',
+    id: 1,
+    slug: 'cose-desde-cero',
     title: 'Cose desde Cero',
     subtitle: 'El punto de partida para todas las costureras',
     category: 'Costura Básica',
     level: 'Principiante',
-    price: 18500, priceUSD: 19,
-    duration: '8 semanas', lessons: 24, students: 1240,
-    rating: 4.9, reviews: 318,
+    price: 18500,
+    priceUSD: 19,
+    duration: '8 semanas',
+    lessons: 24,
+    students: 1240,
+    rating: 4.9,
+    reviews: 318,
     color: '#f4e4d4',
     description: 'Aprendé todo lo que necesitás para empezar a coser: máquinas, telas, costuras básicas, terminaciones y tu primer prenda completa.',
     modules: [
@@ -18,17 +23,23 @@ export const COURSES = [
       { title: 'Técnicas esenciales', lessons: ['Costuras rectas y curvas', 'Pinzas y fruncidos', 'Cierres y botones', 'Terminaciones profesionales'] },
       { title: 'Tu primera prenda', lessons: ['Pantalón palazzo', 'Blusa básica', 'Falda midi', 'Proyecto final'] },
     ],
-    enrolled: true, progress: 62,
+    enrolled: true,
+    progress: 62,
   },
   {
-    id: 2, slug: 'indumentaria-femenina',
+    id: 2,
+    slug: 'indumentaria-femenina',
     title: 'Indumentaria Femenina',
     subtitle: 'Confeccioná ropa que realmente te queda',
     category: 'Indumentaria Femenina',
     level: 'Intermedio',
-    price: 22000, priceUSD: 22,
-    duration: '10 semanas', lessons: 30, students: 890,
-    rating: 4.8, reviews: 224,
+    price: 22000,
+    priceUSD: 22,
+    duration: '10 semanas',
+    lessons: 30,
+    students: 890,
+    rating: 4.8,
+    reviews: 224,
     color: '#e8d5e8',
     description: 'Domina la moldería y confección de prendas femeninas: vestidos, blusas, sacos y más.',
     modules: [
@@ -37,17 +48,23 @@ export const COURSES = [
       { title: 'Prendas inferiores', lessons: ['Falda lápiz', 'Pantalón pinzado', 'Short con vuelo', 'Culotte'] },
       { title: 'Prendas completas', lessons: ['Vestido camisero', 'Vestido envolvente', 'Jumpsuit', 'Proyecto final'] },
     ],
-    enrolled: true, progress: 30,
+    enrolled: true,
+    progress: 30,
   },
   {
-    id: 3, slug: 'bebes-y-ninos',
+    id: 3,
+    slug: 'bebes-y-ninos',
     title: 'Bebés y Niños',
     subtitle: 'Cosé con amor para los más chiquitos',
     category: 'Bebés y Niños',
     level: 'Principiante',
-    price: 16500, priceUSD: 17,
-    duration: '6 semanas', lessons: 18, students: 2100,
-    rating: 5.0, reviews: 512,
+    price: 16500,
+    priceUSD: 17,
+    duration: '6 semanas',
+    lessons: 18,
+    students: 2100,
+    rating: 5.0,
+    reviews: 512,
     color: '#d4e8d4',
     description: 'Aprende a confeccionar ropa para bebés y niños con moldería específica para cada etapa.',
     modules: [
@@ -55,17 +72,23 @@ export const COURSES = [
       { title: 'Niños 2-8 años', lessons: ['Remera básica', 'Pantalón con elástico', 'Vestido con volados', 'Pijama'] },
       { title: 'Niños 8-16 años', lessons: ['Remera colegial', 'Jogger', 'Bermuda', 'Campera'] },
     ],
-    enrolled: false, progress: 0,
+    enrolled: false,
+    progress: 0,
   },
   {
-    id: 4, slug: 'accesorios-bolsos',
+    id: 4,
+    slug: 'accesorios-bolsos',
     title: 'Accesorios y Bolsos',
     subtitle: 'Crea tus propias carteras, bolsos y más',
     category: 'Accesorios y Deco',
     level: 'Principiante',
-    price: 14000, priceUSD: 14,
-    duration: '5 semanas', lessons: 15, students: 670,
-    rating: 4.7, reviews: 189,
+    price: 14000,
+    priceUSD: 14,
+    duration: '5 semanas',
+    lessons: 15,
+    students: 670,
+    rating: 4.7,
+    reviews: 189,
     color: '#e8e4d4',
     description: 'Desde una cartera acolchada hasta una mochila resistente. Aprende a hacer tus propios accesorios.',
     modules: [
@@ -73,36 +96,49 @@ export const COURSES = [
       { title: 'Bolsos medianos', lessons: ['Tote bag', 'Bolso bucket', 'Cartera con asa', 'Bolso mensajero'] },
       { title: 'Mochilas y accesorios grandes', lessons: ['Mochila básica', 'Mochila escolar', 'Porta documentos', 'Proyecto final'] },
     ],
-    enrolled: false, progress: 0,
+    enrolled: false,
+    progress: 0,
   },
   {
-    id: 5, slug: 'club-vecka',
+    id: 5,
+    slug: 'club-vecka',
     title: 'Club VeCKA',
     subtitle: 'Membresía mensual — cosé con propósito',
     category: 'Membresía',
     level: 'Todos los niveles',
-    price: 8500, priceUSD: 9,
-    duration: 'Mensual', lessons: '∞', students: 3400,
-    rating: 4.9, reviews: 890,
+    price: 8500,
+    priceUSD: 9,
+    duration: 'Mensual',
+    lessons: '∞',
+    students: 3400,
+    rating: 4.9,
+    reviews: 890,
     color: '#f4d4d4',
     isMembership: true,
     description: 'Acceso ilimitado a todos los talleres del mes + molde exclusivo + comunidad privada.',
     modules: [],
-    enrolled: true, progress: 100,
+    enrolled: true,
+    progress: 100,
   },
   {
-    id: 6, slug: 'molderia-industrial',
+    id: 6,
+    slug: 'molderia-industrial',
     title: 'Moldería Industrial',
     subtitle: 'Profesionalizate con técnicas industriales',
     category: 'Avanzado',
     level: 'Avanzado',
-    price: 28000, priceUSD: 28,
-    duration: '12 semanas', lessons: 36, students: 340,
-    rating: 4.9, reviews: 98,
+    price: 28000,
+    priceUSD: 28,
+    duration: '12 semanas',
+    lessons: 36,
+    students: 340,
+    rating: 4.9,
+    reviews: 98,
     color: '#d4d8e8',
     description: 'Técnicas profesionales de moldería industrial: trazo, graduación de talles y producción en serie.',
     modules: [],
-    enrolled: false, progress: 0,
+    enrolled: false,
+    progress: 0,
   },
 ];
 
@@ -121,9 +157,15 @@ const INITIAL_PRODUCTS = [
 export const PRODUCTS = INITIAL_PRODUCTS;
 
 const MOCK_USER_STUDENT = {
-  id: 1, name: 'María González', email: 'maria@gmail.com',
-  avatar: 'MG', role: 'student', memberSince: 'Marzo 2024',
-  coursesEnrolled: 3, completedLessons: 28, certificates: 0,
+  id: 1,
+  name: 'María González',
+  email: 'maria@gmail.com',
+  avatar: 'MG',
+  role: 'student',
+  memberSince: 'Marzo 2024',
+  coursesEnrolled: 3,
+  completedLessons: 28,
+  certificates: 0,
   purchases: [
     { id: 'ORD-001', date: '15 Mar 2026', items: 'Molde Remera Básica Adulto', total: 1800, status: 'Completado', currency: 'ARS' },
     { id: 'ORD-002', date: '02 Feb 2026', items: 'Cose desde Cero + Indumentaria Femenina', total: 40500, status: 'Completado', currency: 'ARS' },
@@ -134,26 +176,118 @@ const MOCK_USER_STUDENT = {
 export const MOCK_USER_STUDENT_DATA = MOCK_USER_STUDENT;
 
 const MOCK_USER_ADMIN = {
-  id: 99, name: 'Vero (Admin)', email: 'vero@vecka.com.ar',
-  avatar: 'V', role: 'admin',
+  id: 99,
+  name: 'Vero (Admin)',
+  email: 'vero@vecka.com.ar',
+  avatar: 'V',
+  role: 'admin',
 };
 
 const VeckaContext = createContext(null);
+
+const slugify = (value) => value
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+const createUniqueSlug = (title, list, currentId = null) => {
+  const base = slugify(title) || `curso-${Date.now()}`;
+  let slug = base;
+  let suffix = 2;
+
+  while (list.some((item) => item.slug === slug && item.id !== currentId)) {
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+};
+
+const parseNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const sanitizeModules = (modules = []) => modules
+  .map((module, index) => ({
+    title: module.title?.trim() || `Módulo ${index + 1}`,
+    lessons: Array.isArray(module.lessons)
+      ? module.lessons.map((lesson) => lesson.trim()).filter(Boolean)
+      : [],
+  }))
+  .filter((module) => module.title || module.lessons.length > 0);
+
+const normalizeCoursePayload = (payload, existingCourse, list) => {
+  const modules = sanitizeModules(payload.modules);
+
+  return {
+    id: existingCourse?.id ?? Math.max(0, ...list.map((course) => Number(course.id) || 0)) + 1,
+    slug: createUniqueSlug(payload.title, list, existingCourse?.id ?? null),
+    title: payload.title.trim(),
+    subtitle: payload.subtitle.trim(),
+    category: payload.category.trim() || 'General',
+    level: payload.level.trim() || 'Todos los niveles',
+    price: parseNumber(payload.price, 0),
+    priceUSD: parseNumber(payload.priceUSD, 0),
+    duration: payload.duration.trim() || 'A definir',
+    lessons: payload.lessons === '∞' ? '∞' : parseNumber(payload.lessons, modules.reduce((sum, module) => sum + module.lessons.length, 0)),
+    students: parseNumber(payload.students, 0),
+    rating: parseNumber(payload.rating, 5),
+    reviews: parseNumber(payload.reviews, 0),
+    color: payload.color || '#f4e4d4',
+    description: payload.description.trim(),
+    modules,
+    enrolled: existingCourse?.enrolled ?? false,
+    progress: existingCourse?.progress ?? 0,
+    isMembership: Boolean(payload.isMembership),
+  };
+};
+
+const normalizeProductPayload = (payload, existingProduct, list) => {
+  const isDownloadable = payload.productType === 'downloadable';
+  const baseCategory = isDownloadable ? 'Moldes Digitales' : 'Mercería VeCKA';
+
+  return {
+    id: existingProduct?.id ?? Math.max(0, ...list.map((product) => Number(product.id) || 0)) + 1,
+    title: payload.title.trim(),
+    category: payload.category || baseCategory,
+    subcategory: payload.subcategory.trim() || (isDownloadable ? 'Descargable' : 'Producto Físico'),
+    price: parseNumber(payload.price, 0),
+    priceUSD: parseNumber(payload.priceUSD, 0),
+    format: isDownloadable ? 'PDF' : 'Físico',
+    sizes: payload.sizes.trim() || 'Único',
+    color: payload.color || '#f4e4d4',
+    badge: payload.badge?.trim() || null,
+    productType: payload.productType,
+    deliveryMethod: isDownloadable ? 'descarga' : 'correo',
+    shippingCost: isDownloadable ? 0 : parseNumber(payload.shippingCost, 0),
+    shippingDays: isDownloadable ? '' : payload.shippingDays.trim(),
+    downloadUrl: isDownloadable ? payload.downloadUrl.trim() : '',
+  };
+};
 
 export function VeckaProvider({ children }) {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(null);
   const [currency, setCurrency] = useState('ARS');
   const [cart, setCart] = useState([]);
+  const [courses, setCourses] = useState(COURSES);
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
   const [notification, setNotification] = useState(null);
 
+  const selectedCourse = useMemo(
+    () => courses.find((course) => course.id === selectedCourseId) ?? null,
+    [courses, selectedCourseId],
+  );
+
   const navigate = (p, extra = {}) => {
     setPage(p);
-    if (extra.course) setSelectedCourse(extra.course);
+    if (extra.course) setSelectedCourseId(extra.course.id);
     window.scrollTo(0, 0);
   };
 
@@ -163,43 +297,75 @@ export function VeckaProvider({ children }) {
   };
 
   const addToCart = (item) => {
-    setCart(prev => {
-      const exists = prev.find(c => c.id === item.id);
-      if (exists) { notify('Ya está en tu carrito'); return prev; }
+    setCart((prev) => {
+      const exists = prev.find((cartItem) => cartItem.id === item.id);
+      if (exists) {
+        notify('Ya está en tu carrito');
+        return prev;
+      }
       notify(`"${item.title}" agregado al carrito ✓`);
       return [...prev, { ...item, qty: 1 }];
     });
     setCartOpen(true);
   };
 
-  const removeFromCart = (id) => setCart(prev => prev.filter(c => c.id !== id));
-  const cartTotal = cart.reduce((s, c) => s + (currency === 'ARS' ? c.price : c.priceUSD), 0);
+  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+  const cartTotal = cart.reduce((sum, item) => sum + (currency === 'ARS' ? item.price : item.priceUSD), 0);
 
-  const createProduct = (payload) => {
-    const id = Math.max(0, ...products.map(p => Number(p.id) || 0)) + 1;
-    const baseCategory = payload.productType === 'downloadable' ? 'Moldes Digitales' : 'Mercería VeCKA';
-    const next = {
-      id,
-      title: payload.title.trim(),
-      category: payload.category || baseCategory,
-      subcategory: payload.subcategory.trim() || (payload.productType === 'downloadable' ? 'Descargable' : 'Producto Físico'),
-      price: Number(payload.price),
-      priceUSD: Number(payload.priceUSD),
-      format: payload.productType === 'downloadable' ? 'PDF' : 'Físico',
-      sizes: payload.sizes.trim() || 'Único',
-      color: payload.color || '#f4e4d4',
-      badge: payload.badge?.trim() || null,
-      productType: payload.productType,
-      deliveryMethod: payload.productType === 'physical' ? 'correo' : 'descarga',
-      shippingCost: payload.productType === 'physical' ? Number(payload.shippingCost || 0) : 0,
-      shippingDays: payload.productType === 'physical' ? payload.shippingDays.trim() : '',
-      downloadUrl: payload.productType === 'downloadable' ? payload.downloadUrl.trim() : '',
-    };
-
-    setProducts(prev => [next, ...prev]);
-    return next;
+  const createCourse = (payload) => {
+    let createdCourse;
+    setCourses((prev) => {
+      createdCourse = normalizeCoursePayload(payload, null, prev);
+      return [createdCourse, ...prev];
+    });
+    return createdCourse;
   };
 
+  const updateCourse = (id, payload) => {
+    let updatedCourse = null;
+
+    setCourses((prev) => prev.map((course) => {
+      if (course.id !== id) return course;
+      updatedCourse = normalizeCoursePayload(payload, course, prev);
+      return updatedCourse;
+    }));
+
+    setCart((prev) => prev.map((item) => (item.id === id ? { ...item, ...updatedCourse } : item)));
+    return updatedCourse;
+  };
+
+  const deleteCourse = (id) => {
+    setCourses((prev) => prev.filter((course) => course.id !== id));
+    setCart((prev) => prev.filter((item) => item.id !== id));
+    setSelectedCourseId((prev) => (prev === id ? null : prev));
+  };
+
+  const createProduct = (payload) => {
+    let createdProduct;
+    setProducts((prev) => {
+      createdProduct = normalizeProductPayload(payload, null, prev);
+      return [createdProduct, ...prev];
+    });
+    return createdProduct;
+  };
+
+  const updateProduct = (id, payload) => {
+    let updatedProduct = null;
+
+    setProducts((prev) => prev.map((product) => {
+      if (product.id !== id) return product;
+      updatedProduct = normalizeProductPayload(payload, product, prev);
+      return updatedProduct;
+    }));
+
+    setCart((prev) => prev.map((item) => (item.id === id ? { ...item, ...updatedProduct } : item)));
+    return updatedProduct;
+  };
+
+  const deleteProduct = (id) => {
+    setProducts((prev) => prev.filter((product) => product.id !== id));
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const login = (role) => {
     setUser(role === 'admin' ? MOCK_USER_ADMIN : MOCK_USER_STUDENT);
@@ -208,27 +374,50 @@ export function VeckaProvider({ children }) {
     if (role === 'admin') navigate('admin');
     else navigate('cuenta');
   };
-  const logout = () => { setUser(null); navigate('home'); notify('Sesión cerrada'); };
 
-  const fmt = (ars, usd) => currency === 'ARS'
+  const logout = () => {
+    setUser(null);
+    navigate('home');
+    notify('Sesión cerrada');
+  };
+
+  const fmt = (ars, usd) => (currency === 'ARS'
     ? `$${Number(ars).toLocaleString('es-AR')}`
-    : `USD ${Number(usd).toFixed(2)}`;
+    : `USD ${Number(usd).toFixed(2)}`);
 
   return (
-    <VeckaContext.Provider value={{
-      page, navigate,
-      user, login, logout,
-      currency, setCurrency,
-      cart, addToCart, removeFromCart, cartTotal,
-      cartOpen, setCartOpen,
-      authModal, setAuthModal,
-      notification,
-      selectedCourse, setSelectedCourse,
-      courses: COURSES,
-      products,
-      createProduct,
-      fmt, notify,
-    }}>
+    <VeckaContext.Provider
+      value={{
+        page,
+        navigate,
+        user,
+        login,
+        logout,
+        currency,
+        setCurrency,
+        cart,
+        addToCart,
+        removeFromCart,
+        cartTotal,
+        cartOpen,
+        setCartOpen,
+        authModal,
+        setAuthModal,
+        notification,
+        selectedCourse,
+        setSelectedCourse: (course) => setSelectedCourseId(course?.id ?? null),
+        courses,
+        products,
+        createCourse,
+        updateCourse,
+        deleteCourse,
+        createProduct,
+        updateProduct,
+        deleteProduct,
+        fmt,
+        notify,
+      }}
+    >
       {children}
     </VeckaContext.Provider>
   );
