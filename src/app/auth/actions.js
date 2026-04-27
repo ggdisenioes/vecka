@@ -14,7 +14,25 @@ export async function signIn(formData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`)
   }
 
-  redirect('/admin')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?error=No%20se%20pudo%20recuperar%20la%20sesion')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profile?.role === 'admin' || profile?.role === 'editorial') {
+    redirect('/admin')
+  }
+
+  redirect('/cuenta')
 }
 
 export async function signOut() {
