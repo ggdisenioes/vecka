@@ -18,7 +18,7 @@ function NavLink({ label, onClick }) {
 }
 
 export default function Header() {
-  const { navigate, user, cart, setCartOpen, setAuthModal, currency, setCurrency, logout } = useVecka();
+  const { navigate, user, cart, setCartOpen, openAuthModal, currency, setCurrency, logout } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -109,7 +109,7 @@ export default function Header() {
                     <Icon name="chevronDown" size={14} color="#5e9e8a" />
                   </button>
                 ) : (
-                  <Btn size="sm" onClick={() => setAuthModal('login')}>Iniciar sesión</Btn>
+                  <Btn size="sm" onClick={() => openAuthModal('login')}>Iniciar sesión</Btn>
                 )}
                 {userMenuOpen && user && (
                   <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid oklch(90% 0.012 60)', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,.12)', minWidth: 180, overflow: 'hidden', zIndex: 999 }}>
@@ -177,7 +177,7 @@ export default function Header() {
                   <Btn size="sm" variant="ghost" onClick={() => { logout(); setMobileMenuOpen(false); }}>Salir</Btn>
                 </div>
               ) : (
-                <Btn size="sm" onClick={() => { setAuthModal('login'); setMobileMenuOpen(false); }}>Iniciar sesión</Btn>
+                <Btn size="sm" onClick={() => { openAuthModal('login'); setMobileMenuOpen(false); }}>Iniciar sesión</Btn>
               )}
             </div>
           </div>

@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { useVecka } from '../context/VeckaContext';
 import { Btn, inputStyle } from './Primitives';
+import { signIn, signUp } from '@/app/auth/actions';
 
 export default function AuthModal() {
-  const { authModal, setAuthModal, login } = useVecka();
+  const { authModal, closeAuthModal, authError, authSuccess, authNext } = useVecka();
   const [tab, setTab] = useState('login');
-  const [email, setEmail] = useState('');
-  const [pass, setPass] = useState('');
 
   if (!authModal) return null;
 
   return (
     <>
-      <div onClick={() => setAuthModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1200 }} />
+      <div onClick={closeAuthModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 1200 }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#fff', borderRadius: 20, padding: 40, width: 420, zIndex: 1201, boxShadow: '0 24px 80px rgba(0,0,0,.2)' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <img src="/logo-VeCKA.jpg" alt="VeCKA" style={{ height: 56, width: 56, objectFit: 'cover', borderRadius: 10, margin: '0 auto 8px', display: 'block' }} />
@@ -31,20 +30,23 @@ export default function AuthModal() {
           ))}
         </div>
 
-        {/* Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
-          <input placeholder="Contraseña" type="password" value={pass} onChange={e => setPass(e.target.value)} style={inputStyle} />
-          <Btn size="lg" style={{ width: '100%', justifyContent: 'center' }} onClick={() => login('student')}>
+        {(authError || authSuccess) && (
+          <div style={{ marginBottom: 16, borderRadius: 10, padding: '12px 14px', fontFamily: "'DM Sans', sans-serif", fontSize: 12, background: authError ? '#fce8e1' : '#e7f4ed', color: authError ? '#8a3b26' : '#2f6b4f' }}>
+            {authError || authSuccess}
+          </div>
+        )}
+
+        <form action={tab === 'login' ? signIn : signUp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {tab === 'register' && (
+            <input name="full_name" placeholder="Nombre completo" style={inputStyle} />
+          )}
+          <input name="email" placeholder="Email" required type="email" style={inputStyle} />
+          <input name="password" placeholder="Contraseña" required type="password" style={inputStyle} />
+          <input name="next" type="hidden" value={authNext} />
+          <Btn size="lg" style={{ width: '100%', justifyContent: 'center' }}>
             {tab === 'login' ? 'Entrar' : 'Crear cuenta'}
           </Btn>
-        </div>
-
-        <div style={{ marginTop: 20, textAlign: 'center', fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(52% 0.018 50)' }}>Demo:</div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-          <Btn size="sm" variant="outline" onClick={() => login('student')}>Entrar como Alumna</Btn>
-          <Btn size="sm" variant="ghost" onClick={() => login('admin')}>Entrar como Admin</Btn>
-        </div>
+        </form>
       </div>
     </>
   );

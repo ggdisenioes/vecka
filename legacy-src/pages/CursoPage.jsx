@@ -122,7 +122,7 @@ function countModuleDownloads(module) {
 }
 
 export default function CursoPage() {
-  const { selectedCourse, navigate, addToCart, fmt, user, setAuthModal } = useVecka();
+  const { selectedCourse, navigate, addToCart, fmt, user, openAuthModal } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const { ref, visible } = useAnimateOnScroll(0.05);
   const course = selectedCourse;
@@ -421,7 +421,7 @@ export default function CursoPage() {
                   : <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(0,0,0,.3)', fontStyle: 'italic' }}>Preview del curso</div>}
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 700, color: '#5e9e8a', marginBottom: 14 }}>{fmt(course.price, course.priceUSD)}</div>
-              <Btn size="lg" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={() => { if (!user) setAuthModal('login'); else addToCart(course); }}>
+              <Btn size="lg" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={() => { if (!user) openAuthModal('login'); else addToCart(course); }}>
                 {course.isMembership ? 'Unirme al Club VeCKA' : 'Inscribirme ahora'}
               </Btn>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -438,7 +438,7 @@ export default function CursoPage() {
         {isTablet && (
           <div style={{ maxWidth: 1280, margin: '24px auto 0', background: 'rgba(255,255,255,.08)', borderRadius: 14, padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#97ceb8' }}>{fmt(course.price, course.priceUSD)}</div>
-            <Btn size="lg" onClick={() => { if (!user) setAuthModal('login'); else addToCart(course); }}>
+            <Btn size="lg" onClick={() => { if (!user) openAuthModal('login'); else addToCart(course); }}>
               {course.isMembership ? 'Unirme al Club' : 'Inscribirme'}
             </Btn>
           </div>

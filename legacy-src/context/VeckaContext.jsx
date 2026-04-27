@@ -1,5 +1,5 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export const COURSES = [
   {
@@ -307,6 +307,7 @@ export function VeckaProvider({
   initialSelectedCourseId = null,
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(initialPage);
   const [user, setUser] = useState(initialUser);
   const [currency, setCurrency] = useState('ARS');
@@ -316,12 +317,52 @@ export function VeckaProvider({
   const [selectedCourseId, setSelectedCourseId] = useState(initialSelectedCourseId);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
+  const [authNext, setAuthNext] = useState('/');
   const [notification, setNotification] = useState(null);
 
   const selectedCourse = useMemo(
     () => courses.find((course) => course.id === selectedCourseId) ?? null,
     [courses, selectedCourseId],
   );
+
+  useEffect(() => {
+    const auth = searchParams.get('auth');
+    const error = searchParams.get('error');
+    const success = searchParams.get('success');
+    const next = searchParams.get('next');
+
+    setAuthModal(auth === 'login' ? 'login' : null);
+    setAuthError(error || '');
+    setAuthSuccess(success || '');
+    setAuthNext(next || (typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/'));
+  }, [searchParams]);
+
+  const cleanAuthQuery = () => {
+    if (typeof window === 'undefined') return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('auth');
+    url.searchParams.delete('error');
+    url.searchParams.delete('success');
+    url.searchParams.delete('next');
+    router.replace(`${url.pathname}${url.search}`, { scroll: false });
+  };
+
+  const openAuthModal = (mode = 'login', nextPath = null) => {
+    setAuthModal(mode);
+    setAuthError('');
+    setAuthSuccess('');
+    setAuthNext(nextPath || (typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/'));
+  };
+
+  const closeAuthModal = () => {
+    setAuthModal(null);
+    setAuthError('');
+    setAuthSuccess('');
+    cleanAuthQuery();
+  };
 
   const navigate = (p, extra = {}) => {
     setPage(p);
@@ -406,14 +447,6 @@ export function VeckaProvider({
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const login = (role) => {
-    setUser(role === 'admin' ? MOCK_USER_ADMIN : MOCK_USER_STUDENT);
-    setAuthModal(null);
-    notify(`¡Bienvenida, ${role === 'admin' ? 'Vero' : 'María'}!`);
-    if (role === 'admin') navigate('admin');
-    else navigate('cuenta');
-  };
-
   const logout = () => {
     setUser(null);
     if (typeof window !== 'undefined') {
@@ -431,7 +464,6 @@ export function VeckaProvider({
         page,
         navigate,
         user,
-        login,
         logout,
         currency,
         setCurrency,
@@ -442,7 +474,14 @@ export function VeckaProvider({
         cartOpen,
         setCartOpen,
         authModal,
-        setAuthModal,
+        openAuthModal,
+        closeAuthModal,
+        authError,
+        setAuthError,
+        authSuccess,
+        setAuthSuccess,
+        authNext,
+        setAuthNext,
         notification,
         selectedCourse,
         setSelectedCourse: (course) => setSelectedCourseId(course?.id ?? null),
