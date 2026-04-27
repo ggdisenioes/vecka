@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { uploadLessonAttachment } from '@/lib/admin-media'
 
 function redirectBack(request) {
   const referer = request.headers.get('referer')
@@ -23,32 +24,7 @@ export async function POST(request) {
   }
 
   const supabase = getSupabaseAdmin()
-  const bucketName = 'lesson-assets'
-  const safeName = file.name.replace(/\s+/g, '-').toLowerCase()
-  const storagePath = `${lessonId}/${Date.now()}-${safeName}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-
-  const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, buffer, {
-    contentType: file.type || 'application/octet-stream',
-    upsert: false,
-  })
-
-  if (uploadError) {
-    throw uploadError
-  }
-
-  const { error: insertError } = await supabase.from('lesson_attachments').insert({
-    lesson_id: lessonId,
-    bucket_name: bucketName,
-    storage_path: storagePath,
-    file_name: file.name,
-    mime_type: file.type || 'application/octet-stream',
-    size_bytes: file.size || 0,
-  })
-
-  if (insertError) {
-    throw insertError
-  }
+  await uploadLessonAttachment({ file, lessonId, supabase })
 
   revalidatePath('/admin')
   revalidatePath('/admin/editorial')

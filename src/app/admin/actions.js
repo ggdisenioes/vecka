@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { requireRoles } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { normalizeLessonVideoFields } from '@/lib/vimeo'
+import { assignUploadedVimeoVideo, uploadLessonAttachments } from '@/lib/admin-media'
+import { normalizeLessonVideoFields, normalizeVideoFields } from '@/lib/vimeo'
 
 function slugify(value) {
   return value
@@ -86,6 +87,135 @@ function revalidateAll() {
   revalidatePath('/courses')
   revalidatePath('/courses/[slug]', 'page')
   revalidatePath('/products')
+}
+
+export async function createCourseWithStructure(formData) {
+  await requireRoles(['admin', 'editorial'])
+  const supabase = getSupabaseAdmin()
+  const title = requireText(formData.get('title'), 'Course title')
+  const slug = await uniqueSlug('courses', title)
+  const rawModules = String(formData.get('modules_json') || '[]')
+
+  let modules
+  try {
+    modules = JSON.parse(rawModules)
+  } catch {
+    throw new Error('Invalid modules payload')
+  }
+
+  if (!Array.isArray(modules) || modules.length === 0) {
+    throw new Error('Add at least one module')
+  }
+
+  const { data: course, error: courseError } = await supabase
+    .from('courses')
+    .insert({
+      slug,
+      title,
+      subtitle: String(formData.get('subtitle') || '').trim(),
+      description: String(formData.get('description') || '').trim(),
+      category: String(formData.get('category') || '').trim(),
+      level: String(formData.get('level') || '').trim(),
+      duration_label: String(formData.get('duration_label') || '').trim(),
+      price_ars: toInteger(formData.get('price_ars')),
+      price_usd: toFloat(formData.get('price_usd')),
+      status: String(formData.get('status') || 'draft'),
+      visibility: String(formData.get('visibility') || 'private'),
+      cover_image_url: String(formData.get('cover_image_url') || '').trim(),
+      is_membership: formData.get('is_membership') === 'on',
+    })
+    .select('id')
+    .single()
+
+  if (courseError) throw courseError
+
+  for (const [moduleIndex, moduleInput] of modules.entries()) {
+    const moduleTitle = requireText(moduleInput.title, `Module ${moduleIndex + 1} title`)
+    const moduleVideoFields = normalizeVideoFields(moduleInput.videoProvider, {
+      externalVideoUrl: moduleInput.externalVideoUrl,
+      vimeoUrl: moduleInput.vimeoUrl,
+    })
+
+    const { data: module, error: moduleError } = await supabase
+      .from('course_modules')
+      .insert({
+        course_id: course.id,
+        description: String(moduleInput.description || '').trim(),
+        position: moduleIndex + 1,
+        title: moduleTitle,
+        ...moduleVideoFields,
+      })
+      .select('id')
+      .single()
+
+    if (moduleError) throw moduleError
+
+    const moduleVideoFile = formData.get(`module_video_${moduleInput.key}`)
+    if (moduleVideoFile && typeof moduleVideoFile !== 'string' && moduleVideoFile.size > 0) {
+      await assignUploadedVimeoVideo({
+        file: moduleVideoFile,
+        supabase,
+        targetId: module.id,
+        targetType: 'module',
+        title: moduleTitle,
+      })
+    }
+
+    if (!Array.isArray(moduleInput.lessons) || moduleInput.lessons.length === 0) {
+      throw new Error(`Module "${moduleTitle}" needs at least one lesson`)
+    }
+
+    for (const [lessonIndex, lessonInput] of moduleInput.lessons.entries()) {
+      const lessonTitle = requireText(lessonInput.title, `Lesson ${lessonIndex + 1} title`)
+      const lessonVideoFields = normalizeLessonVideoFields(lessonInput.videoProvider, {
+        externalVideoUrl: lessonInput.externalVideoUrl,
+        vimeoUrl: lessonInput.vimeoUrl,
+      })
+
+      const { data: lesson, error: lessonError } = await supabase
+        .from('course_lessons')
+        .insert({
+          body: String(lessonInput.body || '').trim(),
+          is_preview: Boolean(lessonInput.isPreview),
+          module_id: module.id,
+          position: lessonIndex + 1,
+          slug: await uniqueLessonSlug(module.id, lessonTitle),
+          status: String(lessonInput.status || 'draft'),
+          summary: String(lessonInput.summary || '').trim(),
+          title: lessonTitle,
+          ...lessonVideoFields,
+        })
+        .select('id')
+        .single()
+
+      if (lessonError) throw lessonError
+
+      const lessonVideoFile = formData.get(`lesson_video_${lessonInput.key}`)
+      if (lessonVideoFile && typeof lessonVideoFile !== 'string' && lessonVideoFile.size > 0) {
+        await assignUploadedVimeoVideo({
+          file: lessonVideoFile,
+          supabase,
+          targetId: lesson.id,
+          targetType: 'lesson',
+          title: lessonTitle,
+        })
+      }
+
+      const lessonAttachments = formData
+        .getAll(`lesson_attachments_${lessonInput.key}`)
+        .filter((file) => typeof file !== 'string' && file.size > 0)
+
+      if (lessonAttachments.length > 0) {
+        await uploadLessonAttachments({
+          files: lessonAttachments,
+          lessonId: lesson.id,
+          supabase,
+        })
+      }
+    }
+  }
+
+  revalidateAll()
 }
 
 export async function createCourse(formData) {
@@ -182,10 +312,15 @@ export async function updateModule(formData) {
   const supabase = getSupabaseAdmin()
   const id = String(formData.get('id'))
   const title = requireText(formData.get('title'), 'Module title')
+  const videoFields = normalizeVideoFields(formData.get('video_provider'), {
+    externalVideoUrl: formData.get('external_video_url'),
+    vimeoUrl: formData.get('vimeo_url'),
+  })
   const { error } = await supabase.from('course_modules').update({
     title,
     description: String(formData.get('description') || '').trim(),
     position: toInteger(formData.get('position'), 1),
+    ...videoFields,
   }).eq('id', id)
 
   if (error) throw error

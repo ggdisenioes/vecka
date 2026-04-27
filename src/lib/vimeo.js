@@ -72,7 +72,7 @@ export function normalizeVimeoUrl(value) {
   return input
 }
 
-export function normalizeLessonVideoFields(videoProvider, values = {}) {
+export function normalizeVideoFields(videoProvider, values = {}) {
   const provider = String(videoProvider || 'none')
   const normalizedVimeoUrl = normalizeVimeoUrl(values.vimeoUrl)
   const normalizedExternalUrl = String(values.externalVideoUrl || '').trim()
@@ -98,6 +98,10 @@ export function normalizeLessonVideoFields(videoProvider, values = {}) {
     vimeo_url: '',
     external_video_url: '',
   }
+}
+
+export function normalizeLessonVideoFields(videoProvider, values = {}) {
+  return normalizeVideoFields(videoProvider, values)
 }
 
 export async function getVimeoVideo(uri) {

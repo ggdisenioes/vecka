@@ -13,6 +13,7 @@ import {
   deleteProduct,
   deleteAttachment,
 } from '@/app/admin/actions'
+import CourseStructureBuilder from '@/components/admin/CourseStructureBuilder'
 import { getAdminDashboardData } from '@/lib/lms'
 import { hasVimeoUploadConfig } from '@/lib/vimeo'
 
@@ -48,6 +49,30 @@ function LessonVideoSummary({ lesson }) {
           <span className="muted" style={{ display: 'block' }}>
             {videoUrl}
           </span>
+          {duration ? <span className="muted" style={{ display: 'block', marginTop: 4 }}>Duracion: {duration}</span> : null}
+        </div>
+        <a href={videoUrl} rel="noreferrer" target="_blank">Abrir video</a>
+      </div>
+    </div>
+  )
+}
+
+function ModuleVideoSummary({ module }) {
+  const videoUrl = module.video_provider === 'vimeo' ? module.vimeo_url : module.external_video_url
+  const duration = formatDuration(module.video_duration_seconds)
+
+  if (!videoUrl) {
+    return <div className="empty" style={{ marginBottom: 16 }}>Todavia no hay video cargado para este modulo.</div>
+  }
+
+  return (
+    <div className="attachment-list" style={{ marginBottom: 16 }}>
+      <div className="attachment-item" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
+        <div>
+          <strong style={{ display: 'block', marginBottom: 4 }}>
+            {module.video_provider === 'vimeo' ? 'Video del módulo en Vimeo' : 'Video externo del módulo'}
+          </strong>
+          <span className="muted" style={{ display: 'block' }}>{videoUrl}</span>
           {duration ? <span className="muted" style={{ display: 'block', marginTop: 4 }}>Duracion: {duration}</span> : null}
         </div>
         <a href={videoUrl} rel="noreferrer" target="_blank">Abrir video</a>
@@ -145,9 +170,25 @@ function ModuleEditor({ module, canUploadToVimeo }) {
             <label>Posición</label>
             <input defaultValue={module.position} min="1" name="position" type="number" />
           </div>
+          <div className="field">
+            <label>Video del módulo</label>
+            <select defaultValue={module.video_provider || 'none'} name="video_provider">
+              <option value="none">None</option>
+              <option value="vimeo">Vimeo</option>
+              <option value="external">External</option>
+            </select>
+          </div>
           <div className="field field-full">
             <label>Descripción</label>
             <textarea defaultValue={module.description || ''} name="description" />
+          </div>
+          <div className="field">
+            <label>Vimeo URL del módulo</label>
+            <input defaultValue={module.vimeo_url || ''} name="vimeo_url" placeholder="https://player.vimeo.com/video/..." />
+          </div>
+          <div className="field">
+            <label>Video externo del módulo</label>
+            <input defaultValue={module.external_video_url || ''} name="external_video_url" placeholder="https://..." />
           </div>
         </div>
         <div className="row-actions">
@@ -160,6 +201,25 @@ function ModuleEditor({ module, canUploadToVimeo }) {
       </form>
 
       <div className="stack" style={{ marginTop: 16 }}>
+        <ModuleVideoSummary module={module} />
+
+        <form action="/api/admin/videos" encType="multipart/form-data" method="post" className="editor">
+          <input name="module_id" type="hidden" value={module.id} />
+          <input name="title" type="hidden" value={module.title} />
+          <div className="field">
+            <label>Subir video del módulo a Vimeo</label>
+            <input accept="video/*" disabled={!canUploadToVimeo} name="file" required={canUploadToVimeo} type="file" />
+          </div>
+          <div className="muted" style={{ marginBottom: 12 }}>
+            {canUploadToVimeo
+              ? 'El archivo se sube a Vimeo y el módulo queda vinculado automáticamente.'
+              : 'Falta configurar VIMEO_ACCESS_TOKEN para la subida directa del módulo.'}
+          </div>
+          <button className="btn btn-secondary" disabled={!canUploadToVimeo} type="submit">
+            Subir video del módulo
+          </button>
+        </form>
+
         {(module.lessons || []).map((lesson) => (
           <div className="editor" key={lesson.id}>
             <form action={updateLesson} className="stack">
@@ -237,10 +297,10 @@ function ModuleEditor({ module, canUploadToVimeo }) {
             <form action="/api/admin/attachments" encType="multipart/form-data" method="post" className="editor">
               <input name="lesson_id" type="hidden" value={lesson.id} />
               <div className="field">
-                <label>Adjuntar archivo</label>
-                <input name="file" required type="file" />
+                <label>Adjuntar PDF</label>
+                <input accept=".pdf,application/pdf" name="file" required type="file" />
               </div>
-              <button className="btn btn-secondary" type="submit">Subir adjunto</button>
+              <button className="btn btn-secondary" type="submit">Subir PDF</button>
             </form>
 
             <div className="attachment-list">
@@ -468,8 +528,10 @@ export default async function EditorialDashboard() {
             </div>
           </div>
 
-          <form action={createCourse} className="editor">
-            <h3>Nuevo curso</h3>
+          <CourseStructureBuilder canUploadToVimeo={canUploadToVimeo} />
+
+          <form action={createCourse} className="editor" style={{ marginTop: 18 }}>
+            <h3>Alta rápida de curso vacío</h3>
             <div className="editor-grid">
               <div className="field">
                 <label>Título</label>
@@ -529,7 +591,7 @@ export default async function EditorialDashboard() {
                 <input name="is_membership" type="checkbox" />
                 Curso membresía
               </label>
-              <button className="btn btn-primary" type="submit">Crear curso</button>
+              <button className="btn btn-primary" type="submit">Crear curso vacío</button>
             </div>
           </form>
 
