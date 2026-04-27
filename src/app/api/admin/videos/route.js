@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { uploadVideoToVimeo } from '@/lib/vimeo'
 
 function redirectBack(request) {
   const referer = request.headers.get('referer')
@@ -16,6 +17,7 @@ export async function POST(request) {
 
   const formData = await request.formData()
   const lessonId = String(formData.get('lesson_id') || '')
+  const title = String(formData.get('title') || '').trim()
   const file = formData.get('file')
 
   if (!lessonId || !file || typeof file === 'string') {
@@ -23,31 +25,24 @@ export async function POST(request) {
   }
 
   const supabase = getSupabaseAdmin()
-  const bucketName = 'lesson-assets'
-  const safeName = file.name.replace(/\s+/g, '-').toLowerCase()
-  const storagePath = `${lessonId}/${Date.now()}-${safeName}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-
-  const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, buffer, {
-    contentType: file.type || 'application/octet-stream',
-    upsert: false,
+  const upload = await uploadVideoToVimeo({
+    description: `Leccion ${lessonId}`,
+    file,
+    title: title || file.name,
   })
 
-  if (uploadError) {
-    throw uploadError
-  }
+  const { error } = await supabase
+    .from('course_lessons')
+    .update({
+      external_video_url: '',
+      video_duration_seconds: upload.durationSeconds || null,
+      video_provider: 'vimeo',
+      vimeo_url: upload.embedUrl,
+    })
+    .eq('id', lessonId)
 
-  const { error: insertError } = await supabase.from('lesson_attachments').insert({
-    lesson_id: lessonId,
-    bucket_name: bucketName,
-    storage_path: storagePath,
-    file_name: file.name,
-    mime_type: file.type || 'application/octet-stream',
-    size_bytes: file.size || 0,
-  })
-
-  if (insertError) {
-    throw insertError
+  if (error) {
+    throw error
   }
 
   revalidatePath('/admin')

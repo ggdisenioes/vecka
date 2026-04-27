@@ -14,6 +14,47 @@ import {
   deleteAttachment,
 } from '@/app/admin/actions'
 import { getAdminDashboardData } from '@/lib/lms'
+import { hasVimeoUploadConfig } from '@/lib/vimeo'
+
+function formatDuration(totalSeconds) {
+  if (!totalSeconds) return ''
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+function LessonVideoSummary({ lesson }) {
+  const videoUrl = lesson.video_provider === 'vimeo' ? lesson.vimeo_url : lesson.external_video_url
+  const duration = formatDuration(lesson.video_duration_seconds)
+
+  if (!videoUrl) {
+    return <div className="empty">Todavia no hay video cargado para esta clase.</div>
+  }
+
+  return (
+    <div className="attachment-list" style={{ marginBottom: 16 }}>
+      <div className="attachment-item" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
+        <div>
+          <strong style={{ display: 'block', marginBottom: 4 }}>
+            {lesson.video_provider === 'vimeo' ? 'Video en Vimeo' : 'Video externo'}
+          </strong>
+          <span className="muted" style={{ display: 'block' }}>
+            {videoUrl}
+          </span>
+          {duration ? <span className="muted" style={{ display: 'block', marginTop: 4 }}>Duracion: {duration}</span> : null}
+        </div>
+        <a href={videoUrl} rel="noreferrer" target="_blank">Abrir video</a>
+      </div>
+    </div>
+  )
+}
 
 function CourseEditor({ course }) {
   return (
@@ -90,7 +131,7 @@ function CourseEditor({ course }) {
   )
 }
 
-function ModuleEditor({ module }) {
+function ModuleEditor({ module, canUploadToVimeo }) {
   return (
     <div className="list-row">
       <form action={updateModule} className="editor">
@@ -172,6 +213,25 @@ function ModuleEditor({ module }) {
                 </label>
                 <button className="btn btn-primary" type="submit">Guardar clase</button>
               </div>
+            </form>
+
+            <LessonVideoSummary lesson={lesson} />
+
+            <form action="/api/admin/videos" encType="multipart/form-data" method="post" className="editor">
+              <input name="lesson_id" type="hidden" value={lesson.id} />
+              <input name="title" type="hidden" value={lesson.title} />
+              <div className="field">
+                <label>Subir video a Vimeo</label>
+                <input accept="video/*" name="file" required={canUploadToVimeo} type="file" />
+              </div>
+              <div className="muted" style={{ marginBottom: 12 }}>
+                {canUploadToVimeo
+                  ? 'El archivo se sube a Vimeo y la clase queda vinculada automaticamente.'
+                  : 'Falta configurar VIMEO_ACCESS_TOKEN en el entorno. Mientras tanto podes pegar una URL manual de Vimeo o un video externo.'}
+              </div>
+              <button className="btn btn-secondary" disabled={!canUploadToVimeo} type="submit">
+                Subir video
+              </button>
             </form>
 
             <form action="/api/admin/attachments" encType="multipart/form-data" method="post" className="editor">
@@ -353,6 +413,7 @@ function ProductEditor({ product }) {
 
 export default async function EditorialDashboard() {
   const { courses, products, metrics } = await getAdminDashboardData()
+  const canUploadToVimeo = hasVimeoUploadConfig()
 
   return (
     <main className="shell admin-layout">
@@ -391,6 +452,11 @@ export default async function EditorialDashboard() {
               <strong>{metrics.products}</strong>
               <span className="muted">productos</span>
             </div>
+          </div>
+          <div className="empty" style={{ marginTop: 18 }}>
+            {canUploadToVimeo
+              ? 'Vimeo esta configurado. Ya podes subir videos de clase directamente desde cada leccion del backoffice.'
+              : 'Vimeo todavia no esta configurado en este entorno. El flujo de clases y modulos funciona igual, pero la subida directa de video se habilita cuando exista VIMEO_ACCESS_TOKEN.'}
           </div>
         </section>
 
@@ -474,7 +540,7 @@ export default async function EditorialDashboard() {
                 <CourseEditor course={course} />
                 <div className="stack" style={{ marginTop: 20 }}>
                   {(course.modules || []).map((module) => (
-                    <ModuleEditor key={module.id} module={module} />
+                    <ModuleEditor canUploadToVimeo={canUploadToVimeo} key={module.id} module={module} />
                   ))}
                   <form action={createModule} className="editor">
                     <input name="course_id" type="hidden" value={course.id} />
