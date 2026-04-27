@@ -200,7 +200,7 @@ export default function AdminPage() {
     setShowProductForm(true);
   };
 
-  const handleSaveCourse = () => {
+  const handleSaveCourse = async () => {
     if (!courseForm.title.trim()) return notify('Completá el nombre del curso', 'error');
     if (!courseForm.subtitle.trim()) return notify('Completá el subtítulo del curso', 'error');
     if (!courseForm.price || Number(courseForm.price) <= 0) return notify('Ingresá un precio en ARS válido', 'error');
@@ -212,15 +212,19 @@ export default function AdminPage() {
       modules: parseModulesInput(courseForm.modulesText),
     };
 
-    if (editingCourseId) {
-      const updatedCourse = updateCourse(editingCourseId, payload);
-      notify(`Curso "${updatedCourse.title}" actualizado correctamente`);
-    } else {
-      const newCourse = createCourse(payload);
-      notify(`Curso "${newCourse.title}" creado correctamente`);
-    }
+    try {
+      if (editingCourseId) {
+        const updatedCourse = await updateCourse(editingCourseId, payload);
+        notify(`Curso "${updatedCourse.title}" actualizado correctamente`);
+      } else {
+        const newCourse = await createCourse(payload);
+        notify(`Curso "${newCourse.title}" creado correctamente`);
+      }
 
-    resetCourseEditor();
+      resetCourseEditor();
+    } catch (error) {
+      notify(error.message || 'No se pudo guardar el curso', 'error');
+    }
   };
 
   const handleSaveProduct = () => {
@@ -245,11 +249,15 @@ export default function AdminPage() {
     resetProductEditor();
   };
 
-  const handleDeleteCourse = (course) => {
+  const handleDeleteCourse = async (course) => {
     if (!window.confirm(`¿Eliminar el curso "${course.title}"? Esta acción no se puede deshacer.`)) return;
-    deleteCourse(course.id);
-    notify(`Curso "${course.title}" eliminado`);
-    if (editingCourseId === course.id) resetCourseEditor();
+    try {
+      await deleteCourse(course.id);
+      notify(`Curso "${course.title}" eliminado`);
+      if (editingCourseId === course.id) resetCourseEditor();
+    } catch (error) {
+      notify(error.message || 'No se pudo eliminar el curso', 'error');
+    }
   };
 
   const handleDeleteProduct = (product) => {
@@ -300,28 +308,6 @@ export default function AdminPage() {
             <div style={{ marginBottom: 24 }}>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 28 : 34, margin: 0 }}>Buen día, Vero ✨</h1>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)', marginTop: 4 }}>Lunes 27 de abril, 2026</p>
-              <div style={{ marginTop: 14 }}>
-                <a
-                  href="/admin/editorial"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '10px 14px',
-                    borderRadius: 10,
-                    background: '#5e9e8a',
-                    color: '#fff',
-                    textDecoration: 'none',
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Abrir backoffice editorial
-                </a>
-              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 16, marginBottom: 24 }}>
               {[

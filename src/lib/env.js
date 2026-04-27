@@ -6,9 +6,6 @@ export const env = {
   supabaseUrl: readEnv('NEXT_PUBLIC_SUPABASE_URL'),
   supabaseAnonKey: readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   supabaseServiceRoleKey: readEnv('SUPABASE_SERVICE_ROLE_KEY'),
-  vimeoAccessToken: readEnv('VIMEO_ACCESS_TOKEN'),
-  vimeoClientId: readEnv('VIMEO_CLIENT_ID'),
-  vimeoClientSecret: readEnv('VIMEO_CLIENT_SECRET'),
 }
 
 export function requireEnv(name, value) {

@@ -393,31 +393,62 @@ export function VeckaProvider({
   const cartTotal = cart.reduce((sum, item) => sum + (currency === 'ARS' ? item.price : item.priceUSD), 0);
 
   const createCourse = (payload) => {
-    let createdCourse;
-    setCourses((prev) => {
-      createdCourse = normalizeCoursePayload(payload, null, prev);
-      return [createdCourse, ...prev];
+    return fetch('/api/legacy-admin/courses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo crear el curso');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.location.assign('/admin');
+      }
+
+      return { id: data.course?.id, slug: data.course?.slug, title: data.course?.title || payload.title };
     });
-    return createdCourse;
   };
 
   const updateCourse = (id, payload) => {
-    let updatedCourse = null;
+    return fetch('/api/legacy-admin/courses', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id, ...payload }),
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el curso');
+      }
 
-    setCourses((prev) => prev.map((course) => {
-      if (course.id !== id) return course;
-      updatedCourse = normalizeCoursePayload(payload, course, prev);
-      return updatedCourse;
-    }));
+      if (typeof window !== 'undefined') {
+        window.location.assign('/admin');
+      }
 
-    setCart((prev) => prev.map((item) => (item.id === id ? { ...item, ...updatedCourse } : item)));
-    return updatedCourse;
+      return { id, title: payload.title };
+    });
   };
 
   const deleteCourse = (id) => {
-    setCourses((prev) => prev.filter((course) => course.id !== id));
-    setCart((prev) => prev.filter((item) => item.id !== id));
-    setSelectedCourseId((prev) => (prev === id ? null : prev));
+    return fetch(`/api/legacy-admin/courses?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo eliminar el curso');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.location.assign('/admin');
+      }
+
+      return true;
+    });
   };
 
   const createProduct = (payload) => {
