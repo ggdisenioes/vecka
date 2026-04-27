@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export const COURSES = [
   {
@@ -268,14 +269,51 @@ const normalizeProductPayload = (payload, existingProduct, list) => {
   };
 };
 
-export function VeckaProvider({ children }) {
-  const [page, setPage] = useState('home');
-  const [user, setUser] = useState(null);
+const pageToPath = (page, extra = {}, selectedCourse = null) => {
+  switch (page) {
+    case 'home':
+      return '/';
+    case 'escuela':
+      return '/courses';
+    case 'tienda':
+      return '/products';
+    case 'curso': {
+      const course = extra.course || selectedCourse;
+      return course?.slug ? `/courses/${course.slug}` : '/courses';
+    }
+    case 'checkout':
+      return '/checkout';
+    case 'cuenta':
+      return '/cuenta';
+    case 'admin':
+      return '/admin';
+    case 'blog':
+      return '/blog';
+    case 'sobre':
+      return '/sobre';
+    case 'contacto':
+      return '/contacto';
+    default:
+      return '/';
+  }
+};
+
+export function VeckaProvider({
+  children,
+  initialPage = 'home',
+  initialUser = null,
+  initialCourses = COURSES,
+  initialProducts = INITIAL_PRODUCTS,
+  initialSelectedCourseId = null,
+}) {
+  const router = useRouter();
+  const [page, setPage] = useState(initialPage);
+  const [user, setUser] = useState(initialUser);
   const [currency, setCurrency] = useState('ARS');
   const [cart, setCart] = useState([]);
-  const [courses, setCourses] = useState(COURSES);
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [courses, setCourses] = useState(initialCourses);
+  const [products, setProducts] = useState(initialProducts);
+  const [selectedCourseId, setSelectedCourseId] = useState(initialSelectedCourseId);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -288,7 +326,8 @@ export function VeckaProvider({ children }) {
   const navigate = (p, extra = {}) => {
     setPage(p);
     if (extra.course) setSelectedCourseId(extra.course.id);
-    window.scrollTo(0, 0);
+    router.push(pageToPath(p, extra, extra.course || selectedCourse));
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
   };
 
   const notify = (msg, type = 'success') => {

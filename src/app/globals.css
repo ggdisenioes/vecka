@@ -20,24 +20,35 @@
 html {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--ink);
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: Georgia, 'Times New Roman', serif;
-  background:
-    radial-gradient(circle at top left, rgba(207, 227, 217, 0.75), transparent 34%),
-    radial-gradient(circle at right 20%, rgba(255, 214, 186, 0.55), transparent 26%),
-    var(--bg);
-  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #faf5f8;
+  color: oklch(18% 0.022 50);
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #97ceb8;
+  border-radius: 3px;
 }
 
 img {
@@ -54,6 +65,92 @@ select {
 
 button {
   cursor: pointer;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-18px) rotate(2deg); }
+  66% { transform: translateY(-9px) rotate(-1.5deg); }
+}
+
+@keyframes floatB {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50% { transform: translateY(-14px) rotate(-3deg) scale(1.04); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  55% { transform: scale(1.08); opacity: 1; }
+  80% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes waveMove {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.12); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.08); }
+  56% { transform: scale(1); }
+}
+
+input:focus {
+  outline: 2px solid #5e9e8a;
+  outline-offset: 1px;
+}
+
+button:focus-visible {
+  outline: 2px solid #5e9e8a;
+  outline-offset: 2px;
 }
 
 .shell {

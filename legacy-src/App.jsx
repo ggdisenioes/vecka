@@ -1,3 +1,5 @@
+'use client';
+
 import { VeckaProvider, useVecka } from './context/VeckaContext';
 import Header from './components/Header';
 import CartSidebar from './components/CartSidebar';
@@ -46,9 +48,21 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App({
+  initialPage = 'home',
+  initialUser = null,
+  initialCourses,
+  initialProducts,
+  initialSelectedCourseId = null,
+}) {
   return (
-    <VeckaProvider>
+    <VeckaProvider
+      initialCourses={initialCourses}
+      initialPage={initialPage}
+      initialProducts={initialProducts}
+      initialSelectedCourseId={initialSelectedCourseId}
+      initialUser={initialUser}
+    >
       <AppContent />
     </VeckaProvider>
   );

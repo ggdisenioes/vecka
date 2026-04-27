@@ -3,7 +3,7 @@ import { getLegacyFrontData } from '@/lib/legacy-front'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CoursesPage() {
+export default async function EscuelaPage() {
   const data = await getLegacyFrontData()
 
   return (

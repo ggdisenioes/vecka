@@ -3,13 +3,13 @@ import { getLegacyFrontData } from '@/lib/legacy-front'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CoursesPage() {
+export default async function TiendaPage() {
   const data = await getLegacyFrontData()
 
   return (
     <LegacyApp
       initialCourses={data.courses}
-      initialPage="escuela"
+      initialPage="tienda"
       initialProducts={data.products}
       initialUser={data.user}
     />
