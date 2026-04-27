@@ -50,8 +50,10 @@ const emptyProductForm = () => ({
   color: '#f4e4d4',
 });
 
+const lessonLabel = (lesson) => (typeof lesson === 'string' ? lesson : lesson?.title || '').trim();
+
 const serializeModules = (modules = []) => modules
-  .map((module) => `${module.title}: ${module.lessons.join(' | ')}`.trim())
+  .map((module) => `${module.title}: ${(module.lessons || []).map(lessonLabel).filter(Boolean).join(' | ')}`.trim())
   .join('\n');
 
 const parseModulesInput = (value) => value

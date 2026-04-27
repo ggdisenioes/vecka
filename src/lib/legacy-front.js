@@ -1,6 +1,7 @@
-import { getCurrentAuth } from '@/lib/auth'
+import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getCourseBySlug } from '@/lib/lms'
 import { getSupabasePublic } from '@/lib/supabase/public'
+import { getSupabaseServer } from '@/lib/supabase/server'
 
 const COURSE_COLORS = ['#f4e4d4', '#e8d5e8', '#d4e8d4', '#e8e4d4', '#f4d4d4', '#d4d8e8']
 const PRODUCT_COLORS = ['#f4e4d4', '#e8d5e8', '#d4e8d4', '#d4e8e8', '#e8ead4', '#f0e4d8']
@@ -9,26 +10,60 @@ function withColor(index, palette, fallback) {
   return palette[index % palette.length] || fallback
 }
 
-function mapLessonTitles(lessons = []) {
-  return lessons.map((lesson) => lesson.title)
+function sortByPosition(items = []) {
+  return items
+    .slice()
+    .sort((left, right) => Number(left?.position || 0) - Number(right?.position || 0))
+}
+
+function mapLegacyAttachments(attachments = []) {
+  return attachments
+    .slice()
+    .sort((left, right) => Number(left?.sort_order || 0) - Number(right?.sort_order || 0))
+    .map((attachment) => ({
+      id: attachment.id,
+      fileName: attachment.file_name,
+      href: `/api/attachments/${attachment.id}`,
+      mimeType: attachment.mime_type || '',
+      sizeBytes: Number(attachment.size_bytes || 0),
+    }))
+}
+
+function mapLegacyLessons(lessons = []) {
+  return sortByPosition(lessons).map((lesson) => ({
+    id: lesson.id,
+    slug: lesson.slug,
+    title: lesson.title,
+    summary: lesson.summary || '',
+    body: lesson.body || '',
+    status: lesson.status || 'draft',
+    isPreview: Boolean(lesson.is_preview),
+    videoProvider: lesson.video_provider || 'none',
+    vimeoUrl: lesson.vimeo_url || '',
+    externalVideoUrl: lesson.external_video_url || '',
+    videoDurationSeconds: Number(lesson.video_duration_seconds || 0),
+    attachments: mapLegacyAttachments(lesson.attachments || []),
+  }))
 }
 
 function mapLegacyModules(modules = []) {
-  return modules
-    .slice()
-    .sort((left, right) => left.position - right.position)
-    .map((module) => ({
-      id: module.id,
-      title: module.title,
-      lessons: mapLessonTitles(module.lessons || []),
-    }))
+  return sortByPosition(modules).map((module) => ({
+    id: module.id,
+    title: module.title,
+    description: module.description || '',
+    videoProvider: module.video_provider || 'none',
+    vimeoUrl: module.vimeo_url || '',
+    externalVideoUrl: module.external_video_url || '',
+    videoDurationSeconds: Number(module.video_duration_seconds || 0),
+    lessons: mapLegacyLessons(module.lessons || []),
+  }))
 }
 
 function countLessons(modules = []) {
   return modules.reduce((sum, module) => sum + (module.lessons?.length || 0), 0)
 }
 
-function mapLegacyCourse(course, index = 0) {
+function mapLegacyCourse(course, index = 0, access = {}) {
   const modules = mapLegacyModules(course.modules || [])
   const totalLessons = countLessons(course.modules || [])
 
@@ -48,9 +83,11 @@ function mapLegacyCourse(course, index = 0) {
     reviews: Number(course.reviews_count || 0),
     color: withColor(index, COURSE_COLORS, '#f4e4d4'),
     description: course.description || '',
+    coverImageUrl: course.cover_image_url || '',
     modules,
-    enrolled: false,
-    progress: 0,
+    enrolled: Boolean(access.enrolled),
+    canAccess: Boolean(access.canAccess),
+    progress: Number(access.progress || 0),
     isMembership: Boolean(course.is_membership),
   }
 }
@@ -99,8 +136,9 @@ function mapLegacyUser(user, profile) {
 export async function getLegacyFrontData({ courseSlug } = {}) {
   const supabase = getSupabasePublic()
   const { user, profile } = await getCurrentAuth()
+  const serverSupabase = user ? await getSupabaseServer() : null
 
-  const [coursesResult, productsResult, selectedCourse] = await Promise.all([
+  const [coursesResult, productsResult, selectedCourse, enrollmentsResult] = await Promise.all([
     supabase
       .from('courses')
       .select(`
@@ -120,6 +158,14 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
       .eq('status', 'published')
       .order('created_at', { ascending: false }),
     courseSlug ? getCourseBySlug(courseSlug) : Promise.resolve(null),
+    serverSupabase
+      ? serverSupabase
+          .from('course_enrollments')
+          .select('course_id')
+          .eq('user_id', user.id)
+          .eq('access_status', 'active')
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (coursesResult.error) {
@@ -130,6 +176,10 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
     throw new Error(`Error loading legacy products: ${productsResult.error.message}`)
   }
 
+  if (enrollmentsResult?.error) {
+    throw new Error(`Error loading enrollments: ${enrollmentsResult.error.message}`)
+  }
+
   const rawCourses = coursesResult.data || []
   const mergedCourses = selectedCourse
     ? rawCourses.some((course) => course.id === selectedCourse.id)
@@ -137,7 +187,17 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
       : [selectedCourse, ...rawCourses]
     : rawCourses
 
-  const courses = mergedCourses.map((course, index) => mapLegacyCourse(course, index))
+  const enrolledCourseIds = new Set((enrollmentsResult?.data || []).map((enrollment) => enrollment.course_id))
+  const userIsStaff = isStaff(profile)
+
+  const courses = mergedCourses.map((course, index) => {
+    const enrolled = enrolledCourseIds.has(course.id)
+    return mapLegacyCourse(course, index, {
+      enrolled,
+      canAccess: enrolled || userIsStaff,
+      progress: enrolled ? 0 : 0,
+    })
+  })
   const products = (productsResult.data || []).map((product, index) => mapLegacyProduct(product, index))
   const legacyUser = mapLegacyUser(user, profile)
   const selectedLegacyCourse = selectedCourse
