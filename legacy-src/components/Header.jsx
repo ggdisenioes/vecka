@@ -164,7 +164,16 @@ export default function Header() {
               </div>
               {user ? (
                 <div style={{ display: 'flex', gap: 8, flex: 1 }}>
-                  <Btn size="sm" variant="outline" onClick={() => { navigate('cuenta'); setMobileMenuOpen(false); }}>Mi cuenta</Btn>
+                  <Btn
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigate(user.role === 'admin' ? 'admin' : 'cuenta');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    {user.role === 'admin' ? 'Panel admin' : 'Mi cuenta'}
+                  </Btn>
                   <Btn size="sm" variant="ghost" onClick={() => { logout(); setMobileMenuOpen(false); }}>Salir</Btn>
                 </div>
               ) : (

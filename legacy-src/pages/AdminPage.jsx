@@ -298,6 +298,28 @@ export default function AdminPage() {
             <div style={{ marginBottom: 24 }}>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 28 : 34, margin: 0 }}>Buen día, Vero ✨</h1>
               <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)', marginTop: 4 }}>Lunes 27 de abril, 2026</p>
+              <div style={{ marginTop: 14 }}>
+                <a
+                  href="/admin/editorial"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    background: '#5e9e8a',
+                    color: '#fff',
+                    textDecoration: 'none',
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Abrir backoffice editorial
+                </a>
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 12 : 16, marginBottom: 24 }}>
               {[

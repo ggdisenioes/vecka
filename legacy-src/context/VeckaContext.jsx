@@ -416,8 +416,9 @@ export function VeckaProvider({
 
   const logout = () => {
     setUser(null);
-    navigate('home');
-    notify('Sesión cerrada');
+    if (typeof window !== 'undefined') {
+      window.location.assign('/logout');
+    }
   };
 
   const fmt = (ars, usd) => (currency === 'ARS'
