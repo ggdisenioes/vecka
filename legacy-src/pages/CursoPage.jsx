@@ -150,6 +150,11 @@ export default function CursoPage() {
     currentLesson?.videoDurationSeconds || currentModule?.videoDurationSeconds || 0,
   );
   const timeline = useMemo(() => getTimeline(course.modules), [course.modules]);
+  const useDrawerSidebar = isTablet;
+  const sidePanelWidth = isMobile ? 'min(86vw, 320px)' : 340;
+  const pagePadding = isMobile ? 16 : isTablet ? 28 : 80;
+  const headlineSize = isMobile ? 34 : isTablet ? 44 : 52;
+  const textWrapStyle = { overflowWrap: 'anywhere', wordBreak: 'break-word' };
   const activeTimelineIndex = timeline.findIndex(
     (entry) =>
       entry.moduleIndex === activeModule &&
@@ -193,20 +198,20 @@ export default function CursoPage() {
 
   if (canAccessCourse && course.modules.length > 0) {
     return (
-      <div style={{ paddingTop: isMobile ? 60 : 108, minHeight: '100vh', background: 'oklch(14% 0.02 50)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ background: 'oklch(18% 0.02 50)', padding: `0 ${isMobile ? 14 : 24}px`, height: 50, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid oklch(25% 0.015 50)', flexShrink: 0 }}>
+      <div style={{ paddingTop: isMobile ? 60 : 108, minHeight: '100vh', background: 'oklch(14% 0.02 50)', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+        <div style={{ background: 'oklch(18% 0.02 50)', padding: `${isMobile ? 10 : 12}px ${isMobile ? 14 : 24}px`, minHeight: 58, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid oklch(25% 0.015 50)', flexShrink: 0, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
           <button onClick={() => navigate('escuela')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(65% 0.01 60)', display: 'flex', alignItems: 'center', gap: 5, fontFamily: "'DM Sans', sans-serif", fontSize: 12, flexShrink: 0 }}>
             <Icon name="chevronRight" size={13} color="oklch(60% 0.01 60)" style={{ transform: 'rotate(180deg)' }} />
             {!isMobile && 'Volver'}
           </button>
-          <div style={{ height: 18, width: 1, background: 'oklch(30% 0.015 50)' }} />
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{course.title}</div>
-          {isMobile && (
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'oklch(25% 0.02 50)', border: 'none', cursor: 'pointer', padding: '5px 10px', borderRadius: 6, color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 11, flexShrink: 0 }}>
+          {!isMobile && <div style={{ height: 18, width: 1, background: 'oklch(30% 0.015 50)' }} />}
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap', flex: 1, minWidth: isMobile ? '100%' : 0, ...textWrapStyle }}>{course.title}</div>
+          {useDrawerSidebar && (
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'oklch(25% 0.02 50)', border: '1px solid oklch(31% 0.015 50)', cursor: 'pointer', padding: '7px 12px', borderRadius: 999, color: '#fff', fontFamily: "'DM Sans', sans-serif", fontSize: 11, flexShrink: 0 }}>
               Índice
             </button>
           )}
-          {!isMobile && (
+          {!useDrawerSidebar && (
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(65% 0.01 60)' }}>{completedCount}/{totalLessons}</span>
               <div style={{ width: 100 }}><ProgressBar value={course.progress} color="#97ceb8" /></div>
@@ -215,10 +220,10 @@ export default function CursoPage() {
         </div>
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-          {(!isMobile || sidebarOpen) && (
+          {(!useDrawerSidebar || sidebarOpen) && (
             <>
-              {isMobile && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 50 }} />}
-              <div style={{ width: isMobile ? 280 : 300, background: 'oklch(16% 0.02 50)', borderRight: '1px solid oklch(22% 0.015 50)', overflowY: 'auto', flexShrink: 0, position: isMobile ? 'fixed' : 'relative', right: isMobile ? 0 : 'auto', top: isMobile ? 0 : 'auto', bottom: isMobile ? 0 : 'auto', zIndex: isMobile ? 60 : 'auto' }}>
+              {useDrawerSidebar && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.56)', zIndex: 50, backdropFilter: 'blur(3px)' }} />}
+              <div style={{ width: useDrawerSidebar ? sidePanelWidth : 320, background: 'linear-gradient(180deg, oklch(16% 0.02 50) 0%, oklch(14% 0.018 50) 100%)', borderRight: '1px solid oklch(22% 0.015 50)', overflowY: 'auto', flexShrink: 0, position: useDrawerSidebar ? 'fixed' : 'relative', right: useDrawerSidebar ? 0 : 'auto', top: useDrawerSidebar ? 0 : 'auto', bottom: useDrawerSidebar ? 0 : 'auto', zIndex: useDrawerSidebar ? 60 : 'auto', boxShadow: useDrawerSidebar ? '-20px 0 48px rgba(0,0,0,.35)' : 'none' }}>
                 <div style={{ padding: '16px 14px 8px', fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'oklch(55% 0.01 60)', textTransform: 'uppercase' }}>
                   Contenido
                 </div>
@@ -229,11 +234,11 @@ export default function CursoPage() {
                         setActiveModule(moduleIndex);
                         setActiveLesson(0);
                         setShowModuleOverview(hasModuleOverview(module));
-                        if (isMobile) setSidebarOpen(false);
+                        if (useDrawerSidebar) setSidebarOpen(false);
                       }}
-                      style={{ padding: '11px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: activeModule === moduleIndex ? 'oklch(22% 0.02 50)' : 'transparent' }}
+                      style={{ padding: '13px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: activeModule === moduleIndex ? 'oklch(22% 0.02 50)' : 'transparent', gap: 10 }}
                     >
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: activeModule === moduleIndex ? '#fff' : 'oklch(65% 0.01 60)' }}>
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: activeModule === moduleIndex ? '#fff' : 'oklch(65% 0.01 60)', lineHeight: 1.5, ...textWrapStyle }}>
                         {moduleIndex + 1}. {module.title}
                       </span>
                       <Icon name="chevronDown" size={12} color="oklch(55% 0.01 60)" style={{ transform: activeModule === moduleIndex ? 'rotate(0)' : 'rotate(-90deg)', transition: 'transform .2s' }} />
@@ -246,7 +251,7 @@ export default function CursoPage() {
                             style={{ padding: '8px 14px 8px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, background: showModuleOverview ? 'oklch(26% 0.02 50)' : 'transparent' }}
                           >
                             <Icon name="play" size={12} color={showModuleOverview ? '#97ceb8' : 'oklch(45% 0.01 60)'} />
-                            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: showModuleOverview ? '#fff' : 'oklch(70% 0.01 60)' }}>
+                            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: showModuleOverview ? '#fff' : 'oklch(70% 0.01 60)', ...textWrapStyle }}>
                               Presentación del módulo
                             </span>
                           </div>
@@ -261,14 +266,14 @@ export default function CursoPage() {
                             <div
                               key={lesson.id || `${moduleIndex}-${lessonIndex}`}
                               onClick={() => goToTimelineEntry({ moduleIndex, lessonIndex })}
-                              style={{ padding: '8px 14px 8px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, background: isActive ? 'oklch(26% 0.02 50)' : 'transparent' }}
+                              style={{ padding: '9px 14px 9px 28px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 9, background: isActive ? 'oklch(26% 0.02 50)' : 'transparent' }}
                             >
                               {isCompleted
                                 ? <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#5e9e8a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="check" size={9} color="#fff" /></div>
                                 : <Icon name={isActive ? 'play' : 'lock'} size={12} color={isActive ? '#97ceb8' : 'oklch(45% 0.01 60)'} />
                               }
                               <div style={{ minWidth: 0, flex: 1 }}>
-                                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: isActive ? '#fff' : isCompleted ? 'oklch(70% 0.01 60)' : 'oklch(55% 0.01 60)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: isActive ? '#fff' : isCompleted ? 'oklch(70% 0.01 60)' : 'oklch(55% 0.01 60)', lineHeight: 1.5, ...textWrapStyle }}>
                                   {getLessonTitle(lesson)}
                                 </div>
                                 {(flags.hasVideo || flags.pdfCount > 0 || flags.isPreview) && (
@@ -291,7 +296,7 @@ export default function CursoPage() {
           )}
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <div style={{ background: '#000', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: isMobile ? 220 : 360 }}>
+            <div style={{ background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', minHeight: isMobile ? 220 : isTablet ? 360 : 420, aspectRatio: isMobile ? '16 / 10' : '16 / 9' }}>
               {currentVideoSource.kind === 'iframe' && currentVideoSource.src ? (
                 <iframe
                   title={currentTitle}
@@ -328,13 +333,13 @@ export default function CursoPage() {
               </div>
             </div>
 
-            <div style={{ background: 'oklch(18% 0.02 50)', padding: `${isMobile ? 16 : 20}px ${isMobile ? 16 : 28}px`, flexShrink: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ background: 'linear-gradient(180deg, oklch(18% 0.02 50) 0%, oklch(16% 0.018 50) 100%)', padding: `${isMobile ? 18 : 24}px ${isMobile ? 16 : 28}px`, flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, marginBottom: 16, flexDirection: isMobile ? 'column' : 'row' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'oklch(55% 0.01 60)', marginBottom: 4 }}>
                     {showModuleOverview ? `Módulo ${activeModule + 1}` : `Módulo ${activeModule + 1} · Clase ${activeLesson + 1}`}
                   </div>
-                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 18 : 22, color: '#fff', margin: 0 }}>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 22 : 28, color: '#fff', margin: 0, lineHeight: 1.12, ...textWrapStyle }}>
                     {currentTitle}
                   </h3>
                 </div>
@@ -345,15 +350,15 @@ export default function CursoPage() {
               </div>
 
               {(currentSummary || currentBody || currentAttachments.length > 0) && (
-                <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'minmax(0, 1fr) 280px', gap: 18, alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'minmax(0, 1fr) 300px', gap: 18, alignItems: 'start' }}>
                   <div>
                     {currentSummary && (
-                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(82% 0.012 60)', lineHeight: 1.7, margin: '0 0 14px' }}>
+                      <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(82% 0.012 60)', lineHeight: 1.8, margin: '0 0 14px', ...textWrapStyle }}>
                         {currentSummary}
                       </p>
                     )}
                     {currentBody && (
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(72% 0.012 60)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(72% 0.012 60)', lineHeight: 1.8, whiteSpace: 'pre-wrap', ...textWrapStyle }}>
                         {currentBody}
                       </div>
                     )}
@@ -373,7 +378,7 @@ export default function CursoPage() {
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textDecoration: 'none', background: 'oklch(23% 0.02 50)', borderRadius: 10, padding: '10px 12px' }}
                           >
                             <div style={{ minWidth: 0 }}>
-                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#fff', lineHeight: 1.45, ...textWrapStyle }}>
                                 {attachment.fileName}
                               </div>
                               <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'oklch(68% 0.01 60)', marginTop: 2 }}>
@@ -395,27 +400,45 @@ export default function CursoPage() {
     );
   }
 
-  const px = isMobile ? '16px' : isTablet ? '32px' : '80px';
+  const px = `${pagePadding}px`;
 
   return (
-    <div style={{ paddingTop: isMobile ? 60 : 108 }}>
-      <div style={{ background: 'linear-gradient(135deg, #1e3d2e 0%, #2a5244 60%, #1a3530 100%)', padding: isMobile ? '44px 16px 36px' : `60px ${px}`, position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -100, right: '5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(151,206,184,.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 360px', gap: isTablet ? 32 : 60, alignItems: 'start' }}>
+    <div style={{ paddingTop: isMobile ? 60 : 108, overflowX: 'hidden', background: '#fbf8f4' }}>
+      <div style={{ background: 'linear-gradient(135deg, #173729 0%, #21473a 54%, #132d24 100%)', padding: isMobile ? '44px 16px 36px' : `60px ${px}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -100, right: '5%', width: isMobile ? 260 : 400, height: isMobile ? 260 : 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(151,206,184,.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -120, left: isMobile ? '-10%' : '18%', width: isMobile ? 220 : 320, height: isMobile ? 220 : 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 72%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'minmax(0, 1fr) 360px', gap: isTablet ? 28 : 60, alignItems: 'start', position: 'relative' }}>
           <div>
             <Badge color="#97ceb8" bg="#3d6b5e">{course.category}</Badge>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 36 : isTablet ? 44 : 52, fontWeight: 600, color: '#fff', margin: '14px 0 14px', lineHeight: 1.1 }}>{course.title}</h1>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 14 : 16, color: 'oklch(75% 0.012 60)', lineHeight: 1.7, marginBottom: 20 }}>{course.description}</p>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: headlineSize, fontWeight: 600, color: '#fff', margin: '14px 0 14px', lineHeight: 1.02, maxWidth: 760, ...textWrapStyle }}>{course.title}</h1>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: isMobile ? 14 : 16, color: 'oklch(75% 0.012 60)', lineHeight: 1.8, marginBottom: 24, maxWidth: 760, ...textWrapStyle }}>{course.description}</p>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
               <Stars rating={course.rating} count={course.reviews} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(65% 0.01 60)' }}>{course.students.toLocaleString()} alumnas</span>
               <Badge color="oklch(70% 0.07 152)" bg="oklch(25% 0.05 152)">{course.level}</Badge>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 860 }}>
+              {[
+                { label: 'Clases', value: String(course.lessons || 0) },
+                { label: 'Duración', value: course.duration || 'A tu ritmo' },
+                { label: 'Nivel', value: course.level || 'Todos' },
+                { label: 'Formato', value: course.modules.length > 0 ? 'Online' : 'Próximamente' },
+              ].map((item) => (
+                <div key={item.label} style={{ padding: '14px 16px', borderRadius: 16, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)', backdropFilter: 'blur(10px)' }}>
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(151,206,184,.78)', marginBottom: 8 }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 21 : 24, color: '#fff', lineHeight: 1.1, ...textWrapStyle }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {!isTablet && (
-            <div style={{ background: '#fff', borderRadius: 18, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,.3)', position: 'sticky', top: 120 }}>
-              <div style={{ height: 150, background: course.color, borderRadius: 10, marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <div style={{ background: 'rgba(255,255,255,.96)', borderRadius: 22, padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,.28)', position: 'sticky', top: 128, border: '1px solid rgba(255,255,255,.2)' }}>
+              <div style={{ height: 168, background: course.color, borderRadius: 14, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {course.coverImageUrl
                   ? <img src={course.coverImageUrl} alt={course.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(0,0,0,.3)', fontStyle: 'italic' }}>Preview del curso</div>}
@@ -436,8 +459,8 @@ export default function CursoPage() {
         </div>
 
         {isTablet && (
-          <div style={{ maxWidth: 1280, margin: '24px auto 0', background: 'rgba(255,255,255,.08)', borderRadius: 14, padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 700, color: '#97ceb8' }}>{fmt(course.price, course.priceUSD)}</div>
+          <div style={{ maxWidth: 1280, margin: '24px auto 0', background: 'rgba(255,255,255,.08)', borderRadius: 18, padding: isMobile ? '18px 16px' : '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 30 : 32, fontWeight: 700, color: '#97ceb8' }}>{fmt(course.price, course.priceUSD)}</div>
             <Btn size="lg" onClick={() => { if (!user) openAuthModal('login'); else addToCart(course); }}>
               {course.isMembership ? 'Unirme al Club' : 'Inscribirme'}
             </Btn>
@@ -448,18 +471,18 @@ export default function CursoPage() {
       {course.modules.length > 0 && (
         <div ref={ref} style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '36px 16px 60px' : `60px ${px}` }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 26 : 34, marginBottom: 28, color: 'oklch(18% 0.022 50)' }}>Contenido del curso</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 16 }}>
             {course.modules.map((module, moduleIndex) => {
               const hasOverview = hasModuleOverview(module);
               const modulePdfCount = countModuleDownloads(module);
 
               return (
-                <div key={module.id || moduleIndex} style={{ border: '1px solid oklch(88% 0.016 60)', borderRadius: 12, overflow: 'hidden', ...fadeUpStyle(visible, moduleIndex * 0.07) }}>
-                  <div style={{ padding: '14px 18px', background: 'oklch(96% 0.012 60)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                    <div>
-                      <h4 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 700, margin: 0 }}>{moduleIndex + 1}. {module.title}</h4>
+                <div key={module.id || moduleIndex} style={{ border: '1px solid oklch(88% 0.016 60)', borderRadius: 18, overflow: 'hidden', background: '#fffdf9', boxShadow: '0 16px 40px rgba(31, 31, 31, 0.06)', ...fadeUpStyle(visible, moduleIndex * 0.07) }}>
+                  <div style={{ padding: '16px 18px', background: 'linear-gradient(180deg, oklch(97% 0.012 60) 0%, #fff 100%)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexDirection: isMobile ? 'column' : 'row' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h4 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 700, margin: 0, lineHeight: 1.45, ...textWrapStyle }}>{moduleIndex + 1}. {module.title}</h4>
                       {module.description && (
-                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(48% 0.018 50)', margin: '6px 0 0', lineHeight: 1.5 }}>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(48% 0.018 50)', margin: '6px 0 0', lineHeight: 1.6, ...textWrapStyle }}>
                           {module.description}
                         </p>
                       )}
@@ -470,9 +493,9 @@ export default function CursoPage() {
                       {modulePdfCount > 0 && <Badge color="oklch(35% 0.09 240)" bg="oklch(92% 0.04 240)">{modulePdfCount} PDF</Badge>}
                     </div>
                   </div>
-                  <div style={{ padding: '6px 0' }}>
+                  <div style={{ padding: '8px 0 10px' }}>
                     {hasOverview && (
-                      <div style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 9, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(40% 0.018 50)' }}>
+                      <div style={{ padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 9, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(40% 0.018 50)' }}>
                         <Icon name="play" size={12} color="#5e9e8a" />
                         Presentación del módulo
                       </div>
@@ -480,10 +503,10 @@ export default function CursoPage() {
                     {(module.lessons || []).map((lesson, lessonIndex) => {
                       const flags = getLessonFlags(lesson);
                       return (
-                        <div key={lesson.id || `${moduleIndex}-${lessonIndex}`} style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 9, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(40% 0.018 50)' }}>
+                        <div key={lesson.id || `${moduleIndex}-${lessonIndex}`} style={{ padding: '10px 18px', display: 'flex', alignItems: 'flex-start', gap: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(40% 0.018 50)' }}>
                           <Icon name={flags.isPreview ? 'play' : 'lock'} size={12} color={flags.isPreview ? '#5e9e8a' : 'oklch(72% 0.012 60)'} />
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <div>{getLessonTitle(lesson)}</div>
+                            <div style={{ lineHeight: 1.55, ...textWrapStyle }}>{getLessonTitle(lesson)}</div>
                             {(flags.hasVideo || flags.pdfCount > 0 || flags.isPreview) && (
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                                 {flags.hasVideo && <Badge color="#4a7d6e" bg="#d4f0e6">Video</Badge>}
