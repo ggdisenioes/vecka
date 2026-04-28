@@ -3,7 +3,8 @@ import { getVisibleAttachmentById } from '@/lib/lms'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET(_request, { params }) {
-  const data = await getVisibleAttachmentById(params.id)
+  const { id } = await params
+  const data = await getVisibleAttachmentById(id)
   if (!data) {
     return NextResponse.json({ error: 'Attachment not found' }, { status: 404 })
   }

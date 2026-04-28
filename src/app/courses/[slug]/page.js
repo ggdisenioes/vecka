@@ -5,7 +5,7 @@ import { getLegacyFrontData } from '@/lib/legacy-front'
 export const dynamic = 'force-dynamic'
 
 export default async function CoursePage({ params }) {
-  const { slug } = params
+  const { slug } = await params
   const data = await getLegacyFrontData({ courseSlug: slug })
 
   if (!data.selectedCourseId) {
