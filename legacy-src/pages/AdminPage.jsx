@@ -176,16 +176,28 @@ export default function AdminPage() {
     setShowProductForm(false);
   };
 
-  const openCreateCourse = () => {
-    setCourseForm(emptyCourseForm());
-    setEditingCourseId(null);
-    setShowCourseForm(true);
+  const [creatingCourse, setCreatingCourse] = useState(false);
+
+  const openCreateCourse = async () => {
+    if (creatingCourse) return;
+    setCreatingCourse(true);
+    try {
+      const response = await fetch('/api/admin/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Curso sin título' }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'No se pudo crear el curso');
+      window.location.assign(`/admin/courses/${data.course.id}`);
+    } catch (error) {
+      window.alert(error.message || 'Error al crear el curso');
+      setCreatingCourse(false);
+    }
   };
 
   const openEditCourse = (course) => {
-    setCourseForm(courseFormFromCourse(course));
-    setEditingCourseId(course.id);
-    setShowCourseForm(true);
+    window.location.assign(`/admin/courses/${course.id}`);
   };
 
   const openCreateProduct = () => {
@@ -381,8 +393,8 @@ export default function AdminPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 30, margin: 0 }}>Gestión de Cursos</h2>
-              <Btn icon={showCourseForm ? 'x' : 'plus'} size="sm" onClick={() => (showCourseForm && !editingCourseId ? resetCourseEditor() : openCreateCourse())}>
-                {showCourseForm && !editingCourseId ? 'Cerrar' : 'Nuevo'}
+              <Btn icon="plus" size="sm" onClick={openCreateCourse} disabled={creatingCourse}>
+                {creatingCourse ? 'Creando…' : 'Nuevo'}
               </Btn>
             </div>
 

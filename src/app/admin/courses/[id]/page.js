@@ -45,7 +45,7 @@ export default async function AdminCourseEditPage({ params }) {
         <header className="admin-header">
           <div>
             <div className="breadcrumb">
-              <Link href="/admin/courses">← Cursos</Link>
+              <Link href="/admin">← Volver al panel</Link>
             </div>
             <h1>{course.title || 'Curso sin título'}</h1>
           </div>
