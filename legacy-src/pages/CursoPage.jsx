@@ -20,7 +20,17 @@ function getLessonBody(lesson) {
 }
 
 function getLessonAttachments(lesson) {
-  return Array.isArray(lesson?.attachments) ? lesson.attachments : [];
+  if (!lesson || typeof lesson === 'string') return [];
+  if (Array.isArray(lesson.materials)) return lesson.materials;
+  return Array.isArray(lesson.attachments) ? lesson.attachments : [];
+}
+
+function getModuleMaterials(module) {
+  return Array.isArray(module?.materials) ? module.materials : [];
+}
+
+function getCourseMaterials(course) {
+  return Array.isArray(course?.materials) ? course.materials : [];
 }
 
 function getLessonFlags(lesson) {
@@ -29,7 +39,7 @@ function getLessonFlags(lesson) {
   }
 
   return {
-    hasVideo: Boolean(lesson.vimeoUrl || lesson.externalVideoUrl),
+    hasVideo: Boolean(lesson.vimeoUrl || lesson.externalVideoUrl || (lesson.videoProvider === 'upload' && lesson.videoStoragePath)),
     isPreview: Boolean(lesson.isPreview),
     pdfCount: getLessonAttachments(lesson).length,
   };
@@ -40,6 +50,7 @@ function hasModuleOverview(module) {
     module?.description ||
       module?.vimeoUrl ||
       module?.externalVideoUrl ||
+      (module?.videoProvider === 'upload' && module?.videoStoragePath) ||
       (Array.isArray(module?.lessons) && module.lessons.length === 0),
   );
 }
@@ -78,8 +89,17 @@ function normalizeYoutubeEmbed(url = '') {
   return match?.[1] ? `https://www.youtube.com/embed/${match[1]}` : url;
 }
 
-function resolveVideoSource(module, lesson) {
+function resolveVideoSource(module, lesson, uploadUrl = '') {
   const provider = lesson?.videoProvider || module?.videoProvider || 'none';
+  const hasUploadPath = Boolean(lesson?.videoStoragePath || module?.videoStoragePath);
+
+  if (provider === 'upload' && hasUploadPath) {
+    if (uploadUrl) {
+      return { kind: 'video', src: uploadUrl, provider: 'upload' };
+    }
+    return { kind: 'loading', src: '', provider: 'upload' };
+  }
+
   const rawUrl = lesson?.vimeoUrl || lesson?.externalVideoUrl || module?.vimeoUrl || module?.externalVideoUrl || '';
   const url = String(rawUrl || '').trim();
 
@@ -118,7 +138,11 @@ function formatDuration(seconds) {
 }
 
 function countModuleDownloads(module) {
-  return (module?.lessons || []).reduce((sum, lesson) => sum + getLessonAttachments(lesson).length, 0);
+  const lessonCount = (module?.lessons || []).reduce(
+    (sum, lesson) => sum + getLessonAttachments(lesson).length,
+    0,
+  );
+  return lessonCount + getModuleMaterials(module).length;
 }
 
 export default function CursoPage() {
@@ -130,6 +154,7 @@ export default function CursoPage() {
   const [activeLesson, setActiveLesson] = useState(0);
   const [showModuleOverview, setShowModuleOverview] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [uploadVideoUrl, setUploadVideoUrl] = useState('');
 
   if (!course) {
     navigate('escuela');
@@ -145,7 +170,10 @@ export default function CursoPage() {
   const currentSummary = showModuleOverview ? currentModule?.description || '' : getLessonSummary(currentLesson) || currentModule?.description || '';
   const currentBody = showModuleOverview ? '' : getLessonBody(currentLesson);
   const currentAttachments = showModuleOverview ? [] : getLessonAttachments(currentLesson);
-  const currentVideoSource = resolveVideoSource(currentModule, currentLesson);
+  const moduleMaterials = currentModule ? getModuleMaterials(currentModule) : [];
+  const courseMaterials = getCourseMaterials(course);
+  const hasAnyMaterials = currentAttachments.length > 0 || moduleMaterials.length > 0 || courseMaterials.length > 0;
+  const currentVideoSource = resolveVideoSource(currentModule, currentLesson, uploadVideoUrl);
   const currentDuration = formatDuration(
     currentLesson?.videoDurationSeconds || currentModule?.videoDurationSeconds || 0,
   );
@@ -177,6 +205,31 @@ export default function CursoPage() {
       setActiveLesson(0);
     }
   }, [activeLesson, currentModule, showModuleOverview]);
+
+  useEffect(() => {
+    const target = !showModuleOverview ? currentLesson : currentModule;
+    const provider = target?.videoProvider || 'none';
+    const path = target?.videoStoragePath;
+    if (provider !== 'upload' || !path || !target?.id) {
+      setUploadVideoUrl('');
+      return undefined;
+    }
+
+    const scope = !showModuleOverview ? 'lesson' : 'module';
+    let cancelled = false;
+    setUploadVideoUrl('');
+
+    fetch(`/api/videos/playback?scope=${scope}&id=${target.id}`)
+      .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
+      .then(({ ok, data }) => {
+        if (!cancelled && ok && data?.url) setUploadVideoUrl(data.url);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLesson?.id, currentModule?.id, showModuleOverview, currentLesson?.videoProvider, currentModule?.videoProvider, currentLesson?.videoStoragePath, currentModule?.videoStoragePath]);
 
   const goToTimelineEntry = (entry) => {
     if (!entry) return;
@@ -309,6 +362,10 @@ export default function CursoPage() {
                 <video controls style={{ width: '100%', height: '100%' }} src={currentVideoSource.src}>
                   Tu navegador no soporta reproducción de video embebido.
                 </video>
+              ) : currentVideoSource.kind === 'loading' ? (
+                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.7)', fontFamily: "'DM Sans', sans-serif", fontSize: 13 }}>
+                  Preparando reproducción del video…
+                </div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '0 24px' }}>
                   <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '1px solid rgba(255,255,255,.2)' }}>
@@ -349,7 +406,7 @@ export default function CursoPage() {
                 </div>
               </div>
 
-              {(currentSummary || currentBody || currentAttachments.length > 0) && (
+              {(currentSummary || currentBody || hasAnyMaterials) && (
                 <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'minmax(0, 1fr) 300px', gap: 18, alignItems: 'start' }}>
                   <div>
                     {currentSummary && (
@@ -363,32 +420,40 @@ export default function CursoPage() {
                       </div>
                     )}
                   </div>
-                  {currentAttachments.length > 0 && (
-                    <div style={{ background: 'oklch(20% 0.02 50)', border: '1px solid oklch(25% 0.015 50)', borderRadius: 12, padding: 14 }}>
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
-                        Material de la clase
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {currentAttachments.map((attachment) => (
-                          <a
-                            key={attachment.id}
-                            href={attachment.href}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textDecoration: 'none', background: 'oklch(23% 0.02 50)', borderRadius: 10, padding: '10px 12px' }}
-                          >
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#fff', lineHeight: 1.45, ...textWrapStyle }}>
-                                {attachment.fileName}
-                              </div>
-                              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'oklch(68% 0.01 60)', marginTop: 2 }}>
-                                PDF descargable
-                              </div>
-                            </div>
-                            <Icon name="download" size={14} color="#97ceb8" />
-                          </a>
-                        ))}
-                      </div>
+                  {hasAnyMaterials && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {[
+                        { items: currentAttachments, title: 'Material de la clase', subtitle: 'PDF descargable' },
+                        { items: moduleMaterials, title: 'Material del módulo', subtitle: 'Recurso del módulo' },
+                        { items: courseMaterials, title: 'Material del curso', subtitle: 'Recurso general' },
+                      ].filter((group) => group.items.length > 0).map((group) => (
+                        <div key={group.title} style={{ background: 'oklch(20% 0.02 50)', border: '1px solid oklch(25% 0.015 50)', borderRadius: 12, padding: 14 }}>
+                          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+                            {group.title}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {group.items.map((attachment) => (
+                              <a
+                                key={attachment.id}
+                                href={attachment.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, textDecoration: 'none', background: 'oklch(23% 0.02 50)', borderRadius: 10, padding: '10px 12px' }}
+                              >
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#fff', lineHeight: 1.45, ...textWrapStyle }}>
+                                    {attachment.fileName}
+                                  </div>
+                                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'oklch(68% 0.01 60)', marginTop: 2 }}>
+                                    {group.subtitle}
+                                  </div>
+                                </div>
+                                <Icon name="download" size={14} color="#97ceb8" />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

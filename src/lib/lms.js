@@ -7,6 +7,19 @@ function handleError(label, error) {
   }
 }
 
+const COURSE_TREE_SELECT = `
+  *,
+  materials:course_materials!course_materials_course_id_fkey(*),
+  modules:course_modules(
+    *,
+    materials:course_materials!course_materials_module_id_fkey(*),
+    lessons:course_lessons(
+      *,
+      materials:course_materials!course_materials_lesson_id_fkey(*)
+    )
+  )
+`
+
 export async function getPublishedCourses() {
   const supabase = getSupabasePublic()
   const result = await supabase
@@ -23,17 +36,20 @@ export async function getCourseBySlug(slug) {
   const supabase = await getSupabaseServer()
   const result = await supabase
     .from('courses')
-    .select(`
-      *,
-      modules:course_modules(
-        *,
-        lessons:course_lessons(
-          *,
-          attachments:lesson_attachments(*)
-        )
-      )
-    `)
+    .select(COURSE_TREE_SELECT)
     .eq('slug', slug)
+    .maybeSingle()
+
+  handleError('Error loading course', result.error)
+  return result.data
+}
+
+export async function getCourseById(id) {
+  const supabase = await getSupabaseServer()
+  const result = await supabase
+    .from('courses')
+    .select(COURSE_TREE_SELECT)
+    .eq('id', id)
     .maybeSingle()
 
   handleError('Error loading course', result.error)
@@ -52,14 +68,16 @@ export async function getPublishedProducts() {
   return result.data || []
 }
 
-export async function getVisibleAttachmentById(id) {
+export async function getVisibleMaterialById(id) {
   const supabase = await getSupabaseServer()
   const result = await supabase
-    .from('lesson_attachments')
-    .select('id, bucket_name, storage_path')
+    .from('course_materials')
+    .select('id, bucket_name, storage_path, file_name')
     .eq('id', id)
     .maybeSingle()
 
-  handleError('Error loading attachment', result.error)
+  handleError('Error loading material', result.error)
   return result.data
 }
+
+export { getVisibleMaterialById as getVisibleAttachmentById }

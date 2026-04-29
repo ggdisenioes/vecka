@@ -16,17 +16,29 @@ function sortByPosition(items = []) {
     .sort((left, right) => Number(left?.position || 0) - Number(right?.position || 0))
 }
 
-function mapLegacyAttachments(attachments = []) {
-  return attachments
+function mapLegacyMaterials(materials = []) {
+  return materials
     .slice()
     .sort((left, right) => Number(left?.sort_order || 0) - Number(right?.sort_order || 0))
-    .map((attachment) => ({
-      id: attachment.id,
-      fileName: attachment.file_name,
-      href: `/api/attachments/${attachment.id}`,
-      mimeType: attachment.mime_type || '',
-      sizeBytes: Number(attachment.size_bytes || 0),
+    .map((material) => ({
+      id: material.id,
+      fileName: material.file_name,
+      href: `/api/attachments/${material.id}`,
+      mimeType: material.mime_type || '',
+      sizeBytes: Number(material.size_bytes || 0),
     }))
+}
+
+function mapLegacyVideo(record = {}) {
+  const provider = record.video_provider || 'none'
+  return {
+    provider,
+    vimeoUrl: record.vimeo_url || '',
+    externalUrl: record.external_video_url || '',
+    storagePath: record.video_storage_path || '',
+    bucket: record.video_bucket || 'course-videos',
+    durationSeconds: Number(record.video_duration_seconds || 0),
+  }
 }
 
 function mapLegacyLessons(lessons = []) {
@@ -38,11 +50,14 @@ function mapLegacyLessons(lessons = []) {
     body: lesson.body || '',
     status: lesson.status || 'draft',
     isPreview: Boolean(lesson.is_preview),
+    video: mapLegacyVideo(lesson),
     videoProvider: lesson.video_provider || 'none',
     vimeoUrl: lesson.vimeo_url || '',
     externalVideoUrl: lesson.external_video_url || '',
+    videoStoragePath: lesson.video_storage_path || '',
     videoDurationSeconds: Number(lesson.video_duration_seconds || 0),
-    attachments: mapLegacyAttachments(lesson.attachments || []),
+    materials: mapLegacyMaterials(lesson.materials || []),
+    attachments: mapLegacyMaterials(lesson.materials || []),
   }))
 }
 
@@ -51,10 +66,13 @@ function mapLegacyModules(modules = []) {
     id: module.id,
     title: module.title,
     description: module.description || '',
+    video: mapLegacyVideo(module),
     videoProvider: module.video_provider || 'none',
     vimeoUrl: module.vimeo_url || '',
     externalVideoUrl: module.external_video_url || '',
+    videoStoragePath: module.video_storage_path || '',
     videoDurationSeconds: Number(module.video_duration_seconds || 0),
+    materials: mapLegacyMaterials(module.materials || []),
     lessons: mapLegacyLessons(module.lessons || []),
   }))
 }
@@ -84,6 +102,7 @@ function mapLegacyCourse(course, index = 0, access = {}) {
     color: withColor(index, COURSE_COLORS, '#f4e4d4'),
     description: course.description || '',
     coverImageUrl: course.cover_image_url || '',
+    materials: mapLegacyMaterials(course.materials || []),
     modules,
     enrolled: Boolean(access.enrolled),
     canAccess: Boolean(access.canAccess),
@@ -133,6 +152,19 @@ function mapLegacyUser(user, profile) {
   }
 }
 
+const LEGACY_COURSE_TREE_SELECT = `
+  *,
+  materials:course_materials!course_materials_course_id_fkey(*),
+  modules:course_modules(
+    *,
+    materials:course_materials!course_materials_module_id_fkey(*),
+    lessons:course_lessons(
+      *,
+      materials:course_materials!course_materials_lesson_id_fkey(*)
+    )
+  )
+`
+
 export async function getLegacyFrontData({ courseSlug } = {}) {
   const supabase = getSupabasePublic()
   const { user, profile } = await getCurrentAuth()
@@ -141,13 +173,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
   const [coursesResult, productsResult, selectedCourse, enrollmentsResult] = await Promise.all([
     supabase
       .from('courses')
-      .select(`
-        *,
-        modules:course_modules(
-          *,
-          lessons:course_lessons(*)
-        )
-      `)
+      .select(LEGACY_COURSE_TREE_SELECT)
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .order('position', { foreignTable: 'course_modules', ascending: true })
