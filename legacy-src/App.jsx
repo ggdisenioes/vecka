@@ -54,6 +54,7 @@ export default function App({
   initialCourses,
   initialProducts,
   initialSelectedCourseId = null,
+  initialMemberships = [],
 }) {
   return (
     <VeckaProvider
@@ -62,6 +63,7 @@ export default function App({
       initialProducts={initialProducts}
       initialSelectedCourseId={initialSelectedCourseId}
       initialUser={initialUser}
+      initialMemberships={initialMemberships}
     >
       <AppContent />
     </VeckaProvider>

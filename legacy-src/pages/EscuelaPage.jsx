@@ -7,7 +7,7 @@ import { CourseCard } from '../components/Cards';
 import Footer from '../components/Footer';
 
 export default function EscuelaPage() {
-  const { courses, navigate, fmt } = useVecka();
+  const { courses, memberships, navigate, fmt } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const { ref, visible } = useAnimateOnScroll(0.05);
   const [filter, setFilter] = useState('Todos');
@@ -67,6 +67,43 @@ export default function EscuelaPage() {
           ))}
         </div>
       </div>
+      {/* Membresías */}
+      {memberships && memberships.length > 0 && (
+        <div style={{ background: 'oklch(97% 0.01 60)', borderTop: '1px solid oklch(91% 0.012 60)' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', padding: isMobile ? '40px 16px 56px' : `56px ${px} 72px` }}>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#5e9e8a', marginBottom: 8, textTransform: 'uppercase' }}>★ Acceso ilimitado</div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 28 : 36, margin: 0 }}>Membresías</h2>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(50% 0.018 50)', marginTop: 8 }}>
+                Accedé a contenido exclusivo: clases en video, materiales descargables y sesiones en vivo.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 24 }}>
+              {memberships.map((m) => (
+                <a
+                  key={m.id}
+                  href={`/membresia/${m.slug}`}
+                  style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #5e9e8a, #4a7d6e)', borderRadius: 16, padding: isMobile ? '28px 22px' : '32px 28px', textDecoration: 'none', color: '#fff', transition: 'transform .2s', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#97ceb8', marginBottom: 10, textTransform: 'uppercase' }}>Membresía</div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 22 : 26, margin: '0 0 10px', color: '#fff' }}>{m.name}</h3>
+                  {m.description && (
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(88% 0.02 60)', margin: '0 0 20px', flex: 1 }}>
+                      {m.description}
+                    </p>
+                  )}
+                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: '#c5dfce', marginTop: 'auto' }}>
+                    Ver membresía →
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
