@@ -20,6 +20,14 @@ function normalizeVideo(record = {}) {
   }
 }
 
+function toDatetimeLocal(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function normalizeLesson(lesson) {
   return {
     id: lesson.id,
@@ -30,6 +38,9 @@ function normalizeLesson(lesson) {
     status: lesson.status || 'draft',
     isPreview: Boolean(lesson.is_preview),
     position: lesson.position || 1,
+    lessonType: lesson.lesson_type || 'video',
+    liveSessionUrl: lesson.live_session_url || '',
+    liveSessionAt: toDatetimeLocal(lesson.live_session_at),
     ...normalizeVideo(lesson),
     materials: normalizeMaterials(lesson.materials || []),
   }
@@ -287,6 +298,9 @@ function LessonCard({ lesson, onChange, onDelete, toast }) {
           position: lesson.position,
           status: lesson.status,
           isPreview: lesson.isPreview,
+          lessonType: lesson.lessonType || 'video',
+          liveSessionUrl: lesson.liveSessionUrl || '',
+          liveSessionAt: lesson.liveSessionAt || null,
           ...buildVideoPayload(lesson),
         }),
       })
@@ -350,6 +364,15 @@ function LessonCard({ lesson, onChange, onDelete, toast }) {
           </select>
         </div>
         <div className="editor-field">
+          <label>Tipo de clase</label>
+          <select value={lesson.lessonType} onChange={(event) => update({ lessonType: event.target.value })}>
+            <option value="video">Video</option>
+            <option value="article">Artículo / texto</option>
+            <option value="live_session">Sesión en vivo</option>
+            <option value="attachment">Solo descargas</option>
+          </select>
+        </div>
+        <div className="editor-field">
           <label>
             <input
               type="checkbox"
@@ -360,6 +383,28 @@ function LessonCard({ lesson, onChange, onDelete, toast }) {
           </label>
         </div>
       </div>
+
+      {lesson.lessonType === 'live_session' ? (
+        <div className="editor-row">
+          <div className="editor-field">
+            <label>Fecha y hora de la sesión</label>
+            <input
+              type="datetime-local"
+              value={lesson.liveSessionAt}
+              onChange={(event) => update({ liveSessionAt: event.target.value })}
+            />
+          </div>
+          <div className="editor-field">
+            <label>Link de la sesión (Zoom / Meet / etc.)</label>
+            <input
+              type="url"
+              placeholder="https://"
+              value={lesson.liveSessionUrl}
+              onChange={(event) => update({ liveSessionUrl: event.target.value })}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="editor-field">
         <label>Resumen</label>

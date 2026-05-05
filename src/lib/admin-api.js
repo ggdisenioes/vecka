@@ -87,6 +87,26 @@ export async function uniqueLessonSlug(moduleId, title, currentId = null) {
   }
 }
 
+export async function uniqueTierSlug(name, currentId = null) {
+  const supabase = getSupabaseAdmin()
+  const base = slugify(name) || `tier-${Date.now()}`
+  let slug = base
+  let counter = 2
+  while (true) {
+    let query = supabase
+      .from('membership_tiers')
+      .select('id')
+      .eq('slug', slug)
+      .limit(1)
+    if (currentId) query = query.neq('id', currentId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return slug
+    slug = `${base}-${counter}`
+    counter += 1
+  }
+}
+
 export function revalidateCourses() {
   revalidatePath('/')
   revalidatePath('/admin')
@@ -95,7 +115,32 @@ export function revalidateCourses() {
   revalidatePath('/courses/[slug]', 'page')
 }
 
+export function revalidateMemberships() {
+  revalidatePath('/')
+  revalidatePath('/admin/membresias')
+  revalidatePath('/admin/membresias/[id]', 'page')
+  revalidatePath('/membresia')
+  revalidatePath('/membresia/[slug]', 'page')
+}
+
 export const VIDEO_PROVIDERS = ['vimeo', 'external', 'upload', 'none']
+
+export const LESSON_TYPES = ['video', 'article', 'live_session', 'attachment']
+
+export function pickLessonTypeFields(payload = {}) {
+  const lessonType = LESSON_TYPES.includes(payload.lessonType) ? payload.lessonType : 'video'
+  const liveUrl = lessonType === 'live_session' ? String(payload.liveSessionUrl || '').trim() : null
+  let liveAt = null
+  if (lessonType === 'live_session' && payload.liveSessionAt) {
+    const parsed = new Date(payload.liveSessionAt)
+    if (!Number.isNaN(parsed.getTime())) liveAt = parsed.toISOString()
+  }
+  return {
+    lesson_type: lessonType,
+    live_session_url: liveUrl,
+    live_session_at: liveAt,
+  }
+}
 
 export function pickVideoFields(payload = {}) {
   const provider = VIDEO_PROVIDERS.includes(payload.videoProvider)

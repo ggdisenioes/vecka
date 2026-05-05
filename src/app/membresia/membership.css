@@ -1,0 +1,222 @@
+.membership-shell {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fffaf3 0%, #f7efe6 100%);
+  padding: 56px 24px 96px;
+  color: var(--ink, #172122);
+}
+
+.membership-container {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.membership-hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.membership-hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 44px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.membership-hero p {
+  margin: 0 auto;
+  color: var(--muted, #596567);
+  max-width: 620px;
+  font-size: 16px;
+}
+
+.membership-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.membership-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 22px;
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 12px 30px rgba(23,33,34,0.05);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.membership-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px rgba(23,33,34,0.08);
+}
+
+.membership-card .pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.membership-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #f0e5dc;
+  color: #6f5b4d;
+}
+
+.membership-pill.active { background: #cfe3d9; color: #123c36; }
+.membership-pill.expired { background: #f0d8d8; color: #6c2545; }
+
+.membership-card h2 {
+  font-family: 'Cormorant Garamond', serif;
+  margin: 0;
+  font-size: 26px;
+}
+
+.membership-card p {
+  margin: 0;
+  color: var(--muted, #596567);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.membership-section {
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 22px;
+  padding: 28px;
+  margin-bottom: 22px;
+}
+
+.membership-section h2,
+.membership-section h3 {
+  font-family: 'Cormorant Garamond', serif;
+  margin: 0 0 14px;
+}
+
+.membership-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.membership-list a,
+.membership-list .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #fffefb;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s ease;
+}
+
+.membership-list a:hover {
+  background: #fff5ea;
+}
+
+.membership-list .item-meta {
+  font-size: 12px;
+  color: var(--muted, #596567);
+}
+
+.membership-cta {
+  display: inline-flex;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--accent, #1d5f55);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.membership-cta.secondary {
+  background: transparent;
+  color: var(--ink, #172122);
+  border: 1px solid var(--line, #dfd2c8);
+}
+
+.membership-locked {
+  background: #fffefb;
+  border: 1px dashed var(--line, #dfd2c8);
+  border-radius: 18px;
+  padding: 28px;
+  text-align: center;
+  color: var(--muted, #596567);
+}
+
+.membership-locked strong {
+  color: var(--ink, #172122);
+}
+
+.video-frame {
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.video-frame iframe,
+.video-frame video {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.live-session-banner {
+  background: linear-gradient(135deg, #1d5f55, #2d8073);
+  color: #fff;
+  padding: 22px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.live-session-banner a {
+  align-self: flex-start;
+  background: #fff;
+  color: #123c36;
+  padding: 10px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.article-body {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+.breadcrumb-row {
+  font-size: 13px;
+  color: var(--muted, #596567);
+  margin-bottom: 14px;
+}
+
+.breadcrumb-row a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}

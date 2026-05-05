@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import {
   jsonError,
+  LESSON_TYPES,
   requireStaff,
   requireText,
   revalidateCourses,
@@ -16,6 +17,7 @@ export async function POST(request) {
     const payload = await request.json()
     const moduleId = requireText(payload.moduleId, 'Module id')
     const title = requireText(payload.title || 'Nueva clase', 'Lesson title')
+    const lessonType = LESSON_TYPES.includes(payload.lessonType) ? payload.lessonType : 'video'
     const supabase = getSupabaseAdmin()
 
     const { data: existing, error: countError } = await supabase
@@ -36,6 +38,7 @@ export async function POST(request) {
         status: 'draft',
         is_preview: false,
         video_provider: 'none',
+        lesson_type: lessonType,
       })
       .select('*')
       .single()

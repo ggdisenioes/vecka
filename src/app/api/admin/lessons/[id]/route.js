@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import {
   jsonError,
+  pickLessonTypeFields,
   pickVideoFields,
   requireStaff,
   requireText,
@@ -44,6 +45,7 @@ export async function PUT(request, { params }) {
         status,
         is_preview: Boolean(payload.isPreview),
         ...pickVideoFields(payload),
+        ...pickLessonTypeFields(payload),
       })
       .eq('id', id)
 

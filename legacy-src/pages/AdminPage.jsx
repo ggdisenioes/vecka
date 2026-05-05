@@ -155,6 +155,7 @@ export default function AdminPage() {
   const navItems = [
     { id: 'overview', label: 'Resumen', icon: 'home' },
     { id: 'courses', label: 'Cursos', icon: 'book' },
+    { id: 'memberships', label: 'Membresías', icon: 'star', href: '/admin/membresias' },
     { id: 'products', label: 'Productos', icon: 'package' },
     { id: 'orders', label: 'Ventas', icon: 'tag' },
     { id: 'students', label: 'Alumnas', icon: 'user' },
@@ -286,7 +287,7 @@ export default function AdminPage() {
           {navItems.slice(0, 5).map((item) => (
             <button
               key={item.id}
-              onClick={() => setSection(item.id)}
+              onClick={() => item.href ? window.location.assign(item.href) : setSection(item.id)}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, border: 'none', background: 'none', cursor: 'pointer', padding: '4px 0' }}
             >
               <Icon name={item.icon} size={18} color={section === item.id ? '#5e9e8a' : 'oklch(60% 0.018 50)'} />
@@ -303,7 +304,7 @@ export default function AdminPage() {
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setSection(item.id)}
+                onClick={() => item.href ? window.location.assign(item.href) : setSection(item.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 10px', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: section === item.id ? 600 : 400, background: section === item.id ? '#f0dee7' : 'transparent', color: section === item.id ? '#5e9e8a' : 'oklch(35% 0.018 50)', transition: 'all .15s', marginBottom: 2, textAlign: 'left' }}
               >
                 <Icon name={item.icon} size={15} color={section === item.id ? '#5e9e8a' : 'oklch(55% 0.018 50)'} />
