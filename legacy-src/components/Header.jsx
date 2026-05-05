@@ -4,8 +4,40 @@ import { useResponsive } from '../hooks/useResponsive';
 import Icon from './Icon';
 import { Btn } from './Primitives';
 
-function NavLink({ label, onClick }) {
+function NavLink({ label, onClick, sub }) {
   const [hov, setHov] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  if (sub) {
+    return (
+      <div style={{ position: 'relative' }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <button
+          onClick={() => setOpen(!open)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: open ? '#5e9e8a' : 'oklch(30% 0.018 50)', padding: '6px 12px', borderRadius: 6, transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          {label}
+          <span style={{ fontSize: 8, marginTop: 1 }}>▼</span>
+        </button>
+        {open && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', border: '1px solid oklch(90% 0.012 60)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.1)', minWidth: 160, overflow: 'hidden', zIndex: 999 }}>
+            {sub.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => { item.onClick(); setOpen(false); }}
+                style={{ display: 'block', width: '100%', padding: '10px 16px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: 'oklch(22% 0.022 50)', textAlign: 'left', borderBottom: '1px solid oklch(95% 0.01 60)' }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={onClick}
@@ -32,7 +64,14 @@ export default function Header() {
 
   const navItems = [
     { label: 'INICIO', page: 'home' },
-    { label: 'ESCUELA', page: 'escuela' },
+    {
+      label: 'ESCUELA',
+      page: 'escuela',
+      sub: [
+        { label: 'Cursos', onClick: () => navigate('escuela') },
+        { label: 'Membresías', onClick: () => window.location.assign('/membresia') },
+      ],
+    },
     { label: 'TIENDA', page: 'tienda' },
     { label: 'BLOG', page: 'blog' },
     { label: 'SOBRE MÍ', page: 'sobre' },
@@ -66,8 +105,8 @@ export default function Header() {
           {/* Desktop nav links */}
           {!isTablet && (
             <nav style={{ display: 'flex', gap: 4, flex: 1, justifyContent: 'center' }}>
-              {navItems.map(({ label, page: p }) => (
-                <NavLink key={p} label={label} onClick={() => navigate(p)} />
+              {navItems.map(({ label, page: p, sub }) => (
+                <NavLink key={p} label={label} onClick={() => navigate(p)} sub={sub} />
               ))}
             </nav>
           )}
@@ -146,11 +185,19 @@ export default function Header() {
         <>
           <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 998 }} />
           <div style={{ position: 'fixed', top: isMobile ? 60 : 68, left: 0, right: 0, background: '#fff', zIndex: 999, borderBottom: '1px solid oklch(90% 0.012 60)', boxShadow: '0 8px 32px rgba(0,0,0,.1)', padding: '8px 0 20px' }}>
-            {navItems.map(({ label, page: p }) => (
-              <button key={p} onClick={() => { navigate(p); setMobileMenuOpen(false); }}
-                style={{ display: 'block', width: '100%', padding: '14px 24px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: '0.06em', color: 'oklch(22% 0.022 50)', textAlign: 'left', borderBottom: '1px solid oklch(95% 0.01 60)' }}>
-                {label}
-              </button>
+            {navItems.map(({ label, page: p, sub }) => (
+              <div key={p}>
+                <button onClick={() => { navigate(p); setMobileMenuOpen(false); }}
+                  style={{ display: 'block', width: '100%', padding: '14px 24px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, letterSpacing: '0.06em', color: 'oklch(22% 0.022 50)', textAlign: 'left', borderBottom: sub ? 'none' : '1px solid oklch(95% 0.01 60)' }}>
+                  {label}
+                </button>
+                {sub && sub.map((item) => (
+                  <button key={item.label} onClick={() => { item.onClick(); setMobileMenuOpen(false); }}
+                    style={{ display: 'block', width: '100%', padding: '10px 36px', border: 'none', background: 'oklch(97% 0.01 60)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, color: '#5e9e8a', textAlign: 'left', borderBottom: '1px solid oklch(95% 0.01 60)' }}>
+                    → {item.label}
+                  </button>
+                ))}
+              </div>
             ))}
             <div style={{ padding: '16px 24px 4px', display: 'flex', gap: 12, alignItems: 'center' }}>
               {/* Currency */}
