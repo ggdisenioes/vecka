@@ -13,6 +13,7 @@ const SCOPE_TO_COLUMN = {
   course: 'course_id',
   module: 'module_id',
   lesson: 'lesson_id',
+  topic: 'topic_id',
 }
 
 const MATERIALS_BUCKET = 'lesson-assets'

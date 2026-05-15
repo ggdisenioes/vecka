@@ -127,6 +127,71 @@ export const VIDEO_PROVIDERS = ['vimeo', 'external', 'upload', 'none']
 
 export const LESSON_TYPES = ['video', 'article', 'live_session', 'attachment']
 
+export const MATERIAL_SCOPES = ['course', 'module', 'lesson', 'topic']
+
+export async function uniqueTopicSlug(lessonId, title, currentId = null) {
+  const supabase = getSupabaseAdmin()
+  const base = slugify(title) || `tema-${Date.now()}`
+  let slug = base
+  let counter = 2
+  while (true) {
+    let query = supabase
+      .from('course_topics')
+      .select('id')
+      .eq('lesson_id', lessonId)
+      .eq('slug', slug)
+      .limit(1)
+    if (currentId) query = query.neq('id', currentId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return slug
+    slug = `${base}-${counter}`
+    counter += 1
+  }
+}
+
+export async function uniqueQuizSlug(courseId, title, currentId = null) {
+  const supabase = getSupabaseAdmin()
+  const base = slugify(title) || `quiz-${Date.now()}`
+  let slug = base
+  let counter = 2
+  while (true) {
+    let query = supabase
+      .from('course_quizzes')
+      .select('id')
+      .eq('course_id', courseId)
+      .eq('slug', slug)
+      .limit(1)
+    if (currentId) query = query.neq('id', currentId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return slug
+    slug = `${base}-${counter}`
+    counter += 1
+  }
+}
+
+export async function uniqueLessonSlugByCourse(courseId, title, currentId = null) {
+  const supabase = getSupabaseAdmin()
+  const base = slugify(title) || `leccion-${Date.now()}`
+  let slug = base
+  let counter = 2
+  while (true) {
+    let query = supabase
+      .from('course_lessons')
+      .select('id')
+      .eq('course_id', courseId)
+      .eq('slug', slug)
+      .limit(1)
+    if (currentId) query = query.neq('id', currentId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return slug
+    slug = `${base}-${counter}`
+    counter += 1
+  }
+}
+
 export function pickLessonTypeFields(payload = {}) {
   const lessonType = LESSON_TYPES.includes(payload.lessonType) ? payload.lessonType : 'video'
   const liveUrl = lessonType === 'live_session' ? String(payload.liveSessionUrl || '').trim() : null

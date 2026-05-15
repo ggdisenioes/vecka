@@ -2,6 +2,9 @@
 
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+const CourseBuilder = dynamic(() => import('./CourseBuilder'), { ssr: false })
 
 function normalizeMaterials(list = []) {
   return list
@@ -628,6 +631,7 @@ export default function CourseEditor({ initialCourse }) {
   const [course, setCourse] = useState(() => normalizeCourse(initialCourse))
   const [savingCourse, setSavingCourse] = useState(false)
   const [addingModule, setAddingModule] = useState(false)
+  const [activeTab, setActiveTab] = useState('datos')
   const toast = useToast()
 
   function updateCourse(partial) {
@@ -710,8 +714,37 @@ export default function CourseEditor({ initialCourse }) {
     updateCourse({ modules: course.modules.filter((module) => module.id !== moduleId) })
   }
 
+  const TABS = [
+    { key: 'datos', label: 'Datos del curso' },
+    { key: 'constructor', label: 'Constructor' },
+    { key: 'modulos', label: 'Módulos (legado)' },
+  ]
+
   return (
     <>
+      <div className="editor-tabs">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={`editor-tab${activeTab === tab.key ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'constructor' && (
+        <section className="admin-card">
+          <div className="section-heading" style={{ marginBottom: 20 }}>
+            <h2>Constructor de curso</h2>
+          </div>
+          <CourseBuilder courseId={course.id} />
+        </section>
+      )}
+
+      {activeTab === 'datos' && (
       <section className="admin-card editor-section">
         <div className="section-heading">
           <h2>Datos del curso</h2>
@@ -805,7 +838,9 @@ export default function CourseEditor({ initialCourse }) {
           toast={toast}
         />
       </section>
+      )}
 
+      {activeTab === 'modulos' && (
       <section className="admin-card">
         <div className="section-heading">
           <h2>Módulos y clases</h2>
@@ -828,6 +863,7 @@ export default function CourseEditor({ initialCourse }) {
           ))
         )}
       </section>
+      )}
 
       {toast.toast ? (
         <div className={`toast ${toast.toast.type === 'error' ? 'error' : ''}`} key={toast.toast.key}>

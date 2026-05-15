@@ -7,6 +7,7 @@ import {
   requireText,
   revalidateCourses,
   uniqueLessonSlug,
+  uniqueLessonSlugByCourse,
 } from '@/lib/admin-api'
 
 export async function POST(request) {
@@ -15,11 +16,43 @@ export async function POST(request) {
 
   try {
     const payload = await request.json()
-    const moduleId = requireText(payload.moduleId, 'Module id')
-    const title = requireText(payload.title || 'Nueva clase', 'Lesson title')
+    const title = String(payload.title || 'Nueva lección').trim() || 'Nueva lección'
     const lessonType = LESSON_TYPES.includes(payload.lessonType) ? payload.lessonType : 'video'
     const supabase = getSupabaseAdmin()
 
+    // New-style: lesson linked to course + optional section
+    if (payload.courseId) {
+      const courseId = requireText(payload.courseId, 'Course id')
+      const { data: existing } = await supabase
+        .from('course_lessons')
+        .select('id')
+        .eq('course_id', courseId)
+
+      const slug = await uniqueLessonSlugByCourse(courseId, title)
+      const { data, error } = await supabase
+        .from('course_lessons')
+        .insert({
+          course_id: courseId,
+          section_id: payload.sectionId || null,
+          slug,
+          title,
+          sort_order: (existing?.length || 0) * 100,
+          position: (existing?.length || 0) + 1,
+          status: 'draft',
+          is_preview: false,
+          video_provider: 'none',
+          lesson_type: lessonType,
+        })
+        .select('*')
+        .single()
+
+      if (error) throw error
+      revalidateCourses()
+      return NextResponse.json({ lesson: data })
+    }
+
+    // Legacy: lesson linked to module
+    const moduleId = requireText(payload.moduleId, 'Module id')
     const { data: existing, error: countError } = await supabase
       .from('course_lessons')
       .select('id')
