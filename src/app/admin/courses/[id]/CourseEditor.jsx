@@ -98,28 +98,45 @@ function formatBytes(bytes) {
 
 function MaterialsManager({ scope, parentId, materials, onChange, toast }) {
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useState(null)
 
-  async function handleUpload(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
+  async function uploadFiles(files) {
+    if (!files || files.length === 0) return
     setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('scope', scope)
-      formData.append('parentId', parentId)
-      formData.append('sortOrder', String(materials.length + 1))
-      const response = await fetch('/api/admin/materials', { method: 'POST', body: formData })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data?.error || 'Error al subir')
-      onChange([...materials, data.material])
-      toast.show('Material subido')
-    } catch (error) {
-      toast.show(error.message || 'Error al subir', 'error')
-    } finally {
-      setUploading(false)
-      event.target.value = ''
+    const added = []
+    let failed = 0
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('scope', scope)
+        formData.append('parentId', parentId)
+        formData.append('sortOrder', String(materials.length + added.length + 1))
+        const response = await fetch('/api/admin/materials', { method: 'POST', body: formData })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data?.error || 'Error al subir')
+        added.push(data.material)
+      } catch {
+        failed++
+      }
     }
+    if (added.length > 0) onChange([...materials, ...added])
+    if (failed > 0) toast.show(`${failed} archivo(s) no se pudieron subir`, 'error')
+    else toast.show(added.length === 1 ? 'Material subido' : `${added.length} materiales subidos`)
+    setUploading(false)
+  }
+
+  function handleInputChange(event) {
+    uploadFiles(event.target.files)
+    event.target.value = ''
+  }
+
+  function handleDrop(event) {
+    event.preventDefault()
+    setDragOver(false)
+    uploadFiles(event.dataTransfer.files)
   }
 
   async function handleDelete(materialId) {
@@ -159,10 +176,26 @@ function MaterialsManager({ scope, parentId, materials, onChange, toast }) {
           ))}
         </ul>
       )}
-      <div className="upload-row">
-        <input type="file" onChange={handleUpload} disabled={uploading} />
-        {uploading ? <span className="file-meta">Subiendo…</span> : null}
-      </div>
+      <label
+        className={`drop-zone${dragOver ? ' drag-over' : ''}${uploading ? ' uploading' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+        onDragEnter={() => setDragOver(true)}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef[0]}
+          type="file"
+          multiple
+          onChange={handleInputChange}
+          disabled={uploading}
+          style={{ display: 'none' }}
+        />
+        {uploading
+          ? <span className="file-meta">Subiendo…</span>
+          : <span className="file-meta">Arrastrá archivos acá o <u>hacé clic para seleccionar</u> (podés elegir varios)</span>
+        }
+      </label>
     </div>
   )
 }
