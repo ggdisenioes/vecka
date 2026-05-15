@@ -18,11 +18,14 @@ export async function POST(request) {
     const slug = await uniqueCourseSlug(title)
     const supabase = getSupabaseAdmin()
 
+    const subtitle = String(payload.subtitle || '').trim() || null
+
     const { data, error } = await supabase
       .from('courses')
       .insert({
         slug,
         title,
+        subtitle,
         status: 'draft',
         visibility: 'private',
       })

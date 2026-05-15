@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const CourseBuilder = dynamic(() => import('./CourseBuilder'), { ssr: false })
@@ -628,10 +628,12 @@ function ModuleCard({ module, onChange, onDelete, toast }) {
 
 export default function CourseEditor({ initialCourse }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab') || 'constructor'
   const [course, setCourse] = useState(() => normalizeCourse(initialCourse))
   const [savingCourse, setSavingCourse] = useState(false)
   const [addingModule, setAddingModule] = useState(false)
-  const [activeTab, setActiveTab] = useState('datos')
+  const [activeTab, setActiveTab] = useState(initialTab)
   const toast = useToast()
 
   function updateCourse(partial) {
