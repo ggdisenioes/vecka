@@ -747,6 +747,7 @@ export default function CourseEditor({ initialCourse }) {
       )}
 
       {activeTab === 'datos' && (
+      <>
       <section className="admin-card editor-section">
         <div className="section-heading">
           <h2>Datos del curso</h2>
@@ -840,6 +841,7 @@ export default function CourseEditor({ initialCourse }) {
           toast={toast}
         />
       </section>
+      </>
       )}
 
       {activeTab === 'modulos' && (
