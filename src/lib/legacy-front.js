@@ -219,7 +219,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
   const staffPreview = courseSlug && isStaff(profile)
   const serverSupabase = user ? await getSupabaseServer() : null
 
-  const [coursesResult, productsResult, selectedCourse, enrollmentsResult] = await Promise.all([
+  const [coursesResult, productsResult, selectedCourse, enrollmentsResult, userGrantsResult] = await Promise.all([
     supabase
       .from('courses')
       .select(LEGACY_COURSE_TREE_SELECT)
@@ -250,6 +250,14 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
           .eq('access_status', 'active')
           .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       : Promise.resolve({ data: [], error: null }),
+    serverSupabase
+      ? serverSupabase
+          .from('membership_grants')
+          .select('id, tier_id, access_status, granted_at, expires_at, starts_at, membership_tiers(id, slug, name, billing_period, price_ars, features, description)')
+          .eq('user_id', user.id)
+          .eq('access_status', 'active')
+          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (coursesResult.error) {
@@ -274,11 +282,38 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
   const enrolledCourseIds = new Set((enrollmentsResult?.data || []).map((enrollment) => enrollment.course_id))
   const userIsStaff = isStaff(profile)
 
+  // Membership-based course access
+  const activeGrants = userGrantsResult?.data || []
+  const activeTierIds = activeGrants.map((g) => g.tier_id).filter(Boolean)
+  let membershipCourseIds = new Set()
+  if (activeTierIds.length > 0) {
+    const { data: tierCourses } = await getSupabaseAdmin()
+      .from('membership_tier_courses')
+      .select('course_id')
+      .in('tier_id', activeTierIds)
+    membershipCourseIds = new Set((tierCourses || []).map((tc) => tc.course_id))
+  }
+
+  const userMemberships = activeGrants.map((g) => ({
+    id: g.id,
+    tierId: g.tier_id,
+    tierSlug: g.membership_tiers?.slug || null,
+    tierName: g.membership_tiers?.name || 'Membresía',
+    billingPeriod: g.membership_tiers?.billing_period || null,
+    priceArs: Number(g.membership_tiers?.price_ars || 0),
+    features: Array.isArray(g.membership_tiers?.features) ? g.membership_tiers.features : [],
+    description: g.membership_tiers?.description || '',
+    grantedAt: g.granted_at || null,
+    startsAt: g.starts_at || null,
+    expiresAt: g.expires_at || null,
+    accessStatus: g.access_status,
+  }))
+
   const courses = mergedCourses.map((course, index) => {
     const enrolled = enrolledCourseIds.has(course.id)
     return mapLegacyCourse(course, index, {
       enrolled,
-      canAccess: enrolled || userIsStaff,
+      canAccess: enrolled || userIsStaff || membershipCourseIds.has(course.id),
       progress: enrolled ? 0 : 0,
     })
   })
@@ -293,5 +328,6 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
     products,
     user: legacyUser,
     selectedCourseId: selectedLegacyCourse?.id || null,
+    userMemberships,
   }
 }

@@ -6,7 +6,7 @@ import { Btn, Badge, ProgressBar, inputStyle } from '../components/Primitives';
 import { CourseCard } from '../components/Cards';
 
 export default function CuentaPage() {
-  const { user, navigate, courses, fmt } = useVecka();
+  const { user, navigate, courses, fmt, userMemberships } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const [tab, setTab] = useState('cursos');
   const px = isMobile ? '16px' : isTablet ? '32px' : '80px';
@@ -14,8 +14,10 @@ export default function CuentaPage() {
   if (!user) { navigate('home'); return null; }
 
   const enrolledCourses = courses.filter(c => c.enrolled);
+  const activeMemberships = (userMemberships || []).filter(m => m.accessStatus === 'active');
   const tabs = [
     { id: 'cursos', label: 'Mis Cursos', icon: 'book' },
+    ...(activeMemberships.length > 0 ? [{ id: 'membresia', label: isMobile ? 'Membresía' : 'Mi Membresía', icon: 'star' }] : []),
     { id: 'compras', label: isMobile ? 'Compras' : 'Mis Compras', icon: 'package' },
     { id: 'perfil', label: isMobile ? 'Perfil' : 'Mi Perfil', icon: 'user' },
   ];
@@ -94,6 +96,74 @@ export default function CuentaPage() {
                 <CourseCard key={c.id} course={c} onClick={() => navigate('curso', { course: c })} />
               ))}
             </div>
+          </div>
+        )}
+
+        {tab === 'membresia' && (
+          <div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 28, marginBottom: 20 }}>Mi Membresía</h2>
+            {activeMemberships.length === 0 ? (
+              <div style={{ background: '#fff', borderRadius: 16, padding: 28, border: '1px solid oklch(88% 0.012 60)', fontFamily: "'DM Sans', sans-serif", color: 'oklch(52% 0.018 50)' }}>
+                No tenés membresías activas.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {activeMemberships.map(m => {
+                  const expires = m.expiresAt ? new Date(m.expiresAt) : null;
+                  const daysLeft = expires ? Math.ceil((expires - new Date()) / 86400000) : null;
+                  const periodLabel = m.billingPeriod === 'monthly' ? 'mensual' : m.billingPeriod === 'annual' ? 'anual' : m.billingPeriod === 'lifetime' ? 'vitalicia' : '';
+                  return (
+                    <div key={m.id} style={{ background: '#fff', borderRadius: 16, padding: isMobile ? 20 : 28, border: '1px solid oklch(88% 0.012 60)' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
+                        <div>
+                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700 }}>{m.tierName}</div>
+                          {periodLabel && (
+                            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#5e9e8a', fontWeight: 600, marginTop: 2 }}>
+                              Membresía {periodLabel}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 20, background: '#d4f0e6', color: '#2e7d6a', fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          Activa
+                        </span>
+                      </div>
+                      {m.description ? (
+                        <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(52% 0.018 50)', marginBottom: 14 }}>{m.description}</div>
+                      ) : null}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: m.features?.length ? 16 : 0, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)' }}>
+                        {m.startsAt && (
+                          <span>Inicio: <strong>{new Date(m.startsAt).toLocaleDateString('es-AR')}</strong></span>
+                        )}
+                        {expires ? (
+                          <span>
+                            Vence: <strong>{expires.toLocaleDateString('es-AR')}</strong>
+                            {daysLeft !== null && daysLeft <= 30 && (
+                              <span style={{ marginLeft: 6, color: daysLeft <= 7 ? '#c0392b' : '#e67e22', fontWeight: 700 }}>
+                                ({daysLeft <= 0 ? 'Expirada' : `${daysLeft}d restantes`})
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#5e9e8a', fontWeight: 600 }}>Sin vencimiento</span>
+                        )}
+                      </div>
+                      {m.features?.length > 0 && (
+                        <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(40% 0.018 50)', lineHeight: 1.7 }}>
+                          {m.features.map((f, i) => <li key={i}>{f}</li>)}
+                        </ul>
+                      )}
+                      {m.tierSlug && (
+                        <div style={{ marginTop: 16 }}>
+                          <a href={`/membresia/${m.tierSlug}`} style={{ display: 'inline-block', padding: '9px 20px', background: '#5e9e8a', color: '#fff', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                            Ver contenido de la membresía →
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

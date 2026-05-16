@@ -20,6 +20,7 @@ export default async function AccountPage() {
       initialPage="cuenta"
       initialProducts={data.products}
       initialUser={data.user}
+      initialUserMemberships={data.userMemberships || []}
     />
   )
 }

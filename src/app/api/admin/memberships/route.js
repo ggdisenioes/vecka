@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { jsonError, requireStaff, revalidateMemberships } from '@/lib/admin-api'
+import { sendWelcomeEmail } from '@/lib/email'
 
 const GRANT_STATUSES = ['active', 'expired', 'revoked']
 
@@ -103,6 +104,31 @@ export async function POST(request) {
 
     if (error) throw error
     revalidateMemberships()
+
+    // Send welcome email (non-blocking)
+    try {
+      const { data: tierData } = await supabase
+        .from('membership_tiers')
+        .select('name, slug, billing_period')
+        .eq('id', payload.tierId)
+        .maybeSingle()
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, full_name, display_name')
+        .eq('id', userId)
+        .maybeSingle()
+      if (profile?.email && tierData && status === 'active') {
+        sendWelcomeEmail({
+          to: profile.email,
+          name: profile.display_name || profile.full_name || '',
+          tierName: tierData.name,
+          billingPeriod: tierData.billing_period,
+          expiresAt: data.expires_at,
+          tierSlug: tierData.slug,
+        }).catch(() => {})
+      }
+    } catch {}
+
     return NextResponse.json({ grant: data })
   } catch (error) {
     return jsonError(error.message || 'Could not create membership')

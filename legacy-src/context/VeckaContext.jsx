@@ -306,6 +306,7 @@ export function VeckaProvider({
   initialProducts = INITIAL_PRODUCTS,
   initialSelectedCourseId = null,
   initialMemberships = [],
+  initialUserMemberships = [],
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -316,6 +317,7 @@ export function VeckaProvider({
   const [courses, setCourses] = useState(initialCourses);
   const [products, setProducts] = useState(initialProducts);
   const [memberships] = useState(initialMemberships);
+  const [userMemberships] = useState(initialUserMemberships);
   const [selectedCourseId, setSelectedCourseId] = useState(initialSelectedCourseId);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
@@ -521,6 +523,7 @@ export function VeckaProvider({
         courses,
         products,
         memberships,
+        userMemberships,
         createCourse,
         updateCourse,
         deleteCourse,

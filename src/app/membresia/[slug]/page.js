@@ -2,18 +2,27 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentAuth } from '@/lib/auth'
 import { getSupabaseServer } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import CheckoutButton from './CheckoutButton'
 import '../membership.css'
 
 export const dynamic = 'force-dynamic'
 
-export default async function MembershipTierPage({ params }) {
+function periodLabel(period) {
+  return period === 'monthly' ? 'mes' : period === 'annual' ? 'año' : period === 'lifetime' ? 'vitalicia' : 'único'
+}
+
+export default async function MembershipTierPage({ params, searchParams }) {
   const { slug } = await params
+  const sp = await searchParams
+  const paymentStatus = sp?.payment || null
+
   const supabase = await getSupabaseServer()
   const { user } = await getCurrentAuth()
 
-  const { data: tier } = await supabase
+  const { data: tier } = await getSupabaseAdmin()
     .from('membership_tiers')
-    .select('id, slug, name, description, status')
+    .select('id, slug, name, description, status, price_ars, price_usd, billing_period, features, trial_days')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -24,7 +33,6 @@ export default async function MembershipTierPage({ params }) {
     redirect(`/login?next=/membresia/${slug}`)
   }
 
-  // ¿Tiene acceso activo a este tier?
   const { data: grant } = await supabase
     .from('membership_grants')
     .select('access_status, expires_at, granted_at')
@@ -36,7 +44,6 @@ export default async function MembershipTierPage({ params }) {
     grant?.access_status === 'active' &&
     (!grant.expires_at || new Date(grant.expires_at) > new Date())
 
-  // Cursos del tier (RLS deja pasar si está publicado, o si el usuario tiene acceso, o si es staff).
   const { data: tierCourses } = await supabase
     .from('membership_tier_courses')
     .select(`
@@ -56,6 +63,8 @@ export default async function MembershipTierPage({ params }) {
     .filter(Boolean)
     .filter((c) => c.status === 'published')
 
+  const features = Array.isArray(tier.features) ? tier.features : []
+
   return (
     <main className="membership-shell">
       <div className="membership-container">
@@ -72,20 +81,59 @@ export default async function MembershipTierPage({ params }) {
                 Acceso activo{grant?.expires_at ? ` · hasta ${new Date(grant.expires_at).toLocaleDateString('es-AR')}` : ' · vitalicia'}
               </span>
             ) : (
-              <span className="membership-pill expired">Sin acceso</span>
+              <>
+                {tier.price_ars > 0 && (
+                  <span className="membership-pill" style={{ background: '#f0f4ff', color: '#1a3a6e', fontWeight: 700, fontSize: 16, padding: '6px 14px' }}>
+                    ${Number(tier.price_ars).toLocaleString('es-AR')} ARS / {periodLabel(tier.billing_period)}
+                  </span>
+                )}
+                <span className="membership-pill expired">Sin acceso</span>
+              </>
             )}
           </div>
         </header>
 
+        {/* Payment status banners */}
+        {paymentStatus === 'success' && (
+          <div style={{ background: '#d4f0e6', border: '1px solid #5e9e8a', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#1a5c42', fontWeight: 600 }}>
+            ✓ ¡Pago aprobado! Tu membresía ya está activa. Si no ves el acceso todavía, esperá unos segundos y recargá la página.
+          </div>
+        )}
+        {paymentStatus === 'failure' && (
+          <div style={{ background: '#fde8e8', border: '1px solid #c0392b', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#7b1a1a', fontWeight: 600 }}>
+            ✗ El pago no pudo procesarse. Podés intentarlo nuevamente.
+          </div>
+        )}
+        {paymentStatus === 'pending' && (
+          <div style={{ background: '#fff8e0', border: '1px solid #e0b800', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#5a4500', fontWeight: 600 }}>
+            ⏳ Tu pago está pendiente de confirmación. Te avisaremos por email cuando esté aprobado.
+          </div>
+        )}
+
         {!hasAccess ? (
           <div className="membership-locked">
-            <p>
-              Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso,
-              <strong> contactá a tu administradora</strong> y te lo activamos manualmente.
+            {features.length > 0 && (
+              <div style={{ marginBottom: 20, textAlign: 'left' }}>
+                <strong>¿Qué incluye?</strong>
+                <ul style={{ marginTop: 10, paddingLeft: 18, lineHeight: 1.8 }}>
+                  {features.map((f, i) => <li key={i}>{f}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {tier.price_ars > 0 ? (
+              <CheckoutButton tierId={tier.id} tierName={tier.name} priceArs={tier.price_ars} billingPeriod={tier.billing_period} />
+            ) : (
+              <p>
+                Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso,{' '}
+                <strong>contactá a tu administradora</strong> y te lo activamos manualmente.
+              </p>
+            )}
+
+            <p style={{ marginTop: 12, fontSize: 13, color: '#8a7a6e' }}>
+              ¿Ya pagaste? <Link href="/contacto" style={{ color: '#5e9e8a' }}>Contactanos</Link> y lo verificamos.
             </p>
-            <p style={{ marginTop: 12 }}>
-              <Link href="/contacto" className="membership-cta">Solicitar acceso</Link>
-            </p>
+
             {courses.length ? (
               <div style={{ marginTop: 24, textAlign: 'left' }}>
                 <strong>Lo que incluye:</strong>
