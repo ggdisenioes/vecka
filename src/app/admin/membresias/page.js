@@ -50,7 +50,12 @@ export default async function AdminMembershipsListPage() {
             </div>
             <h1>Membresías</h1>
           </div>
-          <NewTierButton />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Link href="/admin/membresias/miembros" className="admin-button ghost">
+              Ver todos los miembros
+            </Link>
+            <NewTierButton />
+          </div>
         </header>
 
         {(!tiers || tiers.length === 0) ? (
