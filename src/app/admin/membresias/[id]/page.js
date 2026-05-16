@@ -81,7 +81,21 @@ export default async function AdminMembershipTierPage({ params }) {
             <div className="breadcrumb">
               <Link href="/admin/membresias">← Volver a membresías</Link>
             </div>
-            <h1>{tier.name}</h1>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {tier.name}
+              <span style={{
+                fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                background: tier.status === 'published' ? '#d4edda' : '#fff3cd',
+                color: tier.status === 'published' ? '#155724' : '#856404',
+              }}>
+                {tier.status === 'published' ? 'Publicada' : tier.status === 'archived' ? 'Archivada' : 'Borrador'}
+              </span>
+              {tier.is_featured && (
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: '#cce5ff', color: '#004085' }}>
+                  Destacada
+                </span>
+              )}
+            </h1>
           </div>
         </header>
 

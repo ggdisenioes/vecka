@@ -15,7 +15,7 @@ export default async function AdminMembershipsListPage() {
   const supabase = getSupabaseAdmin()
   const { data: tiers, error } = await supabase
     .from('membership_tiers')
-    .select('id, slug, name, description, status, sort_order, updated_at')
+    .select('id, slug, name, description, status, sort_order, updated_at, price_ars, price_usd, billing_period, is_featured')
     .order('sort_order', { ascending: true })
     .order('updated_at', { ascending: false })
 
@@ -65,20 +65,33 @@ export default async function AdminMembershipsListPage() {
                 href={`/admin/membresias/${tier.id}`}
                 className="course-card"
               >
-                <div className="title">{tier.name}</div>
+                <div className="title" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {tier.name}
+                  {tier.is_featured && <span style={{ fontSize: 11, background: '#cce5ff', color: '#004085', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>Destacada</span>}
+                </div>
+                {tier.price_ars > 0 && (
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--accent-deep)', margin: '4px 0' }}>
+                    ${tier.price_ars.toLocaleString('es-AR')} ARS
+                    <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>
+                      / {tier.billing_period === 'monthly' ? 'mes' : tier.billing_period === 'annual' ? 'año' : tier.billing_period === 'lifetime' ? 'vitalicia' : 'único'}
+                    </span>
+                  </div>
+                )}
                 <div className="meta">
-                  <span className={`status-pill ${tier.status}`}>{tier.status}</span>
+                  <span className={`status-pill ${tier.status}`}>
+                    {tier.status === 'published' ? 'Publicada' : tier.status === 'archived' ? 'Archivada' : 'Borrador'}
+                  </span>
                   <span className="status-pill catalog">
-                    {counts.get(tier.id) || 0} {counts.get(tier.id) === 1 ? 'miembro' : 'miembros'}
+                    {counts.get(tier.id) || 0} {counts.get(tier.id) === 1 ? 'miembro activo' : 'miembros activos'}
                   </span>
                 </div>
-                {tier.description ? (
+                {tier.description && (
                   <div className="meta" style={{ color: 'var(--muted)' }}>
-                    {tier.description.slice(0, 120)}{tier.description.length > 120 ? '…' : ''}
+                    {tier.description.slice(0, 100)}{tier.description.length > 100 ? '…' : ''}
                   </div>
-                ) : null}
-                <div className="meta">
-                  Actualizado {tier.updated_at ? new Date(tier.updated_at).toLocaleDateString('es-AR') : '—'}
+                )}
+                <div className="card-footer">
+                  Actualizado {tier.updated_at ? new Date(tier.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                 </div>
               </Link>
             ))}

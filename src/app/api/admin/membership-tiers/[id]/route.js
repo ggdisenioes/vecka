@@ -79,6 +79,12 @@ export async function PUT(request, { params }) {
     const status = STATUSES.includes(payload.status) ? payload.status : 'draft'
     const supabase = getSupabaseAdmin()
 
+    const BILLING_PERIODS = ['monthly', 'annual', 'lifetime', 'one_time']
+    const billingPeriod = BILLING_PERIODS.includes(payload.billingPeriod) ? payload.billingPeriod : 'monthly'
+    const features = Array.isArray(payload.features)
+      ? payload.features.filter((f) => typeof f === 'string' && f.trim())
+      : []
+
     const { error } = await supabase
       .from('membership_tiers')
       .update({
@@ -88,6 +94,12 @@ export async function PUT(request, { params }) {
         cover_image_url: String(payload.coverImageUrl || '').trim() || null,
         sort_order: toInteger(payload.sortOrder, 0),
         status,
+        price_ars: Number(payload.priceArs || 0),
+        price_usd: Number(payload.priceUsd || 0),
+        billing_period: billingPeriod,
+        trial_days: toInteger(payload.trialDays, 0),
+        features,
+        is_featured: Boolean(payload.isFeatured),
       })
       .eq('id', id)
 

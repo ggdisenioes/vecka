@@ -10,15 +10,28 @@ const STATUSES = [
   { value: 'archived', label: 'Archivada' },
 ]
 
-const GRANT_STATUSES = [
-  { value: 'active', label: 'Activo' },
-  { value: 'expired', label: 'Expirado' },
-  { value: 'revoked', label: 'Revocado' },
+const BILLING_PERIODS = [
+  { value: 'monthly', label: 'Mensual' },
+  { value: 'annual', label: 'Anual' },
+  { value: 'lifetime', label: 'Vitalicia' },
+  { value: 'one_time', label: 'Pago único' },
 ]
+
+const GRANT_STATUSES = [
+  { value: 'active', label: 'Activa' },
+  { value: 'expired', label: 'Expirada' },
+  { value: 'revoked', label: 'Revocada' },
+]
+
+const STATUS_COLORS = {
+  active: { bg: '#d4edda', color: '#155724' },
+  expired: { bg: '#fff3cd', color: '#856404' },
+  revoked: { bg: '#f8d7da', color: '#721c24' },
+}
 
 function formatDate(value) {
   if (!value) return '—'
-  return new Date(value).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(value).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function toDatetimeLocal(iso) {
@@ -29,37 +42,92 @@ function toDatetimeLocal(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function FeaturesList({ features, onChange }) {
+  const [newFeature, setNewFeature] = useState('')
+
+  function add() {
+    const trimmed = newFeature.trim()
+    if (!trimmed) return
+    onChange([...features, trimmed])
+    setNewFeature('')
+  }
+
+  function remove(index) {
+    onChange(features.filter((_, i) => i !== index))
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); add() }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {features.length > 0 && (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {features.map((f, i) => (
+            <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f4f1', borderRadius: 8, padding: '7px 12px' }}>
+              <span style={{ flex: 1, fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>✓ {f}</span>
+              <button type="button" onClick={() => remove(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b85c5c', fontSize: 16, lineHeight: 1, padding: '0 2px' }}>×</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          value={newFeature}
+          onChange={(e) => setNewFeature(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Ej: Acceso a todos los cursos"
+          style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}
+        />
+        <button type="button" className="admin-button ghost" onClick={add} disabled={!newFeature.trim()}>
+          + Agregar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function MembershipTierEditor({ tier, initialCourses, allCourses, initialGrants }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
+  const [activeTab, setActiveTab] = useState('datos')
 
+  // Datos del plan
   const [name, setName] = useState(tier.name || '')
   const [description, setDescription] = useState(tier.description || '')
   const [coverImageUrl, setCoverImageUrl] = useState(tier.cover_image_url || '')
   const [sortOrder, setSortOrder] = useState(tier.sort_order ?? 0)
   const [status, setStatus] = useState(tier.status || 'draft')
+  const [priceArs, setPriceArs] = useState(tier.price_ars ?? 0)
+  const [priceUsd, setPriceUsd] = useState(tier.price_usd ?? 0)
+  const [billingPeriod, setBillingPeriod] = useState(tier.billing_period || 'monthly')
+  const [trialDays, setTrialDays] = useState(tier.trial_days ?? 0)
+  const [features, setFeatures] = useState(tier.features || [])
+  const [isFeatured, setIsFeatured] = useState(Boolean(tier.is_featured))
 
+  // Cursos y miembros
   const [courses, setCourses] = useState(initialCourses)
   const [grants, setGrants] = useState(initialGrants)
 
-  const [newCourseId, setNewCourseId] = useState('')
+  // Formulario nuevo miembro
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberExpires, setNewMemberExpires] = useState('')
   const [newMemberNotes, setNewMemberNotes] = useState('')
 
+  // Formulario agregar curso
+  const [newCourseId, setNewCourseId] = useState('')
+
   const [busy, setBusy] = useState('')
   const [toast, setToast] = useState(null)
 
-  function showToast(message, type = 'info') {
+  function showToast(message, type = 'ok') {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3500)
   }
 
   const linkedCourseIds = useMemo(() => new Set(courses.map((c) => c.id)), [courses])
-  const linkableCourses = useMemo(
-    () => allCourses.filter((c) => !linkedCourseIds.has(c.id)),
-    [allCourses, linkedCourseIds],
-  )
+  const linkableCourses = useMemo(() => allCourses.filter((c) => !linkedCourseIds.has(c.id)), [allCourses, linkedCourseIds])
 
   async function handleSaveTier() {
     setBusy('save')
@@ -67,13 +135,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       const res = await fetch(`/api/admin/membership-tiers/${tier.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description,
-          coverImageUrl,
-          sortOrder,
-          status,
-        }),
+        body: JSON.stringify({ name, description, coverImageUrl, sortOrder, status, priceArs, priceUsd, billingPeriod, trialDays, features, isFeatured }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'No se pudo guardar')
@@ -81,6 +143,26 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       startTransition(() => router.refresh())
     } catch (error) {
       showToast(error.message || 'Error al guardar', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handlePublish() {
+    setStatus('published')
+    setBusy('publish')
+    try {
+      const res = await fetch(`/api/admin/membership-tiers/${tier.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description, coverImageUrl, sortOrder, status: 'published', priceArs, priceUsd, billingPeriod, trialDays, features, isFeatured }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo publicar')
+      showToast('Membresía publicada')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al publicar', 'error')
     } finally {
       setBusy('')
     }
@@ -110,7 +192,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
         body: JSON.stringify({ courseId: newCourseId, sortOrder: courses.length }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'No se pudo agregar el curso')
+      if (!res.ok) throw new Error(data?.error || 'No se pudo agregar')
       const added = allCourses.find((c) => c.id === newCourseId)
       if (added) setCourses([...courses, { ...added, sort_order: courses.length }])
       setNewCourseId('')
@@ -124,13 +206,10 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   }
 
   async function handleUnlinkCourse(courseId) {
-    if (!window.confirm('¿Quitar este curso del nivel?')) return
+    if (!window.confirm('¿Quitar este curso de la membresía?')) return
     setBusy(`unlink-${courseId}`)
     try {
-      const res = await fetch(
-        `/api/admin/membership-tiers/${tier.id}/courses?courseId=${encodeURIComponent(courseId)}`,
-        { method: 'DELETE' },
-      )
+      const res = await fetch(`/api/admin/membership-tiers/${tier.id}/courses?courseId=${encodeURIComponent(courseId)}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'No se pudo quitar')
       setCourses(courses.filter((c) => c.id !== courseId))
@@ -150,11 +229,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       const res = await fetch(`/api/admin/membership-tiers/${tier.id}/grants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newMemberEmail.trim(),
-          expiresAt: newMemberExpires || null,
-          notes: newMemberNotes,
-        }),
+        body: JSON.stringify({ email: newMemberEmail.trim(), expiresAt: newMemberExpires || null, notes: newMemberNotes }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'No se pudo otorgar acceso')
@@ -194,10 +269,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
     if (!window.confirm('¿Revocar el acceso de este miembro?')) return
     setBusy(`revoke-${userId}`)
     try {
-      const res = await fetch(
-        `/api/admin/membership-tiers/${tier.id}/grants?userId=${encodeURIComponent(userId)}`,
-        { method: 'DELETE' },
-      )
+      const res = await fetch(`/api/admin/membership-tiers/${tier.id}/grants?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'No se pudo revocar')
       setGrants(grants.filter((g) => g.user_id !== userId))
@@ -210,228 +282,286 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
     }
   }
 
+  const activeCount = grants.filter((g) => g.access_status === 'active').length
+
   return (
     <>
-      <section className="admin-card">
-        <div className="section-heading">
-          <h2>Datos de la membresía</h2>
-        </div>
-        <div className="editor-section">
+      {/* Tabs */}
+      <div className="editor-tabs" style={{ marginBottom: 20 }}>
+        {[
+          { id: 'datos', label: 'Datos del plan' },
+          { id: 'cursos', label: `Cursos incluidos (${courses.length})` },
+          { id: 'miembros', label: `Miembros (${activeCount} activos)` },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`editor-tab${activeTab === tab.id ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB: DATOS */}
+      {activeTab === 'datos' && (
+        <section className="admin-card editor-section">
+          <div className="section-heading">
+            <h2>Datos del plan</h2>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {status !== 'published' && (
+                <button type="button" className="admin-button" style={{ background: 'var(--accent-deep)', color: '#fff' }} onClick={handlePublish} disabled={!!busy}>
+                  {busy === 'publish' ? 'Publicando…' : 'Publicar'}
+                </button>
+              )}
+              <button type="button" className="admin-button ghost" onClick={handleSaveTier} disabled={!!busy}>
+                {busy === 'save' ? 'Guardando…' : 'Guardar'}
+              </button>
+              <button type="button" className="admin-button danger" onClick={handleDeleteTier} disabled={!!busy}>
+                Eliminar
+              </button>
+            </div>
+          </div>
+
           <div className="editor-row">
             <div className="editor-field">
-              <label>Nombre</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} />
+              <label>Nombre del plan</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Plan Premium" />
             </div>
             <div className="editor-field">
               <label>Estado</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                {STATUSES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
+                {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="editor-field">
+              <label>Período de facturación</label>
+              <select value={billingPeriod} onChange={(e) => setBillingPeriod(e.target.value)}>
+                {BILLING_PERIODS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
               </select>
             </div>
             <div className="editor-field">
               <label>Orden</label>
-              <input
-                type="number"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
-              />
+              <input type="number" min={0} value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value) || 0)} style={{ maxWidth: 90 }} />
             </div>
           </div>
-          <div className="editor-field">
-            <label>Descripción</label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Qué incluye esta membresía"
-            />
+
+          <div className="editor-row">
+            <div className="editor-field">
+              <label>Precio (ARS)</label>
+              <input type="number" min={0} value={priceArs} onChange={(e) => setPriceArs(Number(e.target.value) || 0)} placeholder="0" />
+            </div>
+            <div className="editor-field">
+              <label>Precio (USD)</label>
+              <input type="number" min={0} step="0.01" value={priceUsd} onChange={(e) => setPriceUsd(Number(e.target.value) || 0)} placeholder="0" />
+            </div>
+            <div className="editor-field">
+              <label>Días de prueba gratuita</label>
+              <input type="number" min={0} value={trialDays} onChange={(e) => setTrialDays(Number(e.target.value) || 0)} placeholder="0" />
+            </div>
+            <div className="editor-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
+                Plan destacado
+              </label>
+              <span style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Aparece con badge en la página pública</span>
+            </div>
           </div>
+
+          <div className="editor-field">
+            <label>Descripción interna</label>
+            <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descripción visible solo en el admin" />
+          </div>
+
           <div className="editor-field">
             <label>Imagen de portada (URL)</label>
-            <input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} />
+            <input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." />
           </div>
-          <div className="actions-row">
-            <button
-              type="button"
-              className="admin-button"
-              onClick={handleSaveTier}
-              disabled={busy === 'save'}
-            >
-              {busy === 'save' ? 'Guardando…' : 'Guardar cambios'}
-            </button>
-            <button
-              type="button"
-              className="admin-button danger"
-              onClick={handleDeleteTier}
-              disabled={busy === 'delete'}
-            >
-              {busy === 'delete' ? 'Borrando…' : 'Borrar membresía'}
-            </button>
+
+          <div className="editor-field">
+            <label>Beneficios visibles al público</label>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+              Estos aparecen como lista de checkmarks en la página de la membresía. Presioná Enter o hacé clic en "+ Agregar".
+            </p>
+            <FeaturesList features={features} onChange={setFeatures} />
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="admin-card">
-        <div className="section-heading">
-          <h3>Cursos incluidos</h3>
-        </div>
-        <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
-          Los miembros de esta membresía obtienen acceso automático a todos los cursos listados acá.
-          Para subir contenido (videos, PDFs, texto, sesiones en vivo) abrí el editor del curso.
-        </p>
+      {/* TAB: CURSOS */}
+      {activeTab === 'cursos' && (
+        <section className="admin-card editor-section">
+          <div className="section-heading">
+            <h3>Cursos incluidos</h3>
+          </div>
+          <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
+            Las alumnas con esta membresía activa acceden automáticamente a estos cursos.
+          </p>
 
-        {courses.length === 0 ? (
-          <div className="empty-state">Todavía no hay cursos en esta membresía.</div>
-        ) : (
-          <ul className="materials-list">
-            {courses.map((c) => (
-              <li key={c.id}>
-                <span>
-                  <strong>{c.title}</strong>{' '}
-                  <span className={`status-pill ${c.status}`}>{c.status}</span>
-                </span>
-                <span style={{ display: 'flex', gap: 8 }}>
-                  <Link className="admin-button ghost" href={`/admin/courses/${c.id}`}>
-                    Editar contenido
-                  </Link>
-                  <button
-                    type="button"
-                    className="admin-button danger"
-                    onClick={() => handleUnlinkCourse(c.id)}
-                    disabled={busy === `unlink-${c.id}`}
-                  >
-                    Quitar
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="upload-row" style={{ marginTop: 14 }}>
-          <select
-            value={newCourseId}
-            onChange={(e) => setNewCourseId(e.target.value)}
-            style={{ flex: '1 1 240px', padding: '8px 12px', borderRadius: 12, border: '1px solid var(--line, #dfd2c8)' }}
-          >
-            <option value="">Elegí un curso para agregar…</option>
-            {linkableCourses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title} {c.is_membership ? '· (ya marcado membresía)' : ''}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="admin-button"
-            onClick={handleLinkCourse}
-            disabled={!newCourseId || busy === 'link'}
-          >
-            {busy === 'link' ? 'Agregando…' : 'Agregar curso'}
-          </button>
-        </div>
-      </section>
-
-      <section className="admin-card">
-        <div className="section-heading">
-          <h3>Miembros</h3>
-        </div>
-        <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
-          Otorgá o revocá el acceso manualmente. El usuario tiene que estar registrado primero (entrar al menos una vez con su email).
-        </p>
-
-        <div className="upload-row" style={{ marginBottom: 14 }}>
-          <input
-            type="email"
-            placeholder="email@ejemplo.com"
-            value={newMemberEmail}
-            onChange={(e) => setNewMemberEmail(e.target.value)}
-            style={{ flex: '1 1 200px', padding: '8px 12px', borderRadius: 12, border: '1px solid var(--line, #dfd2c8)' }}
-          />
-          <input
-            type="datetime-local"
-            value={newMemberExpires}
-            onChange={(e) => setNewMemberExpires(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--line, #dfd2c8)' }}
-            title="Vencimiento (opcional, vacío = vitalicia)"
-          />
-          <input
-            type="text"
-            placeholder="Notas (opcional)"
-            value={newMemberNotes}
-            onChange={(e) => setNewMemberNotes(e.target.value)}
-            style={{ flex: '1 1 160px', padding: '8px 12px', borderRadius: 12, border: '1px solid var(--line, #dfd2c8)' }}
-          />
-          <button
-            type="button"
-            className="admin-button"
-            onClick={handleAddMember}
-            disabled={!newMemberEmail.trim() || busy === 'grant'}
-          >
-            {busy === 'grant' ? 'Otorgando…' : 'Otorgar acceso'}
-          </button>
-        </div>
-
-        {grants.length === 0 ? (
-          <div className="empty-state">Todavía no hay miembros en esta membresía.</div>
-        ) : (
-          <ul className="materials-list">
-            {grants.map((g) => (
-              <li key={g.id}>
-                <span>
-                  <strong>{g.profile?.email || g.user_id}</strong>{' '}
-                  {g.profile?.full_name ? <span className="file-meta">· {g.profile.full_name}</span> : null}
-                  <div className="file-meta">
-                    Otorgado {formatDate(g.granted_at)}
-                    {g.expires_at ? ` · Expira ${formatDate(g.expires_at)}` : ' · Vitalicia'}
+          {courses.length === 0 ? (
+            <div className="empty-state">Todavía no hay cursos en esta membresía.</div>
+          ) : (
+            <ul className="materials-list">
+              {courses.map((c) => (
+                <li key={c.id}>
+                  <div>
+                    <strong>{c.title}</strong>
+                    <span className={`status-pill ${c.status}`} style={{ marginLeft: 8 }}>{c.status}</span>
                   </div>
-                </span>
-                <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <select
-                    value={g.access_status}
-                    onChange={(e) =>
-                      handleUpdateGrant(g.user_id, {
-                        accessStatus: e.target.value,
-                        expiresAt: g.expires_at,
-                      })
-                    }
-                    disabled={busy === `grant-${g.user_id}`}
-                    style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)' }}
-                  >
-                    {GRANT_STATUSES.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="datetime-local"
-                    value={toDatetimeLocal(g.expires_at)}
-                    onChange={(e) =>
-                      handleUpdateGrant(g.user_id, {
-                        accessStatus: g.access_status,
-                        expiresAt: e.target.value || null,
-                      })
-                    }
-                    style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)' }}
-                    title="Vencimiento"
-                  />
-                  <button
-                    type="button"
-                    className="admin-button danger"
-                    onClick={() => handleRevokeGrant(g.user_id)}
-                    disabled={busy === `revoke-${g.user_id}`}
-                  >
-                    Revocar
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Link className="admin-button ghost" href={`/admin/courses/${c.id}`} style={{ fontSize: 13, padding: '5px 12px' }}>
+                      Editar curso
+                    </Link>
+                    <button type="button" className="admin-button danger" style={{ fontSize: 13, padding: '5px 12px' }} onClick={() => handleUnlinkCourse(c.id)} disabled={busy === `unlink-${c.id}`}>
+                      Quitar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-      {toast ? <div className={`toast ${toast.type === 'error' ? 'error' : ''}`}>{toast.message}</div> : null}
+          <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+            <select
+              value={newCourseId}
+              onChange={(e) => setNewCourseId(e.target.value)}
+              style={{ flex: '1 1 240px', padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
+            >
+              <option value="">Elegí un curso para agregar…</option>
+              {linkableCourses.map((c) => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+            <button type="button" className="admin-button" onClick={handleLinkCourse} disabled={!newCourseId || busy === 'link'}>
+              {busy === 'link' ? 'Agregando…' : '+ Agregar curso'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* TAB: MIEMBROS */}
+      {activeTab === 'miembros' && (
+        <section className="admin-card editor-section">
+          <div className="section-heading">
+            <h3>Miembros</h3>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{activeCount} activos · {grants.length} total</span>
+          </div>
+          <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
+            El usuario tiene que haberse registrado al menos una vez con su email antes de poder asignarle acceso.
+          </p>
+
+          {/* Formulario nuevo miembro */}
+          <div style={{ background: '#f8f4f1', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
+            <h4 style={{ margin: '0 0 12px', fontSize: 14, fontFamily: 'DM Sans, sans-serif' }}>Otorgar acceso manual</h4>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '2 1 220px' }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)' }}>Email de la alumna *</label>
+                <input
+                  type="email"
+                  placeholder="email@ejemplo.com"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 180px' }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)' }}>Vencimiento (vacío = vitalicia)</label>
+                <input
+                  type="datetime-local"
+                  value={newMemberExpires}
+                  onChange={(e) => setNewMemberExpires(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 160px' }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)' }}>Notas internas</label>
+                <input
+                  type="text"
+                  placeholder="Ej: beca, cortesía, staff…"
+                  value={newMemberNotes}
+                  onChange={(e) => setNewMemberNotes(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+              <button type="button" className="admin-button" onClick={handleAddMember} disabled={!newMemberEmail.trim() || busy === 'grant'} style={{ flexShrink: 0 }}>
+                {busy === 'grant' ? 'Otorgando…' : 'Otorgar acceso'}
+              </button>
+            </div>
+          </div>
+
+          {/* Lista de miembros */}
+          {grants.length === 0 ? (
+            <div className="empty-state">Todavía no hay miembros en esta membresía.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {grants.map((g) => {
+                const statusStyle = STATUS_COLORS[g.access_status] || {}
+                return (
+                  <div key={g.id} style={{ background: '#fff', border: '1px solid var(--line, #dfd2c8)', borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {g.profile?.email || g.user_id}
+                      </div>
+                      {g.profile?.full_name && (
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{g.profile.full_name}</div>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                        Otorgado {formatDate(g.granted_at)}
+                        {g.expires_at ? ` · Vence ${formatDate(g.expires_at)}` : ' · Vitalicia'}
+                        {g.notes ? ` · ${g.notes}` : ''}
+                      </div>
+                    </div>
+
+                    <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20, ...statusStyle, flexShrink: 0 }}>
+                      {GRANT_STATUSES.find((s) => s.value === g.access_status)?.label || g.access_status}
+                    </span>
+
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        value={g.access_status}
+                        onChange={(e) => handleUpdateGrant(g.user_id, { accessStatus: e.target.value, expiresAt: g.expires_at })}
+                        disabled={busy === `grant-${g.user_id}`}
+                        style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}
+                      >
+                        {GRANT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                      <input
+                        type="datetime-local"
+                        value={toDatetimeLocal(g.expires_at)}
+                        onChange={(e) => handleUpdateGrant(g.user_id, { accessStatus: g.access_status, expiresAt: e.target.value || null })}
+                        title="Fecha de vencimiento"
+                        style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}
+                      />
+                      <button
+                        type="button"
+                        className="admin-button danger"
+                        style={{ fontSize: 13, padding: '6px 12px' }}
+                        onClick={() => handleRevokeGrant(g.user_id)}
+                        disabled={busy === `revoke-${g.user_id}`}
+                      >
+                        Revocar
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          background: toast.type === 'error' ? '#b85c5c' : 'var(--accent-deep, #4a7d6e)',
+          color: '#fff', borderRadius: 10, padding: '12px 20px',
+          fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500,
+          boxShadow: '0 4px 20px rgba(0,0,0,.15)',
+        }}>
+          {toast.message}
+        </div>
+      )}
     </>
   )
 }
