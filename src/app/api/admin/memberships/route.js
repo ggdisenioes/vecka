@@ -93,6 +93,7 @@ export async function POST(request) {
         tier_id: payload.tierId,
         user_id: userId,
         access_status: status,
+        grant_type: 'manual',
         expires_at: parseExpiry(payload.expiresAt),
         starts_at: parseExpiry(payload.startsAt) || new Date().toISOString(),
         granted_at: new Date().toISOString(),

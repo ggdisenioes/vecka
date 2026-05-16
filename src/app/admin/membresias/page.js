@@ -50,7 +50,13 @@ export default async function AdminMembershipsListPage() {
             </div>
             <h1>Membresías</h1>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Link href="/admin/membresias/estadisticas" className="admin-button ghost">
+              Estadísticas
+            </Link>
+            <Link href="/admin/membresias/cupones" className="admin-button ghost">
+              Cupones
+            </Link>
             <Link href="/admin/membresias/miembros" className="admin-button ghost">
               Ver todos los miembros
             </Link>

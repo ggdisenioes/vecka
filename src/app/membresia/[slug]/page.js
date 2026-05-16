@@ -22,7 +22,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
 
   const { data: tier } = await getSupabaseAdmin()
     .from('membership_tiers')
-    .select('id, slug, name, description, status, price_ars, price_usd, billing_period, features, trial_days')
+    .select('id, slug, name, description, status, price_ars, price_usd, billing_period, features, trial_days, is_featured')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -35,7 +35,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
 
   const { data: grant } = await supabase
     .from('membership_grants')
-    .select('access_status, expires_at, granted_at')
+    .select('access_status, expires_at, granted_at, grant_type')
     .eq('tier_id', tier.id)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -122,7 +122,14 @@ export default async function MembershipTierPage({ params, searchParams }) {
             )}
 
             {tier.price_ars > 0 ? (
-              <CheckoutButton tierId={tier.id} tierName={tier.name} priceArs={tier.price_ars} billingPeriod={tier.billing_period} />
+              <CheckoutButton
+                tierId={tier.id}
+                tierName={tier.name}
+                priceArs={tier.price_ars}
+                billingPeriod={tier.billing_period}
+                trialDays={tier.trial_days || 0}
+                hasUsedTrial={!!grant}
+              />
             ) : (
               <p>
                 Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso,{' '}

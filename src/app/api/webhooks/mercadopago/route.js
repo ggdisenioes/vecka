@@ -28,6 +28,7 @@ export async function POST(request) {
     try { meta = JSON.parse(payment.external_reference || '{}') } catch {}
     const tierId = meta.tierId || payment.metadata?.tierId
     const userId = meta.userId || payment.metadata?.userId
+    const couponId = meta.couponId || payment.metadata?.couponId || null
 
     if (!tierId || !userId) return NextResponse.json({ ok: true })
 
@@ -63,12 +64,22 @@ export async function POST(request) {
           tier_id: tierId,
           user_id: userId,
           access_status: 'active',
+          grant_type: 'payment',
           granted_at: now,
           starts_at: now,
           expires_at: expiresAt,
           payment_reference: String(data.id),
+          coupon_id: couponId || null,
           notes: `MercadoPago · ${payment.payment_method_id || ''} · ${payment.status_detail || ''}`,
         }, { onConflict: 'tier_id,user_id' })
+
+      // Increment coupon usage count
+      if (couponId) {
+        const { data: c } = await supabase.from('membership_coupons').select('uses_count').eq('id', couponId).maybeSingle()
+        if (c) {
+          await supabase.from('membership_coupons').update({ uses_count: (c.uses_count || 0) + 1 }).eq('id', couponId).catch(() => {})
+        }
+      }
 
       revalidateMemberships()
 

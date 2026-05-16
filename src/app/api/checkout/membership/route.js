@@ -31,6 +31,34 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Esta membresía no tiene precio configurado.' }, { status: 400 })
   }
 
+  // Validate and apply coupon
+  let finalPrice = Number(tier.price_ars)
+  let couponId = null
+  if (payload.couponId) {
+    const { data: coupon } = await supabase
+      .from('membership_coupons')
+      .select('id, discount_type, discount_value, max_uses, uses_count, valid_until, active, tier_ids')
+      .eq('id', payload.couponId)
+      .eq('active', true)
+      .maybeSingle()
+
+    if (coupon) {
+      const now = new Date()
+      const expired = coupon.valid_until && new Date(coupon.valid_until) < now
+      const maxed = coupon.max_uses !== null && coupon.uses_count >= coupon.max_uses
+      const wrongTier = coupon.tier_ids?.length && !coupon.tier_ids.includes(tier.id)
+
+      if (!expired && !maxed && !wrongTier) {
+        if (coupon.discount_type === 'percent') {
+          finalPrice = Math.max(0, finalPrice * (1 - coupon.discount_value / 100))
+        } else {
+          finalPrice = Math.max(0, finalPrice - coupon.discount_value)
+        }
+        couponId = coupon.id
+      }
+    }
+  }
+
   const { data: profile } = await (await getSupabaseServer())
     .from('profiles')
     .select('email, full_name, display_name')
@@ -47,7 +75,7 @@ export async function POST(request) {
         description: tier.description || `Membresía ${tier.name}`,
         quantity: 1,
         currency_id: 'ARS',
-        unit_price: Number(tier.price_ars),
+        unit_price: Math.max(1, Math.round(finalPrice)),
       },
     ],
     payer: {
@@ -61,8 +89,8 @@ export async function POST(request) {
     },
     auto_return: 'approved',
     notification_url: `${baseUrl}/api/webhooks/mercadopago`,
-    external_reference: JSON.stringify({ tierId: tier.id, userId: user.id }),
-    metadata: { tierId: tier.id, userId: user.id },
+    external_reference: JSON.stringify({ tierId: tier.id, userId: user.id, couponId }),
+    metadata: { tierId: tier.id, userId: user.id, couponId },
   }
 
   const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -86,5 +114,7 @@ export async function POST(request) {
     initPoint: mpData.init_point,
     sandboxInitPoint: mpData.sandbox_init_point,
     preferenceId: mpData.id,
+    finalPrice,
+    couponApplied: !!couponId,
   })
 }
