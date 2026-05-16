@@ -17,6 +17,12 @@ function sortByPosition(items = []) {
     .sort((left, right) => Number(left?.position || 0) - Number(right?.position || 0))
 }
 
+function sortBySortOrder(items = []) {
+  return items
+    .slice()
+    .sort((left, right) => Number(left?.sort_order || 0) - Number(right?.sort_order || 0))
+}
+
 function mapLegacyMaterials(materials = []) {
   return materials
     .slice()
@@ -78,13 +84,47 @@ function mapLegacyModules(modules = []) {
   }))
 }
 
+function mapConstructorSections(sections = []) {
+  return sortBySortOrder(sections).map((section) => ({
+    id: section.id,
+    title: section.title,
+    description: '',
+    video: { provider: 'none', vimeoUrl: '', externalUrl: '', storagePath: '', bucket: 'course-videos', durationSeconds: 0 },
+    videoProvider: 'none',
+    vimeoUrl: '',
+    externalVideoUrl: '',
+    videoStoragePath: '',
+    videoDurationSeconds: 0,
+    materials: [],
+    lessons: sortBySortOrder(section.lessons || []).map((lesson) => ({
+      id: lesson.id,
+      slug: lesson.slug,
+      title: lesson.title,
+      summary: lesson.summary || '',
+      body: lesson.body || '',
+      status: lesson.status || 'draft',
+      isPreview: Boolean(lesson.is_preview),
+      video: mapLegacyVideo(lesson),
+      videoProvider: lesson.video_provider || 'none',
+      vimeoUrl: lesson.vimeo_url || '',
+      externalVideoUrl: lesson.external_video_url || '',
+      videoStoragePath: lesson.video_storage_path || '',
+      videoDurationSeconds: Number(lesson.video_duration_seconds || 0),
+      materials: mapLegacyMaterials(lesson.materials || []),
+      attachments: mapLegacyMaterials(lesson.materials || []),
+    })),
+  }))
+}
+
 function countLessons(modules = []) {
   return modules.reduce((sum, module) => sum + (module.lessons?.length || 0), 0)
 }
 
 function mapLegacyCourse(course, index = 0, access = {}) {
-  const modules = mapLegacyModules(course.modules || [])
-  const totalLessons = countLessons(course.modules || [])
+  const legacyModules = mapLegacyModules(course.modules || [])
+  const constructorModules = mapConstructorSections(course.sections || [])
+  const modules = [...legacyModules, ...constructorModules]
+  const totalLessons = countLessons(modules)
 
   return {
     id: course.id,
@@ -160,6 +200,13 @@ const LEGACY_COURSE_TREE_SELECT = `
     *,
     materials:course_materials!course_materials_module_id_fkey(*),
     lessons:course_lessons(
+      *,
+      materials:course_materials!course_materials_lesson_id_fkey(*)
+    )
+  ),
+  sections:course_sections(
+    *,
+    lessons:course_lessons!course_lessons_section_id_fkey(
       *,
       materials:course_materials!course_materials_lesson_id_fkey(*)
     )
