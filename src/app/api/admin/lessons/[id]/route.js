@@ -9,6 +9,7 @@ import {
   revalidateCourses,
   toInteger,
   uniqueLessonSlug,
+  uniqueLessonSlugByCourse,
 } from '@/lib/admin-api'
 
 const STATUSES = ['draft', 'published', 'archived']
@@ -26,14 +27,16 @@ export async function PUT(request, { params }) {
 
     const { data: current, error: lookupError } = await supabase
       .from('course_lessons')
-      .select('id, module_id')
+      .select('id, module_id, course_id')
       .eq('id', id)
       .maybeSingle()
 
     if (lookupError) throw lookupError
     if (!current) throw new Error('Lesson not found')
 
-    const slug = await uniqueLessonSlug(current.module_id, title, id)
+    const slug = current.module_id
+      ? await uniqueLessonSlug(current.module_id, title, id)
+      : await uniqueLessonSlugByCourse(current.course_id, title, id)
     const { error } = await supabase
       .from('course_lessons')
       .update({

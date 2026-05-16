@@ -42,6 +42,7 @@ export default function NewCourseButton() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'No se pudo crear el curso')
+      router.refresh()
       router.push(`/admin/courses/${data.course.id}?tab=constructor`)
     } catch (err) {
       setError(err.message || 'Error al crear el curso')

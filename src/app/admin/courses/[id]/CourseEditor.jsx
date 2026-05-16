@@ -132,8 +132,9 @@ function MaterialsManager({ scope, parentId, materials, onChange, toast }) {
   }
 
   function handleInputChange(event) {
-    uploadFiles(event.target.files)
+    const files = Array.from(event.target.files || [])
     event.target.value = ''
+    if (files.length > 0) uploadFiles(files)
   }
 
   function handleDrop(event) {
@@ -640,36 +641,44 @@ export default function CourseEditor({ initialCourse }) {
     setCourse((current) => ({ ...current, ...partial }))
   }
 
-  async function saveCourse() {
+  async function saveCourseWith(overrides = {}) {
     setSavingCourse(true)
     try {
+      const merged = { ...course, ...overrides }
       const response = await fetch(`/api/admin/courses/${course.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: course.title,
-          subtitle: course.subtitle,
-          description: course.description,
-          category: course.category,
-          level: course.level,
-          duration: course.duration,
-          coverImageUrl: course.coverImageUrl,
-          price: course.price,
-          priceUSD: course.priceUSD,
-          isMembership: course.isMembership,
-          status: course.status,
-          visibility: course.visibility,
+          title: merged.title,
+          subtitle: merged.subtitle,
+          description: merged.description,
+          category: merged.category,
+          level: merged.level,
+          duration: merged.duration,
+          coverImageUrl: merged.coverImageUrl,
+          price: merged.price,
+          priceUSD: merged.priceUSD,
+          isMembership: merged.isMembership,
+          status: merged.status,
+          visibility: merged.visibility,
         }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data?.error || 'Error al guardar')
-      toast.show('Curso guardado')
+      if (overrides.status) setCourse((c) => ({ ...c, ...overrides }))
+      toast.show(overrides.status === 'published' ? 'Curso publicado' : 'Curso guardado')
       router.refresh()
     } catch (error) {
       toast.show(error.message || 'Error al guardar', 'error')
     } finally {
       setSavingCourse(false)
     }
+  }
+
+  function saveCourse() { return saveCourseWith() }
+
+  async function publishCourse() {
+    await saveCourseWith({ status: 'published', visibility: course.visibility === 'private' ? 'catalog' : course.visibility })
   }
 
   async function deleteCourse() {
@@ -751,11 +760,16 @@ export default function CourseEditor({ initialCourse }) {
       <section className="admin-card editor-section">
         <div className="section-heading">
           <h2>Datos del curso</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="admin-button" onClick={saveCourse} disabled={savingCourse}>
-              {savingCourse ? 'Guardando…' : 'Guardar curso'}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {course.status !== 'published' && (
+              <button type="button" className="admin-button" style={{ background: 'var(--accent-deep)', color: '#fff' }} onClick={publishCourse} disabled={savingCourse}>
+                {savingCourse ? 'Publicando…' : 'Publicar curso'}
+              </button>
+            )}
+            <button type="button" className="admin-button ghost" onClick={saveCourse} disabled={savingCourse}>
+              {savingCourse ? 'Guardando…' : 'Guardar'}
             </button>
-            <button type="button" className="admin-button danger" onClick={deleteCourse}>Eliminar curso</button>
+            <button type="button" className="admin-button danger" onClick={deleteCourse}>Eliminar</button>
           </div>
         </div>
 

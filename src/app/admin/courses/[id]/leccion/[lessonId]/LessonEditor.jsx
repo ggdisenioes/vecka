@@ -94,7 +94,7 @@ function MaterialsSection({ scope, parentId, materials, setMaterials }) {
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); uploadFiles(e.dataTransfer.files) }}
       >
-        <input type="file" multiple style={{ display: 'none' }} onChange={(e) => { uploadFiles(e.target.files); e.target.value = '' }} disabled={uploading} />
+        <input type="file" multiple style={{ display: 'none' }} onChange={(e) => { const f = Array.from(e.target.files||[]); e.target.value=''; if(f.length) uploadFiles(f) }} disabled={uploading} />
         {uploading ? <span className="file-meta">Subiendo…</span> : <span className="file-meta">Arrastrá archivos o <u>hacé clic para seleccionar</u></span>}
       </label>
     </div>

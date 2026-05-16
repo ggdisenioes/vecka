@@ -1,5 +1,6 @@
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getCourseBySlug } from '@/lib/lms'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getSupabasePublic } from '@/lib/supabase/public'
 import { getSupabaseServer } from '@/lib/supabase/server'
 
@@ -168,6 +169,7 @@ const LEGACY_COURSE_TREE_SELECT = `
 export async function getLegacyFrontData({ courseSlug } = {}) {
   const supabase = getSupabasePublic()
   const { user, profile } = await getCurrentAuth()
+  const staffPreview = courseSlug && isStaff(profile)
   const serverSupabase = user ? await getSupabaseServer() : null
 
   const [coursesResult, productsResult, selectedCourse, enrollmentsResult] = await Promise.all([
@@ -183,7 +185,16 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
       .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false }),
-    courseSlug ? getCourseBySlug(courseSlug) : Promise.resolve(null),
+    courseSlug
+      ? staffPreview
+        ? getSupabaseAdmin()
+            .from('courses')
+            .select(LEGACY_COURSE_TREE_SELECT)
+            .eq('slug', courseSlug)
+            .maybeSingle()
+            .then((r) => r.data)
+        : getCourseBySlug(courseSlug)
+      : Promise.resolve(null),
     serverSupabase
       ? serverSupabase
           .from('course_enrollments')

@@ -47,10 +47,19 @@ export default async function AdminCourseEditPage({ params }) {
             <div className="breadcrumb">
               <Link href="/admin">← Volver al panel</Link>
             </div>
-            <h1>{course.title || 'Curso sin título'}</h1>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {course.title || 'Curso sin título'}
+              <span style={{
+                fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                background: course.status === 'published' ? '#d4edda' : '#fff3cd',
+                color: course.status === 'published' ? '#155724' : '#856404',
+              }}>
+                {course.status === 'published' ? 'Publicado' : course.status === 'archived' ? 'Archivado' : 'Borrador'}
+              </span>
+            </h1>
           </div>
           <Link className="admin-button ghost" href={`/courses/${course.slug}`} target="_blank">
-            Ver en sitio público
+            {course.status === 'published' ? 'Ver en sitio' : 'Vista previa'}
           </Link>
         </header>
 
