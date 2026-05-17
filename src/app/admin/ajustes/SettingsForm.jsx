@@ -93,6 +93,9 @@ export default function SettingsForm({ initialSettings: s }) {
     bankHolderName: s.bank_holder_name || '',
     bankCbu: s.bank_cbu || '',
     bankAlias: s.bank_alias || '',
+    bankUsdHolderName: s.bank_usd_holder_name || '',
+    bankUsdCbu: s.bank_usd_cbu || '',
+    bankUsdAlias: s.bank_usd_alias || '',
     bankContactEmail: s.bank_contact_email || '',
     bankContactWhatsapp: s.bank_contact_whatsapp || '',
     checkoutNote: s.checkout_note || '',
@@ -234,30 +237,63 @@ export default function SettingsForm({ initialSettings: s }) {
           </div>
 
           {form.checkoutBankEnabled && (
-            <div style={card}>
-              <h3 style={cardTitle}>Datos bancarios</h3>
-              <p style={cardSub}>Estos datos se muestran en el paso 3 del checkout cuando la alumna elige pago por transferencia.</p>
-              <div style={grid2}>
-                <Field label="Titular de la cuenta">
-                  <input style={input} value={form.bankHolderName} onChange={setInput('bankHolderName')} placeholder="Nombre Apellido / Razón Social" />
-                </Field>
-                <Field label="CBU / CVU">
-                  <input style={input} value={form.bankCbu} onChange={setInput('bankCbu')} placeholder="0000000000000000000000" />
-                </Field>
-                <Field label="Alias">
-                  <input style={input} value={form.bankAlias} onChange={setInput('bankAlias')} placeholder="ALIAS.EJEMPLO" />
-                </Field>
-                <Field label="Email para recibir comprobantes">
-                  <input style={input} type="email" value={form.bankContactEmail} onChange={setInput('bankContactEmail')} placeholder="pagos@vecka.com.ar" />
-                </Field>
-                <Field label="WhatsApp para envío de comprobantes">
-                  <input style={input} value={form.bankContactWhatsapp} onChange={setInput('bankContactWhatsapp')} placeholder="5491112345678" />
-                </Field>
-                <Field label="Nota en el checkout (opcional)">
-                  <input style={input} value={form.checkoutNote} onChange={setInput('checkoutNote')} placeholder="Pagando por transferencia obtenés 10% de descuento." />
-                </Field>
+            <>
+              <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ background: '#e8f5f0', color: '#2e7d6a', fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, letterSpacing: '0.05em' }}>ARS · PESOS</span>
+                  <h3 style={{ ...cardTitle, marginBottom: 0 }}>Cuenta en pesos</h3>
+                </div>
+                <p style={cardSub}>Datos que se muestran en el checkout cuando la alumna elige transferencia en pesos.</p>
+                <div style={grid2}>
+                  <Field label="Titular">
+                    <input style={input} value={form.bankHolderName} onChange={setInput('bankHolderName')} placeholder="Nombre Apellido / Razón Social" />
+                  </Field>
+                  <Field label="CBU / CVU">
+                    <input style={input} value={form.bankCbu} onChange={setInput('bankCbu')} placeholder="0000000000000000000000" />
+                  </Field>
+                  <Field label="Alias">
+                    <input style={input} value={form.bankAlias} onChange={setInput('bankAlias')} placeholder="ALIAS.EJEMPLO" />
+                  </Field>
+                </div>
               </div>
-            </div>
+
+              <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ background: '#eef2fb', color: '#3a5bbf', fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, letterSpacing: '0.05em' }}>USD · DÓLARES</span>
+                  <h3 style={{ ...cardTitle, marginBottom: 0 }}>Cuenta en dólares</h3>
+                </div>
+                <p style={cardSub}>Datos que se muestran en el checkout cuando la alumna elige transferencia en dólares. Dejá vacío si no aceptás pagos en USD.</p>
+                <div style={grid2}>
+                  <Field label="Titular">
+                    <input style={input} value={form.bankUsdHolderName} onChange={setInput('bankUsdHolderName')} placeholder="Nombre Apellido / Razón Social" />
+                  </Field>
+                  <Field label="CBU / CVU">
+                    <input style={input} value={form.bankUsdCbu} onChange={setInput('bankUsdCbu')} placeholder="0000000000000000000000" />
+                  </Field>
+                  <Field label="Alias">
+                    <input style={input} value={form.bankUsdAlias} onChange={setInput('bankUsdAlias')} placeholder="ALIAS.USD.EJEMPLO" />
+                  </Field>
+                </div>
+              </div>
+
+              <div style={card}>
+                <h3 style={cardTitle}>Contacto para comprobantes</h3>
+                <p style={cardSub}>Email y WhatsApp donde las alumnas envían el comprobante de pago (compartido para ARS y USD).</p>
+                <div style={grid2}>
+                  <Field label="Email">
+                    <input style={input} type="email" value={form.bankContactEmail} onChange={setInput('bankContactEmail')} placeholder="pagos@vecka.com.ar" />
+                  </Field>
+                  <Field label="WhatsApp (con código de país, sin +)">
+                    <input style={input} value={form.bankContactWhatsapp} onChange={setInput('bankContactWhatsapp')} placeholder="5491112345678" />
+                  </Field>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <Field label="Nota en el checkout (opcional)">
+                      <input style={input} value={form.checkoutNote} onChange={setInput('checkoutNote')} placeholder="Pagando por transferencia obtenés 10% de descuento." />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           <div style={card}>

@@ -25,6 +25,9 @@ export async function PATCH(request) {
     if (payload.bankHolderName !== undefined) patch.bank_holder_name = payload.bankHolderName || null
     if (payload.bankCbu !== undefined) patch.bank_cbu = payload.bankCbu || null
     if (payload.bankAlias !== undefined) patch.bank_alias = payload.bankAlias || null
+    if (payload.bankUsdHolderName !== undefined) patch.bank_usd_holder_name = payload.bankUsdHolderName || null
+    if (payload.bankUsdCbu !== undefined) patch.bank_usd_cbu = payload.bankUsdCbu || null
+    if (payload.bankUsdAlias !== undefined) patch.bank_usd_alias = payload.bankUsdAlias || null
     if (payload.bankContactEmail !== undefined) patch.bank_contact_email = payload.bankContactEmail || null
     if (payload.bankContactWhatsapp !== undefined) patch.bank_contact_whatsapp = payload.bankContactWhatsapp || null
     if (payload.checkoutNote !== undefined) patch.checkout_note = payload.checkoutNote || null
