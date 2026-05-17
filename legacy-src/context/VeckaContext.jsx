@@ -308,6 +308,8 @@ export function VeckaProvider({
   initialMemberships = [],
   initialUserMemberships = [],
   bankInfo = null,
+  bankInfoUsd = null,
+  acceptedCurrencies = ['ARS'],
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -537,6 +539,8 @@ export function VeckaProvider({
         memberships,
         userMemberships,
         bankInfo,
+        bankInfoUsd,
+        acceptedCurrencies,
         createCourse,
         updateCourse,
         deleteCourse,

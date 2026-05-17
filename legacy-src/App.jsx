@@ -57,6 +57,8 @@ export default function App({
   initialMemberships = [],
   initialUserMemberships = [],
   bankInfo = null,
+  bankInfoUsd = null,
+  acceptedCurrencies = ['ARS'],
 }) {
   return (
     <VeckaProvider
@@ -67,6 +69,8 @@ export default function App({
       initialUser={initialUser}
       initialMemberships={initialMemberships}
       initialUserMemberships={initialUserMemberships}
+      bankInfoUsd={bankInfoUsd}
+      acceptedCurrencies={acceptedCurrencies}
       bankInfo={bankInfo}
     >
       <AppContent />

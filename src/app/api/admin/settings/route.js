@@ -22,6 +22,8 @@ export async function PATCH(request) {
 
     // Pagos
     if (payload.checkoutBankEnabled !== undefined) patch.checkout_bank_enabled = Boolean(payload.checkoutBankEnabled)
+    if (payload.checkoutArsEnabled !== undefined) patch.checkout_ars_enabled = Boolean(payload.checkoutArsEnabled)
+    if (payload.checkoutUsdEnabled !== undefined) patch.checkout_usd_enabled = Boolean(payload.checkoutUsdEnabled)
     if (payload.bankHolderName !== undefined) patch.bank_holder_name = payload.bankHolderName || null
     if (payload.bankCbu !== undefined) patch.bank_cbu = payload.bankCbu || null
     if (payload.bankAlias !== undefined) patch.bank_alias = payload.bankAlias || null
@@ -31,7 +33,6 @@ export async function PATCH(request) {
     if (payload.bankContactEmail !== undefined) patch.bank_contact_email = payload.bankContactEmail || null
     if (payload.bankContactWhatsapp !== undefined) patch.bank_contact_whatsapp = payload.bankContactWhatsapp || null
     if (payload.checkoutNote !== undefined) patch.checkout_note = payload.checkoutNote || null
-    if (payload.defaultCurrency !== undefined) patch.default_currency = payload.defaultCurrency || 'ARS'
 
     // Correo
     if (payload.resendFromName !== undefined) patch.resend_from_name = payload.resendFromName || null

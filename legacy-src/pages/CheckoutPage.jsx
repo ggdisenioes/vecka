@@ -5,11 +5,14 @@ import Icon from '../components/Icon';
 import { Btn, inputStyle } from '../components/Primitives';
 
 export default function CheckoutPage() {
-  const { cart, cartTotal, fmt, navigate, user, bankInfo } = useVecka();
+  const { cart, cartTotal, fmt, navigate, user, bankInfo, bankInfoUsd, acceptedCurrencies, currency, setCurrency } = useVecka();
   const { isMobile } = useResponsive();
   const [step, setStep] = useState(user ? 1 : 0);
   const [payMethod, setPayMethod] = useState('transferencia');
   const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', phone: '' });
+
+  const multiCurrency = acceptedCurrencies.length > 1;
+  const activeBankInfo = currency === 'USD' ? bankInfoUsd : bankInfo;
 
   const payMethods = [
     {
@@ -138,12 +141,37 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {bankInfo?.checkoutNote && (
-                  <div style={{ background: '#f0faf6', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#2e6052' }}>
-                    💡 {bankInfo.checkoutNote}
+                {multiCurrency && (
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#8a7a6e', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Moneda de pago</div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {acceptedCurrencies.map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setCurrency(c)}
+                          style={{
+                            flex: 1, padding: '12px 16px', borderRadius: 10, cursor: 'pointer',
+                            border: `2px solid ${currency === c ? '#5e9e8a' : 'oklch(88% 0.012 60)'}`,
+                            background: currency === c ? '#f0faf6' : '#fff',
+                            fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: currency === c ? 700 : 500,
+                            color: currency === c ? '#2e7d6a' : '#4a4040',
+                            transition: 'all .15s',
+                          }}
+                        >
+                          {c === 'ARS' ? '🇦🇷 Pesos (ARS)' : '🇺🇸 Dólares (USD)'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
-                {!bankInfo?.checkoutNote && (
+
+                {activeBankInfo?.checkoutNote && (
+                  <div style={{ background: '#f0faf6', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#2e6052' }}>
+                    💡 {activeBankInfo.checkoutNote}
+                  </div>
+                )}
+                {!activeBankInfo?.checkoutNote && (
                   <div style={{ background: '#f0faf6', borderRadius: 10, padding: '12px 16px', marginBottom: 18, fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#2e6052' }}>
                     💡 Pagá por transferencia y confirmá tu compra enviando el comprobante.
                   </div>
@@ -169,11 +197,18 @@ export default function CheckoutPage() {
 
                 {/* Bank details */}
                 <div style={{ background: '#f9f5f0', borderRadius: 14, padding: '20px 24px', marginBottom: 24, textAlign: 'left' }}>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#8a7a6e', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Datos para transferir</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#8a7a6e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Datos para transferir</div>
+                    {multiCurrency && (
+                      <span style={{ background: currency === 'USD' ? '#eef2fb' : '#e8f5f0', color: currency === 'USD' ? '#3a5bbf' : '#2e7d6a', fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
+                        {currency === 'USD' ? '🇺🇸 USD' : '🇦🇷 ARS'}
+                      </span>
+                    )}
+                  </div>
                   {[
-                    ['Titular', bankInfo?.holderName || 'Vecka Escuela de Costura'],
-                    bankInfo?.cbu ? ['CBU', bankInfo.cbu] : null,
-                    bankInfo?.alias ? ['Alias', bankInfo.alias] : null,
+                    ['Titular', activeBankInfo?.holderName || 'Vecka Escuela de Costura'],
+                    activeBankInfo?.cbu ? ['CBU', activeBankInfo.cbu] : null,
+                    activeBankInfo?.alias ? ['Alias', activeBankInfo.alias] : null,
                     ['Monto', fmt(cartTotal, cartTotal)],
                     ['Concepto / Referencia', form.email || form.name || 'tu nombre'],
                   ].filter(Boolean).map(([label, value]) => (
@@ -186,24 +221,24 @@ export default function CheckoutPage() {
 
                 {/* Contact CTAs */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch', maxWidth: 360, margin: '0 auto 24px' }}>
-                  {bankInfo?.contactWhatsapp && (
+                  {activeBankInfo?.contactWhatsapp && (
                     <a
-                      href={`https://wa.me/${bankInfo.contactWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola! Acabo de hacer mi pedido por ${fmt(cartTotal, cartTotal)} y voy a enviar el comprobante. Nombre: ${form.name}, Email: ${form.email}`)}`}
+                      href={`https://wa.me/${activeBankInfo.contactWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola! Acabo de hacer mi pedido por ${fmt(cartTotal, cartTotal)} y voy a enviar el comprobante. Nombre: ${form.name}, Email: ${form.email}`)}`}
                       target="_blank" rel="noreferrer"
                       style={{ display: 'block', padding: '13px 24px', background: '#25D366', color: '#fff', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}
                     >
                       📲 Enviar comprobante por WhatsApp
                     </a>
                   )}
-                  {bankInfo?.contactEmail && (
+                  {activeBankInfo?.contactEmail && (
                     <a
-                      href={`mailto:${bankInfo.contactEmail}?subject=${encodeURIComponent('Comprobante de pago - ' + form.name)}&body=${encodeURIComponent(`Hola! Adjunto el comprobante de mi transferencia por ${fmt(cartTotal, cartTotal)}.\n\nNombre: ${form.name}\nEmail: ${form.email}\nProductos: ${cart.map(i => i.title).join(', ')}`)}`}
+                      href={`mailto:${activeBankInfo.contactEmail}?subject=${encodeURIComponent('Comprobante de pago - ' + form.name)}&body=${encodeURIComponent(`Hola! Adjunto el comprobante de mi transferencia por ${fmt(cartTotal, cartTotal)}.\n\nNombre: ${form.name}\nEmail: ${form.email}\nProductos: ${cart.map(i => i.title).join(', ')}`)}`}
                       style={{ display: 'block', padding: '13px 24px', background: '#5e9e8a', color: '#fff', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}
                     >
                       ✉ Enviar por email
                     </a>
                   )}
-                  {!bankInfo?.contactWhatsapp && !bankInfo?.contactEmail && (
+                  {!activeBankInfo?.contactWhatsapp && !activeBankInfo?.contactEmail && (
                     <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#8a7a6e' }}>
                       Envianos el comprobante al contacto habitual para confirmar tu acceso.
                     </p>

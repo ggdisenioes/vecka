@@ -99,7 +99,8 @@ export default function SettingsForm({ initialSettings: s }) {
     bankContactEmail: s.bank_contact_email || '',
     bankContactWhatsapp: s.bank_contact_whatsapp || '',
     checkoutNote: s.checkout_note || '',
-    defaultCurrency: s.default_currency || 'ARS',
+    checkoutArsEnabled: s.checkout_ars_enabled ?? true,
+    checkoutUsdEnabled: s.checkout_usd_enabled ?? false,
     // Correo
     resendFromName: s.resend_from_name || '',
     resendFromEmail: s.resend_from_email || '',
@@ -297,20 +298,20 @@ export default function SettingsForm({ initialSettings: s }) {
           )}
 
           <div style={card}>
-            <h3 style={cardTitle}>Moneda</h3>
-            <p style={cardSub}>Moneda predeterminada para precios y transacciones.</p>
-            <div style={{ maxWidth: 200 }}>
-              <Field label="Moneda">
-                <Select
-                  value={form.defaultCurrency}
-                  onChange={set('defaultCurrency')}
-                  options={[
-                    { value: 'ARS', label: 'ARS — Peso argentino' },
-                    { value: 'USD', label: 'USD — Dólar estadounidense' },
-                  ]}
-                />
-              </Field>
-            </div>
+            <h3 style={cardTitle}>Monedas aceptadas</h3>
+            <p style={cardSub}>Las monedas habilitadas aparecen como opción en el checkout. La alumna elige en cuál quiere pagar y se le muestran los datos de la cuenta correspondiente.</p>
+            <Toggle
+              checked={form.checkoutArsEnabled}
+              onChange={set('checkoutArsEnabled')}
+              label="Pesos argentinos (ARS)"
+              description="Muestra los datos de la cuenta en pesos en el checkout."
+            />
+            <Toggle
+              checked={form.checkoutUsdEnabled}
+              onChange={set('checkoutUsdEnabled')}
+              label="Dólares (USD)"
+              description="Muestra los datos de la cuenta en dólares en el checkout. Requiere tener una cuenta USD configurada arriba."
+            />
           </div>
         </>
       )}
