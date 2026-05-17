@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export const COURSES = [
@@ -307,13 +307,25 @@ export function VeckaProvider({
   initialSelectedCourseId = null,
   initialMemberships = [],
   initialUserMemberships = [],
+  bankInfo = null,
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [page, setPage] = useState(initialPage);
   const [user, setUser] = useState(initialUser);
   const [currency, setCurrency] = useState('ARS');
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(sessionStorage.getItem('vecka_cart') || '[]'); } catch { return []; }
+  });
+  const cartSyncRef = useRef(false);
+  useEffect(() => {
+    if (cartSyncRef.current) {
+      try { sessionStorage.setItem('vecka_cart', JSON.stringify(cart)); } catch {}
+    } else {
+      cartSyncRef.current = true;
+    }
+  }, [cart]);
   const [courses, setCourses] = useState(initialCourses);
   const [products, setProducts] = useState(initialProducts);
   const [memberships] = useState(initialMemberships);
@@ -524,6 +536,7 @@ export function VeckaProvider({
         products,
         memberships,
         userMemberships,
+        bankInfo,
         createCourse,
         updateCourse,
         deleteCourse,

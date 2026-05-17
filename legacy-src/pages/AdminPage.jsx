@@ -154,12 +154,12 @@ export default function AdminPage() {
 
   const navItems = [
     { id: 'overview', label: 'Resumen', icon: 'home' },
-    { id: 'courses', label: 'Cursos', icon: 'book' },
+    { id: 'courses', label: 'Cursos', icon: 'book', href: '/admin/courses' },
     { id: 'memberships', label: 'Membresías', icon: 'star', href: '/admin/membresias' },
+    { id: 'users', label: 'Usuarios', icon: 'user', href: '/admin/usuarios' },
     { id: 'products', label: 'Productos', icon: 'package' },
     { id: 'orders', label: 'Ventas', icon: 'tag' },
-    { id: 'students', label: 'Alumnas', icon: 'user' },
-    { id: 'settings', label: 'Ajustes', icon: 'settings' },
+    { id: 'settings', label: 'Ajustes', icon: 'settings', href: '/admin/ajustes' },
   ];
 
   const updateCourseFormField = (key, value) => setCourseForm((prev) => ({ ...prev, [key]: value }));
