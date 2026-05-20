@@ -28,6 +28,10 @@ export default async function AdminMembershipsListPage() {
     .from('membership_tier_courses')
     .select('tier_id, course_id, courses(status)')
 
+  const { data: contentRows } = await supabase
+    .from('membership_content_items')
+    .select('tier_id, status')
+
   const counts = new Map()
   for (const g of grants || []) {
     counts.set(g.tier_id, (counts.get(g.tier_id) || 0) + 1)
@@ -44,9 +48,19 @@ export default async function AdminMembershipsListPage() {
     }
   }
 
+  const contentCounts = new Map()
+  const publishedContentCounts = new Map()
+  for (const row of contentRows || []) {
+    contentCounts.set(row.tier_id, (contentCounts.get(row.tier_id) || 0) + 1)
+    if (row.status === 'published') {
+      publishedContentCounts.set(row.tier_id, (publishedContentCounts.get(row.tier_id) || 0) + 1)
+    }
+  }
+
   const publishedCount = (tiers || []).filter((tier) => tier.status === 'published').length
   const draftCount = (tiers || []).filter((tier) => tier.status === 'draft').length
   const activeMemberCount = (grants || []).length
+  const nativeContentCount = (contentRows || []).length
 
   if (error) {
     return (
@@ -101,7 +115,11 @@ export default async function AdminMembershipsListPage() {
               <strong>{activeMemberCount}</strong>
             </div>
             <div className="metric-card">
-              <span>Cursos internos</span>
+              <span>Contenido exclusivo</span>
+              <strong>{nativeContentCount}</strong>
+            </div>
+            <div className="metric-card">
+              <span>Cursos opcionales</span>
               <strong>{uniqueCourseIds.size}</strong>
             </div>
           </div>
@@ -138,8 +156,11 @@ export default async function AdminMembershipsListPage() {
                   <span className={`status-pill ${courseCounts.get(tier.id) ? 'catalog' : 'draft'}`}>
                     {courseCounts.get(tier.id) || 0} cursos
                   </span>
+                  <span className={`status-pill ${contentCounts.get(tier.id) ? 'catalog' : 'draft'}`}>
+                    {contentCounts.get(tier.id) || 0} recursos
+                  </span>
                   <span className={`status-pill ${publishedCourseCounts.get(tier.id) ? 'published' : 'draft'}`}>
-                    {publishedCourseCounts.get(tier.id) || 0} publicados
+                    {(publishedCourseCounts.get(tier.id) || 0) + (publishedContentCounts.get(tier.id) || 0)} publicados
                   </span>
                   <span className="status-pill catalog">
                     {counts.get(tier.id) || 0} {counts.get(tier.id) === 1 ? 'miembro activo' : 'miembros activos'}

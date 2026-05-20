@@ -189,6 +189,34 @@
   margin-bottom: 16px;
 }
 
+.membership-content-card {
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.membership-content-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.membership-content-card-header strong {
+  font-size: 15px;
+}
+
+.file-meta {
+  color: var(--muted, #596567);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .course-card {
   display: flex;
   flex-direction: column;

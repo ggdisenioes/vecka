@@ -23,10 +23,30 @@ const GRANT_STATUSES = [
   { value: 'revoked', label: 'Revocada' },
 ]
 
+const CONTENT_TYPES = [
+  { value: 'text', label: 'Texto' },
+  { value: 'image', label: 'Imagen' },
+  { value: 'download', label: 'Descargable PDF/molde' },
+  { value: 'link', label: 'Link externo' },
+  { value: 'embed', label: 'Embed' },
+]
+
 const STATUS_COLORS = {
   active: { bg: '#d4edda', color: '#155724' },
   expired: { bg: '#fff3cd', color: '#856404' },
   revoked: { bg: '#f8d7da', color: '#721c24' },
+}
+
+function contentTypeLabel(type) {
+  return CONTENT_TYPES.find((item) => item.value === type)?.label || type
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0)
+  if (!value) return '0 B'
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function formatDate(value) {
@@ -88,7 +108,7 @@ function FeaturesList({ features, onChange }) {
   )
 }
 
-export default function MembershipTierEditor({ tier, initialCourses, allCourses, initialGrants }) {
+export default function MembershipTierEditor({ tier, initialCourses, allCourses, initialGrants, initialContentItems }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState('datos')
@@ -109,13 +129,20 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   // Cursos y miembros
   const [courses, setCourses] = useState(initialCourses)
   const [grants, setGrants] = useState(initialGrants)
+  const [contentItems, setContentItems] = useState(initialContentItems || [])
 
   // Formulario nuevo miembro
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberExpires, setNewMemberExpires] = useState('')
   const [newMemberNotes, setNewMemberNotes] = useState('')
 
-  // Formulario agregar curso
+  // Formulario contenido y cursos
+  const [newContentType, setNewContentType] = useState('text')
+  const [newContentTitle, setNewContentTitle] = useState('')
+  const [newContentSummary, setNewContentSummary] = useState('')
+  const [newContentBody, setNewContentBody] = useState('')
+  const [newContentUrl, setNewContentUrl] = useState('')
+  const [newContentFile, setNewContentFile] = useState(null)
   const [newCourseId, setNewCourseId] = useState('')
   const [newCourseTitle, setNewCourseTitle] = useState('')
   const [newCourseSubtitle, setNewCourseSubtitle] = useState('')
@@ -131,11 +158,14 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   const linkedCourseIds = useMemo(() => new Set(courses.map((c) => c.id)), [courses])
   const linkableCourses = useMemo(() => allCourses.filter((c) => !linkedCourseIds.has(c.id)), [allCourses, linkedCourseIds])
   const publishedCourseCount = courses.filter((c) => c.status === 'published').length
+  const publishedContentCount = contentItems.filter((item) => item.status === 'published').length
+  const hasPublishedMembershipMaterial = publishedContentCount > 0 || publishedCourseCount > 0
   const publishChecklist = [
     { key: 'data', label: 'Datos públicos', done: Boolean(name.trim() && description.trim()), required: true },
     { key: 'features', label: 'Beneficios visibles', done: features.length > 0 },
-    { key: 'courses', label: 'Curso interno vinculado', done: courses.length > 0, required: true },
-    { key: 'publishedContent', label: 'Contenido publicado', done: publishedCourseCount > 0, required: true },
+    { key: 'nativeContent', label: 'Contenido exclusivo', done: contentItems.length > 0 },
+    { key: 'courses', label: 'Cursos opcionales', done: courses.length > 0 },
+    { key: 'publishedContent', label: 'Contenido publicado', done: hasPublishedMembershipMaterial, required: true },
   ]
   const requiredReady = publishChecklist.filter((item) => item.required).every((item) => item.done)
   const missingRequired = publishChecklist.filter((item) => item.required && !item.done).length
@@ -163,7 +193,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   async function handlePublish() {
     if (!requiredReady) {
       showToast('Faltan datos o contenido publicado para publicar la membresía', 'error')
-      setActiveTab(name.trim() && description.trim() ? 'cursos' : 'datos')
+      setActiveTab(name.trim() && description.trim() ? 'contenido' : 'datos')
       return
     }
 
@@ -220,6 +250,117 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       startTransition(() => router.refresh())
     } catch (error) {
       showToast(error.message || 'Error', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateContentItem() {
+    const title = newContentTitle.trim()
+    if (!title) return
+    if ((newContentType === 'download' || newContentType === 'image') && !newContentFile && !newContentUrl.trim()) {
+      showToast('Agregá un archivo o una URL para este contenido', 'error')
+      return
+    }
+    if ((newContentType === 'link' || newContentType === 'embed') && !newContentUrl.trim()) {
+      showToast('Agregá una URL para este contenido', 'error')
+      return
+    }
+
+    setBusy('create-content')
+    try {
+      let res
+      if (newContentFile) {
+        const formData = new FormData()
+        formData.append('tierId', tier.id)
+        formData.append('type', newContentType)
+        formData.append('title', title)
+        formData.append('summary', newContentSummary)
+        formData.append('body', newContentBody)
+        formData.append('mediaUrl', newContentUrl)
+        formData.append('sortOrder', String(contentItems.length))
+        formData.append('status', 'draft')
+        formData.append('file', newContentFile)
+        res = await fetch('/api/admin/membership-content', { method: 'POST', body: formData })
+      } else {
+        res = await fetch('/api/admin/membership-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tierId: tier.id,
+            type: newContentType,
+            title,
+            summary: newContentSummary,
+            body: newContentBody,
+            mediaUrl: newContentUrl,
+            sortOrder: contentItems.length,
+            status: 'draft',
+          }),
+        })
+      }
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo crear el contenido')
+      setContentItems([...contentItems, data.item])
+      setNewContentTitle('')
+      setNewContentSummary('')
+      setNewContentBody('')
+      setNewContentUrl('')
+      setNewContentFile(null)
+      showToast('Contenido creado')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al crear contenido', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  function updateContentItemLocal(id, patch) {
+    setContentItems(contentItems.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  }
+
+  async function handleSaveContentItem(item, patch = {}) {
+    const next = { ...item, ...patch }
+    setBusy(`content-${item.id}`)
+    try {
+      const res = await fetch(`/api/admin/membership-content/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: next.type,
+          title: next.title,
+          summary: next.summary,
+          body: next.body,
+          mediaUrl: next.media_url,
+          sortOrder: next.sort_order,
+          status: next.status,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar')
+      updateContentItemLocal(item.id, data.item)
+      showToast('Contenido guardado')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al guardar contenido', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleDeleteContentItem(item) {
+    if (!window.confirm(`¿Eliminar "${item.title}" de la membresía?`)) return
+    setBusy(`delete-content-${item.id}`)
+    try {
+      const res = await fetch(`/api/admin/membership-content/${item.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo eliminar')
+      setContentItems(contentItems.filter((current) => current.id !== item.id))
+      showToast('Contenido eliminado')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al eliminar contenido', 'error')
     } finally {
       setBusy('')
     }
@@ -367,7 +508,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
             <button type="button" className="admin-button ghost" onClick={() => setActiveTab('datos')}>
               Datos
             </button>
-            <button type="button" className="admin-button ghost" onClick={() => setActiveTab('cursos')}>
+            <button type="button" className="admin-button ghost" onClick={() => setActiveTab('contenido')}>
               Contenido
             </button>
             {status === 'published' ? (
@@ -387,7 +528,8 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       <div className="editor-tabs" style={{ marginBottom: 20 }}>
         {[
           { id: 'datos', label: 'Datos del plan' },
-          { id: 'cursos', label: `Cursos incluidos (${courses.length})` },
+          { id: 'contenido', label: `Contenido exclusivo (${contentItems.length})` },
+          { id: 'cursos', label: `Cursos opcionales (${courses.length})` },
           { id: 'miembros', label: `Miembros (${activeCount} activos)` },
         ].map((tab) => (
           <button
@@ -486,14 +628,214 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
         </section>
       )}
 
+      {/* TAB: CONTENIDO */}
+      {activeTab === 'contenido' && (
+        <section className="admin-card editor-section">
+          <div className="section-heading">
+            <h3>Contenido exclusivo</h3>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+              {publishedContentCount} publicados · {contentItems.length} total
+            </span>
+          </div>
+          <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
+            Estos recursos pertenecen directamente a la membresía. Podés publicar artículos, imágenes,
+            moldes PDF descargables, links externos o embeds sin convertirlos en cursos.
+          </p>
+
+          <div className="membership-content-create">
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <h4>Nuevo contenido</h4>
+            </div>
+            <div className="editor-row">
+              <div className="editor-field">
+                <label>Tipo</label>
+                <select value={newContentType} onChange={(e) => setNewContentType(e.target.value)}>
+                  {CONTENT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="editor-field">
+                <label>Título</label>
+                <input
+                  value={newContentTitle}
+                  onChange={(e) => setNewContentTitle(e.target.value)}
+                  placeholder="Ej: Molde base en PDF"
+                />
+              </div>
+              <div className="editor-field">
+                <label>Orden</label>
+                <input type="number" value={contentItems.length} disabled />
+              </div>
+            </div>
+
+            <div className="editor-field">
+              <label>Resumen</label>
+              <input
+                value={newContentSummary}
+                onChange={(e) => setNewContentSummary(e.target.value)}
+                placeholder="Descripción breve visible para miembros"
+              />
+            </div>
+
+            {(newContentType === 'text' || newContentType === 'embed') && (
+              <div className="editor-field">
+                <label>{newContentType === 'embed' ? 'Notas' : 'Texto'}</label>
+                <textarea
+                  rows={5}
+                  value={newContentBody}
+                  onChange={(e) => setNewContentBody(e.target.value)}
+                  placeholder={newContentType === 'embed' ? 'Notas internas o descripción del embed' : 'Escribí el contenido exclusivo'}
+                />
+              </div>
+            )}
+
+            {(newContentType === 'image' || newContentType === 'download') && (
+              <div className="editor-row">
+                <div className="editor-field">
+                  <label>{newContentType === 'image' ? 'Imagen' : 'Archivo descargable'}</label>
+                  <input
+                    type="file"
+                    accept={newContentType === 'image' ? 'image/*' : '.pdf,application/pdf,*/*'}
+                    onChange={(e) => setNewContentFile(e.target.files?.[0] || null)}
+                  />
+                  {newContentFile ? (
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      {newContentFile.name} · {formatBytes(newContentFile.size)}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="editor-field">
+                  <label>URL alternativa</label>
+                  <input
+                    value={newContentUrl}
+                    onChange={(e) => setNewContentUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {(newContentType === 'link' || newContentType === 'embed') && (
+              <div className="editor-field">
+                <label>{newContentType === 'embed' ? 'URL embed' : 'URL'}</label>
+                <input
+                  value={newContentUrl}
+                  onChange={(e) => setNewContentUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            <div className="actions-row">
+              <button
+                type="button"
+                className="admin-button"
+                onClick={handleCreateContentItem}
+                disabled={busy === 'create-content' || !newContentTitle.trim()}
+              >
+                {busy === 'create-content' ? 'Creando…' : '+ Crear contenido'}
+              </button>
+            </div>
+          </div>
+
+          {contentItems.length === 0 ? (
+            <div className="empty-state">Todavía no hay contenido exclusivo cargado.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {contentItems.map((item) => (
+                <div key={item.id} className="membership-content-card">
+                  <div className="membership-content-card-header">
+                    <div>
+                      <strong>{item.title || 'Contenido sin título'}</strong>
+                      <div className="file-meta">
+                        {contentTypeLabel(item.type)} · {item.status === 'published' ? 'Publicado' : item.status === 'archived' ? 'Archivado' : 'Borrador'}
+                        {item.file_name ? ` · ${item.file_name} (${formatBytes(item.size_bytes)})` : ''}
+                      </div>
+                    </div>
+                    <span className={`status-pill ${item.status}`}>{item.status === 'published' ? 'Publicado' : item.status === 'archived' ? 'Archivado' : 'Borrador'}</span>
+                  </div>
+
+                  <div className="editor-row">
+                    <div className="editor-field">
+                      <label>Tipo</label>
+                      <select value={item.type} onChange={(e) => updateContentItemLocal(item.id, { type: e.target.value })}>
+                        {CONTENT_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="editor-field">
+                      <label>Título</label>
+                      <input value={item.title || ''} onChange={(e) => updateContentItemLocal(item.id, { title: e.target.value })} />
+                    </div>
+                    <div className="editor-field">
+                      <label>Estado</label>
+                      <select value={item.status || 'draft'} onChange={(e) => updateContentItemLocal(item.id, { status: e.target.value })}>
+                        {STATUSES.map((statusOption) => (
+                          <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="editor-field">
+                      <label>Orden</label>
+                      <input type="number" value={item.sort_order ?? 0} onChange={(e) => updateContentItemLocal(item.id, { sort_order: Number(e.target.value) || 0 })} />
+                    </div>
+                  </div>
+
+                  <div className="editor-field">
+                    <label>Resumen</label>
+                    <input value={item.summary || ''} onChange={(e) => updateContentItemLocal(item.id, { summary: e.target.value })} />
+                  </div>
+
+                  <div className="editor-field">
+                    <label>{item.type === 'embed' ? 'Notas' : 'Texto'}</label>
+                    <textarea rows={4} value={item.body || ''} onChange={(e) => updateContentItemLocal(item.id, { body: e.target.value })} />
+                  </div>
+
+                  <div className="editor-field">
+                    <label>URL externa, imagen o embed</label>
+                    <input value={item.media_url || ''} onChange={(e) => updateContentItemLocal(item.id, { media_url: e.target.value })} placeholder="https://..." />
+                  </div>
+
+                  {item.storage_path ? (
+                    <div className="file-meta">
+                      Archivo privado: <a href={`/api/membership-content/${item.id}`} target="_blank" rel="noopener noreferrer">{item.file_name || item.storage_path}</a>
+                    </div>
+                  ) : null}
+
+                  <div className="actions-row">
+                    <button type="button" className="admin-button ghost" onClick={() => handleSaveContentItem(item)} disabled={busy === `content-${item.id}`}>
+                      {busy === `content-${item.id}` ? 'Guardando…' : 'Guardar'}
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-button subtle"
+                      onClick={() => handleSaveContentItem(item, { status: item.status === 'published' ? 'draft' : 'published' })}
+                      disabled={busy === `content-${item.id}`}
+                    >
+                      {item.status === 'published' ? 'Pasar a borrador' : 'Publicar'}
+                    </button>
+                    <button type="button" className="admin-button danger" onClick={() => handleDeleteContentItem(item)} disabled={busy === `delete-content-${item.id}`}>
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* TAB: CURSOS */}
       {activeTab === 'cursos' && (
         <section className="admin-card editor-section">
           <div className="section-heading">
-            <h3>Cursos incluidos</h3>
+            <h3>Cursos opcionales incluidos</h3>
           </div>
           <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
-            Las alumnas con esta membresía activa acceden automáticamente a estos cursos.
+            Si la membresía también incluye cursos estructurados, las alumnas con acceso activo los ven automáticamente.
+            No es obligatorio usar cursos para publicar una membresía.
           </p>
 
           <div className="membership-content-create">

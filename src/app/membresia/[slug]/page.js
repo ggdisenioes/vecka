@@ -63,6 +63,18 @@ export default async function MembershipTierPage({ params, searchParams }) {
     .filter(Boolean)
     .filter((c) => c.status === 'published')
 
+  let contentItems = []
+  if (hasAccess) {
+    const { data: items } = await getSupabaseAdmin()
+      .from('membership_content_items')
+      .select('*')
+      .eq('tier_id', tier.id)
+      .eq('status', 'published')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+    contentItems = items || []
+  }
+
   const features = Array.isArray(tier.features) ? tier.features : []
 
   return (
@@ -143,7 +155,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
 
             {courses.length ? (
               <div style={{ marginTop: 24, textAlign: 'left' }}>
-                <strong>Lo que incluye:</strong>
+                <strong>Cursos incluidos:</strong>
                 <ul style={{ marginTop: 10, paddingLeft: 18 }}>
                   {courses.map((c) => (
                     <li key={c.id} style={{ marginBottom: 4 }}>{c.title}</li>
@@ -152,12 +164,63 @@ export default async function MembershipTierPage({ params, searchParams }) {
               </div>
             ) : null}
           </div>
-        ) : courses.length === 0 ? (
+        ) : courses.length === 0 && contentItems.length === 0 ? (
           <div className="membership-locked">
             Aún no hay contenido publicado para esta membresía. Volvé pronto.
           </div>
         ) : (
-          courses.map((course) => {
+          <>
+          {contentItems.length > 0 ? (
+            <section className="membership-section">
+              <h2>Contenido exclusivo</h2>
+              <div className="membership-content-grid">
+                {contentItems.map((item) => {
+                  const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
+                  const imageSrc = item.media_url || privateFileUrl
+                  const downloadHref = privateFileUrl || item.media_url
+                  return (
+                    <article key={item.id} className="membership-resource-card">
+                      <div className="item-meta">{item.type === 'download' ? 'Descargable' : item.type === 'image' ? 'Imagen' : item.type === 'link' ? 'Link' : item.type === 'embed' ? 'Embed' : 'Texto'}</div>
+                      <h3>{item.title}</h3>
+                      {item.summary ? <p>{item.summary}</p> : null}
+
+                      {item.type === 'image' && imageSrc ? (
+                        <img src={imageSrc} alt={item.title} className="membership-resource-image" />
+                      ) : null}
+
+                      {item.type === 'text' && item.body ? (
+                        <div className="article-body">{item.body}</div>
+                      ) : null}
+
+                      {item.type === 'embed' && item.media_url ? (
+                        <div className="video-frame">
+                          <iframe src={item.media_url} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+                        </div>
+                      ) : null}
+
+                      {item.type === 'embed' && item.body ? (
+                        <div className="article-body">{item.body}</div>
+                      ) : null}
+
+                      {item.type === 'download' && downloadHref ? (
+                        <a className="membership-cta secondary" href={downloadHref} target="_blank" rel="noopener noreferrer">
+                          Descargar {item.file_name || 'archivo'}
+                        </a>
+                      ) : null}
+
+                      {item.type === 'link' && item.media_url ? (
+                        <a className="membership-cta secondary" href={item.media_url} target="_blank" rel="noopener noreferrer">
+                          Abrir recurso
+                        </a>
+                      ) : null}
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {courses.map((course) => {
             const modules = (course.modules || [])
               .slice()
               .sort((a, b) => (a.position || 0) - (b.position || 0))
@@ -212,7 +275,8 @@ export default async function MembershipTierPage({ params, searchParams }) {
                 )}
               </section>
             )
-          })
+          })}
+          </>
         )}
       </div>
     </main>

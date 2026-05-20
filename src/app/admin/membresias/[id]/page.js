@@ -73,6 +73,13 @@ export default async function AdminMembershipTierPage({ params }) {
     profile: profilesById.get(g.user_id) || null,
   }))
 
+  const { data: contentItems } = await supabase
+    .from('membership_content_items')
+    .select('*')
+    .eq('tier_id', id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
   return (
     <main className="admin-shell">
       <div className="admin-container">
@@ -104,6 +111,7 @@ export default async function AdminMembershipTierPage({ params }) {
           initialCourses={tierCourses}
           allCourses={allCourses || []}
           initialGrants={grantsHydrated}
+          initialContentItems={contentItems || []}
         />
       </div>
     </main>
