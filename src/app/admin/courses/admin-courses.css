@@ -97,6 +97,98 @@
   gap: 18px;
 }
 
+.membership-dashboard {
+  margin-bottom: 18px;
+}
+
+.admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-card span {
+  color: var(--muted, #596567);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metric-card strong {
+  color: var(--ink, #172122);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.membership-admin-panel {
+  margin-bottom: 18px;
+}
+
+.membership-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
+
+.readiness-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.readiness-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted, #596567);
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.readiness-item span {
+  color: #b85c5c;
+  font-weight: 800;
+}
+
+.readiness-item.done {
+  border-color: var(--accent-soft, #cfe3d9);
+  color: var(--accent-deep, #123c36);
+  background: #f3faf6;
+}
+
+.readiness-item.done span {
+  color: var(--accent, #1d5f55);
+}
+
+.membership-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.membership-content-create {
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
 .course-card {
   display: flex;
   flex-direction: column;
@@ -733,6 +825,16 @@
 .editor-tab.active {
   color: var(--accent, #1d5f55);
   border-bottom-color: var(--accent, #1d5f55);
+}
+
+@media (max-width: 760px) {
+  .membership-admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .membership-admin-actions {
+    justify-content: flex-start;
+  }
 }
 
 /* ─── Quiz Builder ───────────────────────────────────────────────────── */

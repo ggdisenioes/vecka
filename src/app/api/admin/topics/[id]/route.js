@@ -7,7 +7,6 @@ import {
   requireStaff,
   requireText,
   revalidateCourses,
-  toInteger,
   uniqueTopicSlug,
 } from '@/lib/admin-api'
 

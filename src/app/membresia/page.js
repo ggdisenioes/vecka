@@ -33,8 +33,6 @@ export default async function MembresiaLandingPage() {
     )
   }
 
-  const hasFeatured = tiers?.some((t) => t.is_featured)
-
   return (
     <main className="membership-shell">
       <div className="membership-container">

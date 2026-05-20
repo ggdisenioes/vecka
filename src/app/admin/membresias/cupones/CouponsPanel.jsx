@@ -180,7 +180,7 @@ export default function CouponsPanel({ initialCoupons, tiers }) {
           <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 80px 80px 90px 100px', padding: '11px 20px', background: 'oklch(96% 0.012 60)', fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {['Código', 'Descripción', 'Descuento', 'Usos', 'Límite', 'Vence', 'Estado'].map((h) => <div key={h}>{h}</div>)}
           </div>
-          {filtered.map((c, i) => {
+          {filtered.map((c) => {
             const isExpired = c.valid_until && new Date(c.valid_until) < new Date()
             const isFull = c.max_uses !== null && c.uses_count >= c.max_uses
             const isEffectivelyActive = c.active && !isExpired && !isFull

@@ -80,7 +80,9 @@ export async function POST(request) {
         tierSlug: tier.slug,
       }).catch(() => {})
     }
-  } catch {}
+  } catch {
+    // Welcome email is best-effort.
+  }
 
   return NextResponse.json({ grant, trialDays: tier.trial_days })
 }

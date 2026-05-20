@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
@@ -102,7 +102,7 @@ function formatBytes(bytes) {
 function MaterialsManager({ scope, parentId, materials, onChange, toast }) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const inputRef = useState(null)
+  const inputRef = useRef(null)
 
   async function uploadFiles(files) {
     if (!files || files.length === 0) return
@@ -188,7 +188,7 @@ function MaterialsManager({ scope, parentId, materials, onChange, toast }) {
         onDrop={handleDrop}
       >
         <input
-          ref={inputRef[0]}
+          ref={inputRef}
           type="file"
           multiple
           onChange={handleInputChange}

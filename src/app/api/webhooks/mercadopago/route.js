@@ -25,7 +25,9 @@ export async function POST(request) {
     if (!payment) return NextResponse.json({ ok: true })
 
     let meta = {}
-    try { meta = JSON.parse(payment.external_reference || '{}') } catch {}
+    try { meta = JSON.parse(payment.external_reference || '{}') } catch {
+      // MercadoPago may send a non-JSON external reference.
+    }
     const tierId = meta.tierId || payment.metadata?.tierId
     const userId = meta.userId || payment.metadata?.userId
     const couponId = meta.couponId || payment.metadata?.couponId || null

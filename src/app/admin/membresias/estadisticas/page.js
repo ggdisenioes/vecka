@@ -202,7 +202,7 @@ export default async function MembershipStatsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 90px 110px', padding: '11px 20px', background: 'oklch(96% 0.012 60)', fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               {['Alumna', 'Plan', 'Tipo', 'Estado', 'Fecha'].map((h) => <div key={h}>{h}</div>)}
             </div>
-            {recentGrants.map((g, i) => {
+            {recentGrants.map((g) => {
               const p = profilesById.get(g.user_id)
               return (
                 <div key={g.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px 90px 110px', padding: '13px 20px', borderTop: '1px solid oklch(93% 0.01 60)', alignItems: 'center', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}>

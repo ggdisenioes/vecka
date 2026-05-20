@@ -5,8 +5,24 @@ import {
   requireStaff,
   requireText,
   revalidateMemberships,
+  toInteger,
   uniqueTierSlug,
 } from '@/lib/admin-api'
+
+const BILLING_PERIODS = ['monthly', 'annual', 'lifetime', 'one_time']
+
+function normalizeFeatures(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || '').trim()).filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    return value
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  return []
+}
 
 export async function POST(request) {
   const auth = await requireStaff()
@@ -16,6 +32,9 @@ export async function POST(request) {
     const payload = await request.json().catch(() => ({}))
     const name = requireText(payload.name || 'Nueva membresía', 'Tier name')
     const slug = await uniqueTierSlug(name)
+    const billingPeriod = BILLING_PERIODS.includes(payload.billingPeriod)
+      ? payload.billingPeriod
+      : 'monthly'
     const supabase = getSupabaseAdmin()
 
     const { data, error } = await supabase
@@ -23,7 +42,15 @@ export async function POST(request) {
       .insert({
         slug,
         name,
+        description: String(payload.description || '').trim() || null,
+        sort_order: toInteger(payload.sortOrder, 0),
         status: 'draft',
+        price_ars: Math.max(0, Number(payload.priceArs || 0)),
+        price_usd: Math.max(0, Number(payload.priceUsd || 0)),
+        billing_period: billingPeriod,
+        trial_days: Math.max(0, toInteger(payload.trialDays, 0)),
+        features: normalizeFeatures(payload.features),
+        is_featured: Boolean(payload.isFeatured),
       })
       .select('id, slug, name, status')
       .single()

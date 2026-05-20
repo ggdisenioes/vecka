@@ -128,7 +128,9 @@ export async function POST(request) {
           tierSlug: tierData.slug,
         }).catch(() => {})
       }
-    } catch {}
+    } catch {
+      // Email delivery is best-effort for manual grants.
+    }
 
     return NextResponse.json({ grant: data })
   } catch (error) {

@@ -13,12 +13,9 @@ export default function NewCourseButton() {
   const titleRef = useRef(null)
 
   useEffect(() => {
-    if (open) {
-      setTitle('')
-      setSubtitle('')
-      setError(null)
-      setTimeout(() => titleRef.current?.focus(), 50)
-    }
+    if (!open) return undefined
+    const timer = setTimeout(() => titleRef.current?.focus(), 50)
+    return () => clearTimeout(timer)
   }, [open])
 
   useEffect(() => {
@@ -28,6 +25,13 @@ export default function NewCourseButton() {
     if (open) document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
+
+  function openModal() {
+    setTitle('')
+    setSubtitle('')
+    setError(null)
+    setOpen(true)
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -52,7 +56,7 @@ export default function NewCourseButton() {
 
   return (
     <>
-      <button type="button" className="admin-button" onClick={() => setOpen(true)}>
+      <button type="button" className="admin-button" onClick={openModal}>
         + Nuevo curso
       </button>
 

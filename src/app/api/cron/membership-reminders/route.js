@@ -14,8 +14,6 @@ export async function GET(request) {
 
   // Expiring in 7 days
   const in7 = new Date(now.getTime() + 7 * 86400000).toISOString()
-  // Expiring in 3 days
-  const in3 = new Date(now.getTime() + 3 * 86400000).toISOString()
   // Expired in the last 24 hours
   const yesterday = new Date(now.getTime() - 86400000).toISOString()
 

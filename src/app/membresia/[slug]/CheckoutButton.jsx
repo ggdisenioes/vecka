@@ -6,7 +6,7 @@ function periodLabel(period) {
   return period === 'monthly' ? 'mes' : period === 'annual' ? 'año' : period === 'lifetime' ? 'pago único' : ''
 }
 
-export default function CheckoutButton({ tierId, tierName, priceArs, billingPeriod, trialDays, hasUsedTrial }) {
+export default function CheckoutButton({ tierId, priceArs, billingPeriod, trialDays, hasUsedTrial }) {
   const [loading, setLoading] = useState(false)
   const [trialLoading, setTrialLoading] = useState(false)
   const [error, setError] = useState(null)

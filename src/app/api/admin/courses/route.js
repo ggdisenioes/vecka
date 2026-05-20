@@ -8,6 +8,9 @@ import {
   uniqueCourseSlug,
 } from '@/lib/admin-api'
 
+const COURSE_STATUSES = ['draft', 'published', 'archived']
+const COURSE_VISIBILITIES = ['private', 'catalog', 'public']
+
 export async function POST(request) {
   const auth = await requireStaff()
   if (auth.error) return auth.error
@@ -19,6 +22,8 @@ export async function POST(request) {
     const supabase = getSupabaseAdmin()
 
     const subtitle = String(payload.subtitle || '').trim() || null
+    const status = COURSE_STATUSES.includes(payload.status) ? payload.status : 'draft'
+    const visibility = COURSE_VISIBILITIES.includes(payload.visibility) ? payload.visibility : 'private'
 
     const { data, error } = await supabase
       .from('courses')
@@ -26,10 +31,11 @@ export async function POST(request) {
         slug,
         title,
         subtitle,
-        status: 'draft',
-        visibility: 'private',
+        status,
+        visibility,
+        is_membership: Boolean(payload.isMembership),
       })
-      .select('id, slug, title, status, visibility')
+      .select('id, slug, title, subtitle, status, visibility, is_membership')
       .single()
 
     if (error) throw error

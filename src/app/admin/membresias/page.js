@@ -24,10 +24,29 @@ export default async function AdminMembershipsListPage() {
     .select('tier_id')
     .eq('access_status', 'active')
 
+  const { data: tierCourseRows } = await supabase
+    .from('membership_tier_courses')
+    .select('tier_id, course_id, courses(status)')
+
   const counts = new Map()
   for (const g of grants || []) {
     counts.set(g.tier_id, (counts.get(g.tier_id) || 0) + 1)
   }
+
+  const courseCounts = new Map()
+  const publishedCourseCounts = new Map()
+  const uniqueCourseIds = new Set()
+  for (const row of tierCourseRows || []) {
+    courseCounts.set(row.tier_id, (courseCounts.get(row.tier_id) || 0) + 1)
+    if (row.course_id) uniqueCourseIds.add(row.course_id)
+    if (row.courses?.status === 'published') {
+      publishedCourseCounts.set(row.tier_id, (publishedCourseCounts.get(row.tier_id) || 0) + 1)
+    }
+  }
+
+  const publishedCount = (tiers || []).filter((tier) => tier.status === 'published').length
+  const draftCount = (tiers || []).filter((tier) => tier.status === 'draft').length
+  const activeMemberCount = (grants || []).length
 
   if (error) {
     return (
@@ -48,7 +67,7 @@ export default async function AdminMembershipsListPage() {
             <div className="breadcrumb">
               <Link href="/admin">← Volver al panel</Link>
             </div>
-            <h1>Membresías</h1>
+            <h1>Membership Admin</h1>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Link href="/admin/membresias/estadisticas" className="admin-button ghost">
@@ -63,6 +82,30 @@ export default async function AdminMembershipsListPage() {
             <NewTierButton />
           </div>
         </header>
+
+        <section className="admin-card membership-dashboard">
+          <div className="section-heading">
+            <h2>Membresías</h2>
+          </div>
+          <div className="admin-metrics">
+            <div className="metric-card">
+              <span>Publicadas</span>
+              <strong>{publishedCount}</strong>
+            </div>
+            <div className="metric-card">
+              <span>Borradores</span>
+              <strong>{draftCount}</strong>
+            </div>
+            <div className="metric-card">
+              <span>Miembros activos</span>
+              <strong>{activeMemberCount}</strong>
+            </div>
+            <div className="metric-card">
+              <span>Cursos internos</span>
+              <strong>{uniqueCourseIds.size}</strong>
+            </div>
+          </div>
+        </section>
 
         {(!tiers || tiers.length === 0) ? (
           <div className="empty-state">
@@ -91,6 +134,12 @@ export default async function AdminMembershipsListPage() {
                 <div className="meta">
                   <span className={`status-pill ${tier.status}`}>
                     {tier.status === 'published' ? 'Publicada' : tier.status === 'archived' ? 'Archivada' : 'Borrador'}
+                  </span>
+                  <span className={`status-pill ${courseCounts.get(tier.id) ? 'catalog' : 'draft'}`}>
+                    {courseCounts.get(tier.id) || 0} cursos
+                  </span>
+                  <span className={`status-pill ${publishedCourseCounts.get(tier.id) ? 'published' : 'draft'}`}>
+                    {publishedCourseCounts.get(tier.id) || 0} publicados
                   </span>
                   <span className="status-pill catalog">
                     {counts.get(tier.id) || 0} {counts.get(tier.id) === 1 ? 'miembro activo' : 'miembros activos'}

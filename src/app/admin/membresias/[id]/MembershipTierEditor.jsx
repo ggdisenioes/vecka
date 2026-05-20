@@ -117,6 +117,8 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
 
   // Formulario agregar curso
   const [newCourseId, setNewCourseId] = useState('')
+  const [newCourseTitle, setNewCourseTitle] = useState('')
+  const [newCourseSubtitle, setNewCourseSubtitle] = useState('')
 
   const [busy, setBusy] = useState('')
   const [toast, setToast] = useState(null)
@@ -128,6 +130,16 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
 
   const linkedCourseIds = useMemo(() => new Set(courses.map((c) => c.id)), [courses])
   const linkableCourses = useMemo(() => allCourses.filter((c) => !linkedCourseIds.has(c.id)), [allCourses, linkedCourseIds])
+  const publishedCourseCount = courses.filter((c) => c.status === 'published').length
+  const publishChecklist = [
+    { key: 'data', label: 'Datos públicos', done: Boolean(name.trim() && description.trim()), required: true },
+    { key: 'features', label: 'Beneficios visibles', done: features.length > 0 },
+    { key: 'courses', label: 'Curso interno vinculado', done: courses.length > 0, required: true },
+    { key: 'publishedContent', label: 'Contenido publicado', done: publishedCourseCount > 0, required: true },
+  ]
+  const requiredReady = publishChecklist.filter((item) => item.required).every((item) => item.done)
+  const missingRequired = publishChecklist.filter((item) => item.required && !item.done).length
+  const suggestedCourseTitle = `${name.trim() || 'Membresía'} · Contenido`
 
   async function handleSaveTier() {
     setBusy('save')
@@ -149,8 +161,15 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   }
 
   async function handlePublish() {
-    setStatus('published')
+    if (!requiredReady) {
+      showToast('Faltan datos o contenido publicado para publicar la membresía', 'error')
+      setActiveTab(name.trim() && description.trim() ? 'cursos' : 'datos')
+      return
+    }
+
+    const previousStatus = status
     setBusy('publish')
+    setStatus('published')
     try {
       const res = await fetch(`/api/admin/membership-tiers/${tier.id}`, {
         method: 'PUT',
@@ -162,6 +181,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
       showToast('Membresía publicada')
       startTransition(() => router.refresh())
     } catch (error) {
+      setStatus(previousStatus)
       showToast(error.message || 'Error al publicar', 'error')
     } finally {
       setBusy('')
@@ -201,6 +221,45 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
     } catch (error) {
       showToast(error.message || 'Error', 'error')
     } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateMembershipCourse() {
+    const title = (newCourseTitle || suggestedCourseTitle).trim()
+    if (!title) return
+    setBusy('create-course')
+    try {
+      const courseRes = await fetch('/api/admin/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          subtitle: newCourseSubtitle,
+          isMembership: true,
+          status: 'draft',
+          visibility: 'private',
+        }),
+      })
+      const courseData = await courseRes.json()
+      if (!courseRes.ok) throw new Error(courseData?.error || 'No se pudo crear el curso')
+
+      const course = courseData.course
+      const linkRes = await fetch(`/api/admin/membership-tiers/${tier.id}/courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId: course.id, sortOrder: courses.length }),
+      })
+      const linkData = await linkRes.json().catch(() => ({}))
+      if (!linkRes.ok) throw new Error(linkData?.error || 'No se pudo vincular el curso')
+
+      setCourses([...courses, { ...course, sort_order: courses.length }])
+      setNewCourseTitle('')
+      setNewCourseSubtitle('')
+      showToast('Curso interno creado')
+      router.push(`/admin/courses/${course.id}?tab=constructor`)
+    } catch (error) {
+      showToast(error.message || 'Error al crear el curso', 'error')
       setBusy('')
     }
   }
@@ -286,6 +345,44 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
 
   return (
     <>
+      <section className="admin-card membership-admin-panel">
+        <div className="section-heading">
+          <h2>Membership Admin</h2>
+          <span className={`status-pill ${requiredReady ? 'published' : 'draft'}`}>
+            {requiredReady ? 'Lista para publicar' : `${missingRequired} pendiente${missingRequired === 1 ? '' : 's'}`}
+          </span>
+        </div>
+
+        <div className="membership-admin-grid">
+          <div className="readiness-list">
+            {publishChecklist.map((item) => (
+              <div key={item.key} className={`readiness-item${item.done ? ' done' : ''}`}>
+                <span aria-hidden="true">{item.done ? '✓' : '•'}</span>
+                <strong>{item.label}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className="membership-admin-actions">
+            <button type="button" className="admin-button ghost" onClick={() => setActiveTab('datos')}>
+              Datos
+            </button>
+            <button type="button" className="admin-button ghost" onClick={() => setActiveTab('cursos')}>
+              Contenido
+            </button>
+            {status === 'published' ? (
+              <Link className="admin-button ghost" href={`/membresia/${tier.slug}`} target="_blank">
+                Ver pública
+              </Link>
+            ) : (
+              <button type="button" className="admin-button" onClick={handlePublish} disabled={!!busy || !requiredReady}>
+                {busy === 'publish' ? 'Publicando…' : 'Publicar'}
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Tabs */}
       <div className="editor-tabs" style={{ marginBottom: 20 }}>
         {[
@@ -311,7 +408,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
             <h2>Datos del plan</h2>
             <div style={{ display: 'flex', gap: 8 }}>
               {status !== 'published' && (
-                <button type="button" className="admin-button" style={{ background: 'var(--accent-deep)', color: '#fff' }} onClick={handlePublish} disabled={!!busy}>
+                <button type="button" className="admin-button" style={{ background: 'var(--accent-deep)', color: '#fff' }} onClick={handlePublish} disabled={!!busy || !requiredReady}>
                   {busy === 'publish' ? 'Publicando…' : 'Publicar'}
                 </button>
               )}
@@ -398,6 +495,35 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
           <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
             Las alumnas con esta membresía activa acceden automáticamente a estos cursos.
           </p>
+
+          <div className="membership-content-create">
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <h4>Nuevo curso interno</h4>
+            </div>
+            <div className="editor-row">
+              <div className="editor-field">
+                <label>Título</label>
+                <input
+                  value={newCourseTitle}
+                  onChange={(e) => setNewCourseTitle(e.target.value)}
+                  placeholder={suggestedCourseTitle}
+                />
+              </div>
+              <div className="editor-field">
+                <label>Subtítulo</label>
+                <input
+                  value={newCourseSubtitle}
+                  onChange={(e) => setNewCourseSubtitle(e.target.value)}
+                  placeholder="Opcional"
+                />
+              </div>
+              <div className="editor-field" style={{ justifyContent: 'flex-end' }}>
+                <button type="button" className="admin-button" onClick={handleCreateMembershipCourse} disabled={busy === 'create-course'}>
+                  {busy === 'create-course' ? 'Creando…' : 'Crear y abrir constructor'}
+                </button>
+              </div>
+            </div>
+          </div>
 
           {courses.length === 0 ? (
             <div className="empty-state">Todavía no hay cursos en esta membresía.</div>
