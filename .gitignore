@@ -16,6 +16,11 @@ dist-ssr
 .env.*.local
 *.local
 supabase/.temp
+migration/logs
+migration/exports
+migration/tmp
+u210132504_HPex9.sql
+u210132504_HPex9.sql.gz
 
 # Editor directories and files
 .vscode/*

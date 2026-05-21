@@ -8,7 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "preview": "next start"
+    "migration:preflight": "node migration/etl/00-preflight.js",
+    "preview": "next start",
+    "migration:users": "node migration/etl/01-users.js",
+    "migration:membership-tiers": "node migration/etl/02-membership-tiers.js",
+    "migration:membership-grants": "node migration/etl/03-membership-grants.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -17,10 +21,12 @@
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.1",
     "eslint-config-next": "^16.2.4",
+    "mysql2": "^3.22.3",
     "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "resend": "^6.12.3"
+    "resend": "^6.12.3",
+    "wordpress-hash-node": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

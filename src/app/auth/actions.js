@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { getSupabaseServer } from '@/lib/supabase/server'
+import { migrateLegacyPasswordAndSignIn } from '@/lib/legacy-passwords'
 
 function getSafeInternalPath(value, fallback = '/') {
   const input = String(value || '').trim()
@@ -53,7 +54,10 @@ export async function signIn(formData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: error.message, next: nextPath }))
+    const migrated = await migrateLegacyPasswordAndSignIn({ email, password, supabase })
+    if (!migrated) {
+      redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: error.message, next: nextPath }))
+    }
   }
 
   const {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { getCurrentAuth } from '@/lib/auth'
+import PublicSiteShell from '@/components/site/PublicSiteShell'
+import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import LessonVideoPlayer from './LessonVideoPlayer'
 import '../../../membership.css'
@@ -16,7 +17,8 @@ function vimeoEmbed(url) {
 export default async function MembershipLessonPage({ params }) {
   const { slug, courseSlug, lessonSlug } = await params
   const supabase = await getSupabaseServer()
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
+  const userIsStaff = isStaff(profile)
   if (!user) redirect(`/login?next=/membresia/${slug}/${courseSlug}/${lessonSlug}`)
 
   // Localiza el tier (debe estar publicado).
@@ -25,7 +27,7 @@ export default async function MembershipLessonPage({ params }) {
     .select('id, slug, name, status')
     .eq('slug', slug)
     .maybeSingle()
-  if (!tier || tier.status !== 'published') notFound()
+  if (!tier || (tier.status !== 'published' && !userIsStaff)) notFound()
 
   // Curso por slug — RLS protege el contenido si el usuario no tiene acceso.
   const { data: course } = await supabase
@@ -43,9 +45,10 @@ export default async function MembershipLessonPage({ params }) {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  const hasAccess =
+  const hasAccess = userIsStaff || (
     grant?.access_status === 'active' &&
     (!grant.expires_at || new Date(grant.expires_at) > new Date())
+  )
   if (!hasAccess) {
     redirect(`/membresia/${slug}`)
   }
@@ -72,100 +75,108 @@ export default async function MembershipLessonPage({ params }) {
     .order('sort_order', { ascending: true })
 
   return (
-    <main className="membership-shell">
-      <div className="membership-container">
-        <div className="breadcrumb-row">
-          <Link href="/membresia">Membresías</Link> ·{' '}
-          <Link href={`/membresia/${tier.slug}`}>{tier.name}</Link> ·{' '}
-          <span>{course.title}</span>
-        </div>
-
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, margin: '6px 0 18px' }}>
-          {lesson.title}
-        </h1>
-
-        {lesson.lesson_type === 'live_session' ? (
-          <div className="live-session-banner">
-            <strong>Sesión en vivo</strong>
-            {lesson.live_session_at ? (
-              <span>
-                {new Date(lesson.live_session_at).toLocaleString('es-AR', {
-                  dateStyle: 'full',
-                  timeStyle: 'short',
-                })}
-              </span>
-            ) : null}
-            {lesson.live_session_url ? (
-              <a href={lesson.live_session_url} target="_blank" rel="noopener noreferrer">
-                Entrar a la sesión
-              </a>
-            ) : (
-              <span>El link estará disponible pronto.</span>
-            )}
+    <PublicSiteShell user={user} loginHref={`/login?next=/membresia/${slug}/${courseSlug}/${lessonSlug}`}>
+      <section className="membership-shell">
+        <div className="membership-container">
+          <div className="breadcrumb-row">
+            <Link href="/membresia">Membresías</Link> ·{' '}
+            <Link href={`/membresia/${tier.slug}`}>{tier.name}</Link> ·{' '}
+            <span>{course.title}</span>
           </div>
-        ) : null}
 
-        {lesson.lesson_type === 'video' || (!lesson.lesson_type && lesson.video_provider !== 'none') ? (
-          <>
-            {lesson.video_provider === 'vimeo' && lesson.vimeo_url ? (
-              <div className="video-frame">
-                <iframe
-                  src={vimeoEmbed(lesson.vimeo_url) || lesson.vimeo_url}
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : null}
-            {lesson.video_provider === 'external' && lesson.external_video_url ? (
-              <div className="video-frame">
-                <iframe
-                  src={lesson.external_video_url}
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : null}
-            {lesson.video_provider === 'upload' && lesson.video_storage_path ? (
-              <LessonVideoPlayer lessonId={lesson.id} />
-            ) : null}
-          </>
-        ) : null}
+          {userIsStaff ? (
+            <div className="membership-admin-banner">
+              Vista administradora: esta lección se muestra aunque la membresía o el acceso no estén publicados para alumnas.
+            </div>
+          ) : null}
 
-        {lesson.summary ? (
-          <p style={{ color: 'var(--muted)', marginTop: 0 }}>{lesson.summary}</p>
-        ) : null}
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, margin: '6px 0 18px' }}>
+            {lesson.title}
+          </h1>
 
-        {lesson.body ? (
-          <section className="membership-section">
-            <div className="article-body">{lesson.body}</div>
-          </section>
-        ) : null}
+          {lesson.lesson_type === 'live_session' ? (
+            <div className="live-session-banner">
+              <strong>Sesión en vivo</strong>
+              {lesson.live_session_at ? (
+                <span>
+                  {new Date(lesson.live_session_at).toLocaleString('es-AR', {
+                    dateStyle: 'full',
+                    timeStyle: 'short',
+                  })}
+                </span>
+              ) : null}
+              {lesson.live_session_url ? (
+                <a href={lesson.live_session_url} target="_blank" rel="noopener noreferrer">
+                  Entrar a la sesión
+                </a>
+              ) : (
+                <span>El link estará disponible pronto.</span>
+              )}
+            </div>
+          ) : null}
 
-        {materials && materials.length ? (
-          <section className="membership-section">
-            <h3>Materiales descargables</h3>
-            <ul className="membership-list">
-              {materials.map((m) => (
-                <li key={m.id}>
-                  <a href={`/api/attachments/${m.id}`} target="_blank" rel="noopener noreferrer">
-                    <span>
-                      <strong>{m.file_name}</strong>
-                      <div className="item-meta">{m.mime_type}</div>
-                    </span>
-                    <span className="item-meta">Descargar →</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+          {lesson.lesson_type === 'video' || (!lesson.lesson_type && lesson.video_provider !== 'none') ? (
+            <>
+              {lesson.video_provider === 'vimeo' && lesson.vimeo_url ? (
+                <div className="video-frame">
+                  <iframe
+                    src={vimeoEmbed(lesson.vimeo_url) || lesson.vimeo_url}
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : null}
+              {lesson.video_provider === 'external' && lesson.external_video_url ? (
+                <div className="video-frame">
+                  <iframe
+                    src={lesson.external_video_url}
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : null}
+              {lesson.video_provider === 'upload' && lesson.video_storage_path ? (
+                <LessonVideoPlayer lessonId={lesson.id} />
+              ) : null}
+            </>
+          ) : null}
 
-        <div style={{ marginTop: 22 }}>
-          <Link href={`/membresia/${tier.slug}`} className="membership-cta secondary">
-            ← Volver al nivel
-          </Link>
+          {lesson.summary ? (
+            <p style={{ color: 'var(--muted)', marginTop: 0 }}>{lesson.summary}</p>
+          ) : null}
+
+          {lesson.body ? (
+            <section className="membership-section">
+              <div className="article-body">{lesson.body}</div>
+            </section>
+          ) : null}
+
+          {materials && materials.length ? (
+            <section className="membership-section">
+              <h3>Materiales descargables</h3>
+              <ul className="membership-list">
+                {materials.map((m) => (
+                  <li key={m.id}>
+                    <a href={`/api/attachments/${m.id}`} target="_blank" rel="noopener noreferrer">
+                      <span>
+                        <strong>{m.file_name}</strong>
+                        <div className="item-meta">{m.mime_type}</div>
+                      </span>
+                      <span className="item-meta">Descargar →</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <div style={{ marginTop: 22 }}>
+            <Link href={`/membresia/${tier.slug}`} className="membership-cta secondary">
+              ← Volver al nivel
+            </Link>
+          </div>
         </div>
-      </div>
-    </main>
+      </section>
+    </PublicSiteShell>
   )
 }
