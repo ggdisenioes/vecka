@@ -26,6 +26,10 @@ function buildAuthModalUrl(path, params = {}) {
   return `${url.pathname}${url.search}`
 }
 
+function buildLoginPageUrl(nextPath, params = {}) {
+  return buildAuthModalUrl('/login', { ...params, next: nextPath })
+}
+
 function getPostLoginPath(role, requestedPath) {
   const safePath = getSafeInternalPath(requestedPath, '/')
   const isStaff = role === 'admin' || role === 'editorial'
@@ -50,12 +54,16 @@ export async function signIn(formData) {
   const email = String(formData.get('email') || '').trim()
   const password = String(formData.get('password') || '')
   const nextPath = getSafeInternalPath(formData.get('next'), '/')
+  const useLoginPage = formData.get('auth_page') === '/login'
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     const migrated = await migrateLegacyPasswordAndSignIn({ email, password, supabase })
     if (!migrated) {
+      if (useLoginPage) {
+        redirect(buildLoginPageUrl(nextPath, { error: error.message }))
+      }
       redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: error.message, next: nextPath }))
     }
   }
@@ -65,6 +73,9 @@ export async function signIn(formData) {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    if (useLoginPage) {
+      redirect(buildLoginPageUrl(nextPath, { error: 'No se pudo recuperar la sesión' }))
+    }
     redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: 'No se pudo recuperar la sesión', next: nextPath }))
   }
 
@@ -82,6 +93,7 @@ export async function signUp(formData) {
   const email = String(formData.get('email') || '').trim()
   const password = String(formData.get('password') || '')
   const nextPath = getSafeInternalPath(formData.get('next'), '/')
+  const useLoginPage = formData.get('auth_page') === '/login'
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -94,9 +106,15 @@ export async function signUp(formData) {
   })
 
   if (error) {
+    if (useLoginPage) {
+      redirect(buildLoginPageUrl(nextPath, { error: error.message, mode: 'signup' }))
+    }
     redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: error.message, next: nextPath }))
   }
 
+  if (useLoginPage) {
+    redirect(buildLoginPageUrl(nextPath, { success: 'Cuenta creada. Ya podés iniciar sesión.' }))
+  }
   redirect(buildAuthModalUrl(nextPath, { auth: 'login', success: 'Cuenta creada. Ya podés iniciar sesión.', next: nextPath }))
 }
 

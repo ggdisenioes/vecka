@@ -31,6 +31,8 @@ export async function POST(request) {
     const tierId = meta.tierId || payment.metadata?.tierId
     const userId = meta.userId || payment.metadata?.userId
     const couponId = meta.couponId || payment.metadata?.couponId || null
+    const selectedMethod = meta.paymentMethod || payment.metadata?.paymentMethod || payment.metadata?.payment_method || null
+    const checkoutNotes = payment.metadata?.notes || null
 
     if (!tierId || !userId) return NextResponse.json({ ok: true })
 
@@ -72,7 +74,11 @@ export async function POST(request) {
           expires_at: expiresAt,
           payment_reference: String(data.id),
           coupon_id: couponId || null,
-          notes: `MercadoPago · ${payment.payment_method_id || ''} · ${payment.status_detail || ''}`,
+          notes: [
+            `MercadoPago · ${payment.payment_method_id || ''} · ${payment.status_detail || ''}`,
+            selectedMethod ? `Elegido en checkout: ${selectedMethod}` : null,
+            checkoutNotes ? `Comentario: ${checkoutNotes}` : null,
+          ].filter(Boolean).join(' · '),
         }, { onConflict: 'tier_id,user_id' })
 
       // Increment coupon usage count

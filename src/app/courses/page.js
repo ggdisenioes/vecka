@@ -1,5 +1,7 @@
-import LegacyApp from '@/components/legacy/LegacyApp'
-import { getLegacyFrontData } from '@/lib/legacy-front'
+import Link from 'next/link'
+import PublicSiteShell from '@/components/site/PublicSiteShell'
+import { getCurrentAuth } from '@/lib/auth'
+import '../membresia/membership.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,14 +11,20 @@ export const metadata = {
 }
 
 export default async function CoursesPage() {
-  const data = await getLegacyFrontData()
+  const { user } = await getCurrentAuth()
 
   return (
-    <LegacyApp
-      initialCourses={data.courses}
-      initialPage="escuela"
-      initialProducts={data.products}
-      initialUser={data.user}
-    />
+    <PublicSiteShell user={user} loginHref="/login?next=/talleres">
+      <main className="lovable-soon">
+        <p>Próximamente</p>
+        <h1>Talleres online</h1>
+        <p>
+          Estamos preparando este apartado. Mientras tanto, accedé a todos los talleres del mes con el Club VeCKA.
+        </p>
+        <Link href="/membresias" className="lovable-button" style={{ width: 'auto', paddingInline: 22 }}>
+          Ver membresías
+        </Link>
+      </main>
+    </PublicSiteShell>
   )
 }

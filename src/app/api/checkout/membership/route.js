@@ -13,6 +13,10 @@ export async function POST(request) {
   if (!payload.tierId) {
     return NextResponse.json({ error: 'tierId es requerido' }, { status: 400 })
   }
+  const paymentMethod = ['transferencia', 'mercadopago', 'tarjeta'].includes(payload.paymentMethod)
+    ? payload.paymentMethod
+    : 'mercadopago'
+  const notes = typeof payload.notes === 'string' ? payload.notes.slice(0, 500) : null
 
   const supabase = getSupabaseAdmin()
 
@@ -89,8 +93,8 @@ export async function POST(request) {
     },
     auto_return: 'approved',
     notification_url: `${baseUrl}/api/webhooks/mercadopago`,
-    external_reference: JSON.stringify({ tierId: tier.id, userId: user.id, couponId }),
-    metadata: { tierId: tier.id, userId: user.id, couponId },
+    external_reference: JSON.stringify({ tierId: tier.id, userId: user.id, couponId, paymentMethod }),
+    metadata: { tierId: tier.id, userId: user.id, couponId, paymentMethod, notes },
   }
 
   const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {

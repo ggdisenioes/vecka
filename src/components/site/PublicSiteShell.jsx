@@ -1,16 +1,23 @@
 import Link from 'next/link'
 
+const NAV_ITEMS = [
+  { href: '/', label: 'Inicio' },
+  { href: '/membresias', label: 'Membresías' },
+  { href: '/talleres', label: 'Talleres' },
+  { href: '/tienda', label: 'Tienda' },
+]
+
 function HeaderCta({ user, loginHref }) {
   if (user) {
     return (
-      <Link href="/cuenta" className="site-shell-cta">
+      <Link href="/cuenta" className="site-shell-button ghost">
         Mi cuenta
       </Link>
     )
   }
 
   return (
-    <Link href={loginHref} className="site-shell-cta">
+    <Link href={loginHref} className="site-shell-button ghost">
       Iniciar sesión
     </Link>
   )
@@ -22,14 +29,41 @@ export default function PublicSiteShell({ children, user = null, loginHref = '/l
       <header className="site-shell-header">
         <div className="site-shell-header-inner">
           <Link href="/" className="site-shell-brand">
-            <img src="/logo-VeCKA.jpg" alt="VeCKA" className="site-shell-brand-mark" />
-            <div className="site-shell-brand-copy">
-              <strong>VeCKA</strong>
-              <span>Talleres de costura</span>
-            </div>
+            <span className="site-shell-brand-mark">V</span>
+            <span className="site-shell-brand-name">VeCKA</span>
           </Link>
 
-          <HeaderCta user={user} loginHref={loginHref} />
+          <nav className="site-shell-nav" aria-label="Secciones principales">
+            {NAV_ITEMS.map((item) => (
+              <Link key={item.href} href={item.href}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="site-shell-actions">
+            <HeaderCta user={user} loginHref={loginHref} />
+            <Link href="/membresias" className="site-shell-button primary">
+              Sumarme al Club
+            </Link>
+          </div>
+
+          <details className="site-shell-mobile-menu">
+            <summary aria-label="Abrir menú">
+              <span />
+              <span />
+              <span />
+            </summary>
+            <nav aria-label="Menú móvil">
+              {NAV_ITEMS.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  {item.label}
+                </Link>
+              ))}
+              <Link href={user ? '/cuenta' : loginHref}>{user ? 'Mi cuenta' : 'Iniciar sesión'}</Link>
+              <Link href="/membresias" className="mobile-primary">Sumarme al Club</Link>
+            </nav>
+          </details>
         </div>
       </header>
 
@@ -39,16 +73,29 @@ export default function PublicSiteShell({ children, user = null, loginHref = '/l
         <div className="site-shell-footer-inner">
           <div className="site-shell-footer-brand">
             <strong>VeCKA</strong>
-            <span>Talleres, membresías y recursos de costura.</span>
+            <span>Talleres online, moldes digitales y una comunidad de costureras que aprenden juntas.</span>
           </div>
 
-          <nav className="site-shell-footer-nav" aria-label="Secciones principales">
-            <Link href="/">Inicio</Link>
-            <Link href="/talleres">Talleres</Link>
-            <Link href="/tienda">Tienda</Link>
-            <Link href="/membresias">Membresías</Link>
-            <Link href="/contacto">Contacto</Link>
-          </nav>
+          <div className="site-shell-footer-column">
+            <h4>Escuela</h4>
+            <nav aria-label="Escuela">
+              <Link href="/membresias">Club VeCKA</Link>
+              <Link href="/talleres">Talleres</Link>
+              <Link href="/tienda">Moldes digitales</Link>
+            </nav>
+          </div>
+
+          <div className="site-shell-footer-column">
+            <h4>VeCKA</h4>
+            <nav aria-label="VeCKA">
+              <Link href="/">Sobre mí</Link>
+              <Link href="/contacto">Contacto</Link>
+              <Link href="/membresias">Preguntas frecuentes</Link>
+            </nav>
+          </div>
+        </div>
+        <div className="site-shell-footer-bottom">
+          © {new Date().getFullYear()} VeCKA Talleres. Cosé con propósito.
         </div>
       </footer>
     </div>

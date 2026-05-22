@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
-import { getSupabaseServer } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import CheckoutButton from './CheckoutButton'
+import { getSupabaseServer } from '@/lib/supabase/server'
 import '../membership.css'
 
 export const dynamic = 'force-dynamic'
@@ -14,8 +13,26 @@ function RichBody({ html }) {
   return <div className="article-body" dangerouslySetInnerHTML={{ __html: html }} />
 }
 
+function formatPrice(value) {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0))
+}
+
 function periodLabel(period) {
-  return period === 'monthly' ? 'mes' : period === 'annual' ? 'año' : period === 'lifetime' ? 'vitalicia' : 'único'
+  if (period === 'annual') return 'año'
+  if (period === 'lifetime') return 'vitalicia'
+  return 'mes'
+}
+
+function contentTypeLabel(type) {
+  if (type === 'download') return 'Descargable'
+  if (type === 'image') return 'Imagen'
+  if (type === 'link') return 'Link'
+  if (type === 'embed') return 'Video'
+  return 'Texto'
 }
 
 export default async function MembershipTierPage({ params, searchParams }) {
@@ -23,11 +40,11 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const sp = await searchParams
   const paymentStatus = sp?.payment || null
 
-  const supabase = await getSupabaseServer()
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
+  const admin = getSupabaseAdmin()
 
-  const { data: tier } = await getSupabaseAdmin()
+  const { data: tier } = await admin
     .from('membership_tiers')
     .select('id, slug, name, description, status, price_ars, price_usd, billing_period, features, trial_days, is_featured')
     .eq('slug', slug)
@@ -36,23 +53,24 @@ export default async function MembershipTierPage({ params, searchParams }) {
   if (!tier) notFound()
   if (tier.status !== 'published' && !userIsStaff) notFound()
 
-  if (!user) {
-    redirect(`/login?next=/membresias/${slug}`)
+  let grant = null
+  if (user) {
+    const supabase = await getSupabaseServer()
+    const { data } = await supabase
+      .from('membership_grants')
+      .select('access_status, expires_at, granted_at, grant_type')
+      .eq('tier_id', tier.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    grant = data
   }
-
-  const { data: grant } = await supabase
-    .from('membership_grants')
-    .select('access_status, expires_at, granted_at, grant_type')
-    .eq('tier_id', tier.id)
-    .eq('user_id', user.id)
-    .maybeSingle()
 
   const hasAccess = userIsStaff || (
     grant?.access_status === 'active' &&
     (!grant.expires_at || new Date(grant.expires_at) > new Date())
   )
 
-  const { data: tierCourses } = await supabase
+  const { data: tierCourses } = await admin
     .from('membership_tier_courses')
     .select(`
       sort_order,
@@ -69,11 +87,11 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const courses = (tierCourses || [])
     .map((row) => row.course)
     .filter(Boolean)
-    .filter((c) => userIsStaff || c.status === 'published')
+    .filter((course) => userIsStaff || course.status === 'published')
 
   let contentItems = []
   if (hasAccess) {
-    let itemsQuery = getSupabaseAdmin()
+    let itemsQuery = admin
       .from('membership_content_items')
       .select('*')
       .eq('tier_id', tier.id)
@@ -90,21 +108,21 @@ export default async function MembershipTierPage({ params, searchParams }) {
 
   const features = Array.isArray(tier.features) ? tier.features : []
   const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
+  const checkoutHref = user ? `/checkout/${tier.slug}` : `/login?next=/checkout/${tier.slug}`
 
   return (
     <PublicSiteShell user={user} loginHref={`/login?next=/membresias/${slug}`}>
       <section className="membership-shell">
-        <div className="membership-container">
-          <div className="breadcrumb-row">
-            <Link href="/membresias">← Membresías</Link>
-          </div>
+        <div className="membership-container" style={{ paddingTop: 48 }}>
+          <Link href="/membresias" className="lovable-back-link">← Volver a membresías</Link>
 
           <header className="membership-detail-hero">
             <div className="membership-detail-hero-copy">
-              <span className="membership-kicker">Club VeCKA</span>
+              <span className="lovable-eyebrow">CLUB VECKA</span>
               <h1>{tier.name}</h1>
               {tier.description ? <p>{tier.description}</p> : null}
-              <div className="pill-row membership-detail-pills">
+
+              <div className="pill-row membership-detail-pills" style={{ marginTop: 20 }}>
                 {userIsStaff && tier.status !== 'published' ? (
                   <span className="membership-pill expired">
                     {tier.status === 'draft' ? 'Borrador' : 'Archivada'}
@@ -112,114 +130,100 @@ export default async function MembershipTierPage({ params, searchParams }) {
                 ) : null}
                 {hasAccess ? (
                   <span className="membership-pill active">
-                    Acceso activo{grant?.expires_at ? ` · hasta ${new Date(grant.expires_at).toLocaleDateString('es-AR')}` : ' · vitalicia'}
+                    Acceso activo{grant?.expires_at ? ` · hasta ${new Date(grant.expires_at).toLocaleDateString('es-AR')}` : ' · vigente'}
                   </span>
                 ) : (
-                  <span className="membership-pill expired">Sin acceso</span>
+                  <span className="membership-pill expired">Sin acceso activo</span>
                 )}
               </div>
             </div>
 
             <aside className="membership-detail-side">
+              <p className="summary-kicker" style={{ color: 'var(--vck-primary)', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', margin: 0 }}>
+                Tu membresía
+              </p>
               <div className="membership-detail-price">
-                {tier.price_ars > 0 ? (
-                  <>
-                    <div className="membership-detail-price-value">
-                      ${Number(tier.price_ars).toLocaleString('es-AR')}
-                    </div>
-                    <div className="membership-detail-price-meta">
-                      ARS / {periodLabel(tier.billing_period)}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="membership-detail-price-value">Gratis</div>
-                    <div className="membership-detail-price-meta">Acceso sin cargo</div>
-                  </>
-                )}
+                <div className="membership-detail-price-value">
+                  {Number(tier.price_ars || 0) > 0 ? formatPrice(tier.price_ars) : 'Gratis'}
+                </div>
+                <div className="membership-detail-price-meta">
+                  {Number(tier.price_ars || 0) > 0 ? `ARS / ${periodLabel(tier.billing_period)}` : 'Acceso sin cargo'}
+                </div>
               </div>
 
               <div className="membership-detail-meta">
-                <div><strong>{courses.length}</strong> cursos incluidos</div>
+                <div><strong>{courses.length}</strong> talleres incluidos</div>
                 <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
                 <div><strong>{features.length}</strong> beneficios</div>
               </div>
 
-              {hasAccess || userIsStaff ? (
+              {hasAccess ? (
                 <Link className="membership-detail-primary" href={directAccessHref}>
                   Ir a la membresía →
                 </Link>
-              ) : tier.price_ars > 0 ? (
-                <CheckoutButton
-                  tierId={tier.id}
-                  tierName={tier.name}
-                  priceArs={tier.price_ars}
-                  billingPeriod={tier.billing_period}
-                  trialDays={tier.trial_days || 0}
-                  hasUsedTrial={!!grant}
-                />
               ) : (
-                <div className="membership-detail-note">
-                  Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso, contactá a la administradora.
-                </div>
+                <Link className="membership-detail-primary" href={checkoutHref}>
+                  Sumarme ahora →
+                </Link>
               )}
-
-              <div className="membership-detail-note secondary">
-                <Link href="/contacto">Contactanos</Link> si necesitás que te habilitemos el acceso.
-              </div>
             </aside>
           </header>
 
           {userIsStaff ? (
-            <div className="membership-admin-banner">
+            <div className="membership-admin-banner" style={{ marginTop: 24 }}>
               Vista administradora: podés ver esta membresía y su contenido aunque no esté publicada o no tengas un grant activo.
             </div>
           ) : null}
 
-          {paymentStatus === 'success' && (
-            <div className="membership-status success">
-              ✓ ¡Pago aprobado! Tu membresía ya está activa. Si no ves el acceso todavía, esperá unos segundos y recargá la página.
-            </div>
-          )}
-          {paymentStatus === 'failure' && (
-            <div className="membership-status error">
-              ✗ El pago no pudo procesarse. Podés intentarlo nuevamente.
-            </div>
-          )}
-          {paymentStatus === 'pending' && (
-            <div className="membership-status pending">
-              ⏳ Tu pago está pendiente de confirmación. Te avisaremos por email cuando esté aprobado.
-            </div>
-          )}
+          {paymentStatus === 'success' ? (
+            <div className="membership-status success">✓ Pago aprobado. Tu membresía ya está activa.</div>
+          ) : null}
+          {paymentStatus === 'failure' ? (
+            <div className="membership-status error">El pago no pudo procesarse. Podés intentarlo nuevamente.</div>
+          ) : null}
+          {paymentStatus === 'pending' ? (
+            <div className="membership-status pending">Tu pago está pendiente de confirmación.</div>
+          ) : null}
 
           <div className="membership-detail-grid">
             <div className="membership-detail-main">
               {!hasAccess ? (
-                <div className="membership-locked">
-                  {features.length > 0 && (
-                    <div style={{ marginBottom: 20, textAlign: 'left' }}>
-                      <strong>¿Qué incluye?</strong>
-                      <ul style={{ marginTop: 10, paddingLeft: 18, lineHeight: 1.8 }}>
-                        {features.map((f, i) => <li key={i}>{f}</li>)}
-                      </ul>
-                    </div>
+                <section className="membership-section">
+                  <h2>Qué incluye</h2>
+                  {features.length > 0 ? (
+                    <ul className="lovable-tier-benefits">
+                      {features.map((feature, index) => (
+                        <li key={`${feature}-${index}`}>
+                          <span className="lovable-check">✓</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="item-meta">Próximamente vamos a cargar los beneficios completos.</p>
                   )}
 
-                  {courses.length ? (
-                    <div style={{ marginTop: 18, textAlign: 'left' }}>
-                      <strong>Cursos incluidos:</strong>
-                      <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-                        {courses.map((c) => (
-                          <li key={c.id} style={{ marginBottom: 4 }}>{c.title}</li>
+                  {courses.length > 0 ? (
+                    <div style={{ marginTop: 24 }}>
+                      <h3>Talleres incluidos</h3>
+                      <ul className="membership-list">
+                        {courses.map((course) => (
+                          <li key={course.id}>
+                            <div className="item">
+                              <span>
+                                <strong>{course.title}</strong>
+                                {course.subtitle ? <div className="item-meta">{course.subtitle}</div> : null}
+                              </span>
+                              <span className="item-meta">Incluido</span>
+                            </div>
+                          </li>
                         ))}
                       </ul>
                     </div>
                   ) : null}
-                </div>
+                </section>
               ) : courses.length === 0 && contentItems.length === 0 ? (
-                <div className="membership-locked">
-                  Aún no hay contenido publicado para esta membresía. Volvé pronto.
-                </div>
+                <div className="membership-locked">Aún no hay contenido publicado para esta membresía. Volvé pronto.</div>
               ) : (
                 <>
                   {contentItems.length > 0 ? (
@@ -228,20 +232,15 @@ export default async function MembershipTierPage({ params, searchParams }) {
                       <div className="membership-content-grid">
                         {contentItems.map((item) => {
                           const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
-                          const imageSrc = item.media_url || privateFileUrl
-                          const downloadHref = privateFileUrl || item.media_url
+                          const mediaHref = privateFileUrl || item.media_url
                           return (
                             <article key={item.id} className="membership-resource-card">
-                              <div className="item-meta">{item.type === 'download' ? 'Descargable' : item.type === 'image' ? 'Imagen' : item.type === 'link' ? 'Link' : item.type === 'embed' ? 'Embed' : 'Texto'}</div>
+                              <div className="item-meta">{contentTypeLabel(item.type)}</div>
                               <h3>{item.title}</h3>
                               {item.summary ? <p>{item.summary}</p> : null}
 
-                              {item.type === 'image' && imageSrc ? (
-                                <img src={imageSrc} alt={item.title} className="membership-resource-image" />
-                              ) : null}
-
-                              {item.type === 'text' && item.body ? (
-                                <div className="article-body">{item.body}</div>
+                              {item.type === 'image' && mediaHref ? (
+                                <img src={mediaHref} alt={item.title} className="membership-resource-image" />
                               ) : null}
 
                               {item.type === 'embed' && item.media_url ? (
@@ -250,12 +249,10 @@ export default async function MembershipTierPage({ params, searchParams }) {
                                 </div>
                               ) : null}
 
-                              {item.type === 'embed' && item.body ? (
-                                <div className="article-body">{item.body}</div>
-                              ) : null}
+                              {item.body ? <RichBody html={item.body} /> : null}
 
-                              {item.type === 'download' && downloadHref ? (
-                                <a className="membership-cta secondary" href={downloadHref} target="_blank" rel="noopener noreferrer">
+                              {item.type === 'download' && mediaHref ? (
+                                <a className="membership-cta secondary" href={mediaHref} target="_blank" rel="noopener noreferrer">
                                   Descargar {item.file_name || 'archivo'}
                                 </a>
                               ) : null}
@@ -265,8 +262,6 @@ export default async function MembershipTierPage({ params, searchParams }) {
                                   Abrir recurso
                                 </a>
                               ) : null}
-
-                              {item.body ? <RichBody html={item.body} /> : null}
                             </article>
                           )
                         })}
@@ -281,40 +276,36 @@ export default async function MembershipTierPage({ params, searchParams }) {
                     return (
                       <section key={course.id} className="membership-section">
                         <h2>{course.title}</h2>
-                        {course.subtitle ? (
-                          <p style={{ color: 'var(--muted)', marginTop: -8 }}>{course.subtitle}</p>
-                        ) : null}
+                        {course.subtitle ? <p className="item-meta">{course.subtitle}</p> : null}
                         {modules.length === 0 ? (
-                          <div className="membership-locked" style={{ marginTop: 12 }}>
-                            Próximamente.
-                          </div>
+                          <div className="membership-locked" style={{ marginTop: 12 }}>Próximamente.</div>
                         ) : (
                           modules.map((mod) => {
                             const lessons = (mod.lessons || [])
-                              .filter((l) => userIsStaff || l.status === 'published')
+                              .filter((lesson) => userIsStaff || lesson.status === 'published')
                               .sort((a, b) => (a.position || 0) - (b.position || 0))
                             return (
                               <div key={mod.id} style={{ marginTop: 18 }}>
-                                <h3 style={{ fontSize: 20, marginBottom: 10 }}>{mod.title}</h3>
+                                <h3>{mod.title}</h3>
                                 {lessons.length === 0 ? (
                                   <p className="item-meta">Sin clases publicadas todavía.</p>
                                 ) : (
                                   <ul className="membership-list">
-                                    {lessons.map((l) => (
-                                      <li key={l.id}>
-                                        <Link href={`/membresias/${tier.slug}/${course.slug}/${l.slug}`}>
+                                    {lessons.map((lesson) => (
+                                      <li key={lesson.id}>
+                                        <Link href={`/membresias/${tier.slug}/${course.slug}/${lesson.slug}`}>
                                           <span>
-                                            <strong>{l.title}</strong>
-                                            {l.summary ? <div className="item-meta">{l.summary}</div> : null}
+                                            <strong>{lesson.title}</strong>
+                                            {lesson.summary ? <div className="item-meta">{lesson.summary}</div> : null}
                                           </span>
                                           <span className="item-meta">
-                                            {l.lesson_type === 'live_session'
-                                              ? l.live_session_at
-                                                ? `En vivo · ${new Date(l.live_session_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
+                                            {lesson.lesson_type === 'live_session'
+                                              ? lesson.live_session_at
+                                                ? `En vivo · ${new Date(lesson.live_session_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
                                                 : 'En vivo'
-                                              : l.lesson_type === 'article'
+                                              : lesson.lesson_type === 'article'
                                                 ? 'Artículo'
-                                                : l.lesson_type === 'attachment'
+                                                : lesson.lesson_type === 'attachment'
                                                   ? 'Descargas'
                                                   : 'Video'}
                                           </span>
@@ -337,24 +328,14 @@ export default async function MembershipTierPage({ params, searchParams }) {
             <aside className="membership-detail-sidebar">
               <section className="membership-detail-card">
                 <h3>Estado</h3>
-                <p>
-                  {hasAccess || userIsStaff
-                    ? 'Tenés acceso a esta membresía.'
-                    : 'No tenés acceso activo todavía.'}
-                </p>
-                <div className="membership-detail-inline">
-                  <span>{tier.billing_period === 'monthly' ? 'Mensual' : tier.billing_period === 'annual' ? 'Anual' : 'Única'}</span>
-                  <span>{tier.is_featured ? 'Destacada' : 'Standard'}</span>
-                </div>
+                <p>{hasAccess ? 'Tenés acceso a esta membresía.' : 'Todavía no tenés acceso activo.'}</p>
               </section>
 
               <section className="membership-detail-card">
                 <h3>Beneficios</h3>
                 {features.length > 0 ? (
                   <ul className="membership-detail-list">
-                    {features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
-                    ))}
+                    {features.map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
                   </ul>
                 ) : (
                   <p>No hay beneficios cargados todavía.</p>
