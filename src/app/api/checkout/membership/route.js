@@ -83,9 +83,9 @@ export async function POST(request) {
       name: profile?.display_name || profile?.full_name || '',
     },
     back_urls: {
-      success: `${baseUrl}/membresia/${tier.slug}?payment=success`,
-      failure: `${baseUrl}/membresia/${tier.slug}?payment=failure`,
-      pending: `${baseUrl}/membresia/${tier.slug}?payment=pending`,
+      success: `${baseUrl}/membresias/${tier.slug}?payment=success`,
+      failure: `${baseUrl}/membresias/${tier.slug}?payment=failure`,
+      pending: `${baseUrl}/membresias/${tier.slug}?payment=pending`,
     },
     auto_return: 'approved',
     notification_url: `${baseUrl}/api/webhooks/mercadopago`,

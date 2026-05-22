@@ -154,7 +154,7 @@ export default function CuentaPage() {
                       )}
                       {m.tierSlug && (
                         <div style={{ marginTop: 16 }}>
-                          <a href={`/membresia/${m.tierSlug}`} style={{ display: 'inline-block', padding: '9px 20px', background: '#5e9e8a', color: '#fff', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                          <a href={`/membresias/${m.tierSlug}`} style={{ display: 'inline-block', padding: '9px 20px', background: '#5e9e8a', color: '#fff', borderRadius: 10, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
                             Ver contenido de la membresía →
                           </a>
                         </div>

@@ -9,6 +9,11 @@ import '../membership.css'
 
 export const dynamic = 'force-dynamic'
 
+function RichBody({ html }) {
+  if (!html) return null
+  return <div className="article-body" dangerouslySetInnerHTML={{ __html: html }} />
+}
+
 function periodLabel(period) {
   return period === 'monthly' ? 'mes' : period === 'annual' ? 'año' : period === 'lifetime' ? 'vitalicia' : 'único'
 }
@@ -32,7 +37,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
   if (tier.status !== 'published' && !userIsStaff) notFound()
 
   if (!user) {
-    redirect(`/login?next=/membresia/${slug}`)
+    redirect(`/login?next=/membresias/${slug}`)
   }
 
   const { data: grant } = await supabase
@@ -84,77 +89,67 @@ export default async function MembershipTierPage({ params, searchParams }) {
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
+  const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/membresia/${slug}`}>
+    <PublicSiteShell user={user} loginHref={`/login?next=/membresias/${slug}`}>
       <section className="membership-shell">
         <div className="membership-container">
           <div className="breadcrumb-row">
-            <Link href="/membresia">← Membresías</Link>
+            <Link href="/membresias">← Membresías</Link>
           </div>
 
-          <header className="membership-hero membership-hero-left">
-            <span className="membership-kicker">Club VeCKA</span>
-            <h1 style={{ fontSize: 36 }}>{tier.name}</h1>
-            {tier.description ? <p style={{ margin: '8px 0 0' }}>{tier.description}</p> : null}
-            <div className="pill-row" style={{ marginTop: 14 }}>
-              {userIsStaff && tier.status !== 'published' ? (
-                <span className="membership-pill expired">
-                  {tier.status === 'draft' ? 'Borrador' : 'Archivada'}
-                </span>
-              ) : null}
-              {hasAccess ? (
-                <span className="membership-pill active">
-                  Acceso activo{grant?.expires_at ? ` · hasta ${new Date(grant.expires_at).toLocaleDateString('es-AR')}` : ' · vitalicia'}
-                </span>
-              ) : (
-                <>
-                  {tier.price_ars > 0 && (
-                    <span className="membership-pill" style={{ background: '#f0f4ff', color: '#1a3a6e', fontWeight: 700, fontSize: 16, padding: '6px 14px' }}>
-                      ${Number(tier.price_ars).toLocaleString('es-AR')} ARS / {periodLabel(tier.billing_period)}
-                    </span>
-                  )}
+          <header className="membership-detail-hero">
+            <div className="membership-detail-hero-copy">
+              <span className="membership-kicker">Club VeCKA</span>
+              <h1>{tier.name}</h1>
+              {tier.description ? <p>{tier.description}</p> : null}
+              <div className="pill-row membership-detail-pills">
+                {userIsStaff && tier.status !== 'published' ? (
+                  <span className="membership-pill expired">
+                    {tier.status === 'draft' ? 'Borrador' : 'Archivada'}
+                  </span>
+                ) : null}
+                {hasAccess ? (
+                  <span className="membership-pill active">
+                    Acceso activo{grant?.expires_at ? ` · hasta ${new Date(grant.expires_at).toLocaleDateString('es-AR')}` : ' · vitalicia'}
+                  </span>
+                ) : (
                   <span className="membership-pill expired">Sin acceso</span>
-                </>
-              )}
+                )}
+              </div>
             </div>
-          </header>
 
-          {userIsStaff ? (
-            <div className="membership-admin-banner">
-              Vista administradora: podés ver esta membresía y su contenido aunque no esté publicada o no tengas un grant activo.
-            </div>
-          ) : null}
+            <aside className="membership-detail-side">
+              <div className="membership-detail-price">
+                {tier.price_ars > 0 ? (
+                  <>
+                    <div className="membership-detail-price-value">
+                      ${Number(tier.price_ars).toLocaleString('es-AR')}
+                    </div>
+                    <div className="membership-detail-price-meta">
+                      ARS / {periodLabel(tier.billing_period)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="membership-detail-price-value">Gratis</div>
+                    <div className="membership-detail-price-meta">Acceso sin cargo</div>
+                  </>
+                )}
+              </div>
 
-        {/* Payment status banners */}
-        {paymentStatus === 'success' && (
-          <div style={{ background: '#d4f0e6', border: '1px solid #5e9e8a', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#1a5c42', fontWeight: 600 }}>
-            ✓ ¡Pago aprobado! Tu membresía ya está activa. Si no ves el acceso todavía, esperá unos segundos y recargá la página.
-          </div>
-        )}
-        {paymentStatus === 'failure' && (
-          <div style={{ background: '#fde8e8', border: '1px solid #c0392b', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#7b1a1a', fontWeight: 600 }}>
-            ✗ El pago no pudo procesarse. Podés intentarlo nuevamente.
-          </div>
-        )}
-        {paymentStatus === 'pending' && (
-          <div style={{ background: '#fff8e0', border: '1px solid #e0b800', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#5a4500', fontWeight: 600 }}>
-            ⏳ Tu pago está pendiente de confirmación. Te avisaremos por email cuando esté aprobado.
-          </div>
-        )}
+              <div className="membership-detail-meta">
+                <div><strong>{courses.length}</strong> cursos incluidos</div>
+                <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
+                <div><strong>{features.length}</strong> beneficios</div>
+              </div>
 
-          {!hasAccess ? (
-            <div className="membership-locked">
-              {features.length > 0 && (
-                <div style={{ marginBottom: 20, textAlign: 'left' }}>
-                  <strong>¿Qué incluye?</strong>
-                  <ul style={{ marginTop: 10, paddingLeft: 18, lineHeight: 1.8 }}>
-                    {features.map((f, i) => <li key={i}>{f}</li>)}
-                  </ul>
-                </div>
-              )}
-
-              {tier.price_ars > 0 ? (
+              {hasAccess || userIsStaff ? (
+                <Link className="membership-detail-primary" href={directAccessHref}>
+                  Ir a la membresía →
+                </Link>
+              ) : tier.price_ars > 0 ? (
                 <CheckoutButton
                   tierId={tier.id}
                   tierName={tier.name}
@@ -164,141 +159,209 @@ export default async function MembershipTierPage({ params, searchParams }) {
                   hasUsedTrial={!!grant}
                 />
               ) : (
-                <p>
-                  Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso,{' '}
-                  <strong>contactá a tu administradora</strong> y te lo activamos manualmente.
-                </p>
+                <div className="membership-detail-note">
+                  Esta membresía requiere acceso. Si ya pagaste o creés que deberías tener acceso, contactá a la administradora.
+                </div>
               )}
 
-              <p style={{ marginTop: 12, fontSize: 13, color: '#8a7a6e' }}>
-                ¿Ya pagaste? <Link href="/contacto" style={{ color: '#5e9e8a' }}>Contactanos</Link> y lo verificamos.
-              </p>
+              <div className="membership-detail-note secondary">
+                <Link href="/contacto">Contactanos</Link> si necesitás que te habilitemos el acceso.
+              </div>
+            </aside>
+          </header>
 
-              {courses.length ? (
-                <div style={{ marginTop: 24, textAlign: 'left' }}>
-                  <strong>Cursos incluidos:</strong>
-                  <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-                    {courses.map((c) => (
-                      <li key={c.id} style={{ marginBottom: 4 }}>{c.title}</li>
-                    ))}
-                  </ul>
+          {userIsStaff ? (
+            <div className="membership-admin-banner">
+              Vista administradora: podés ver esta membresía y su contenido aunque no esté publicada o no tengas un grant activo.
+            </div>
+          ) : null}
+
+          {paymentStatus === 'success' && (
+            <div className="membership-status success">
+              ✓ ¡Pago aprobado! Tu membresía ya está activa. Si no ves el acceso todavía, esperá unos segundos y recargá la página.
+            </div>
+          )}
+          {paymentStatus === 'failure' && (
+            <div className="membership-status error">
+              ✗ El pago no pudo procesarse. Podés intentarlo nuevamente.
+            </div>
+          )}
+          {paymentStatus === 'pending' && (
+            <div className="membership-status pending">
+              ⏳ Tu pago está pendiente de confirmación. Te avisaremos por email cuando esté aprobado.
+            </div>
+          )}
+
+          <div className="membership-detail-grid">
+            <div className="membership-detail-main">
+              {!hasAccess ? (
+                <div className="membership-locked">
+                  {features.length > 0 && (
+                    <div style={{ marginBottom: 20, textAlign: 'left' }}>
+                      <strong>¿Qué incluye?</strong>
+                      <ul style={{ marginTop: 10, paddingLeft: 18, lineHeight: 1.8 }}>
+                        {features.map((f, i) => <li key={i}>{f}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {courses.length ? (
+                    <div style={{ marginTop: 18, textAlign: 'left' }}>
+                      <strong>Cursos incluidos:</strong>
+                      <ul style={{ marginTop: 10, paddingLeft: 18 }}>
+                        {courses.map((c) => (
+                          <li key={c.id} style={{ marginBottom: 4 }}>{c.title}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-          ) : courses.length === 0 && contentItems.length === 0 ? (
-            <div className="membership-locked">
-              Aún no hay contenido publicado para esta membresía. Volvé pronto.
-            </div>
-          ) : (
-            <>
-            {contentItems.length > 0 ? (
-              <section className="membership-section">
-                <h2>Contenido exclusivo</h2>
-                <div className="membership-content-grid">
-                  {contentItems.map((item) => {
-                    const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
-                    const imageSrc = item.media_url || privateFileUrl
-                    const downloadHref = privateFileUrl || item.media_url
+              ) : courses.length === 0 && contentItems.length === 0 ? (
+                <div className="membership-locked">
+                  Aún no hay contenido publicado para esta membresía. Volvé pronto.
+                </div>
+              ) : (
+                <>
+                  {contentItems.length > 0 ? (
+                    <section className="membership-section">
+                      <h2>Contenido exclusivo</h2>
+                      <div className="membership-content-grid">
+                        {contentItems.map((item) => {
+                          const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
+                          const imageSrc = item.media_url || privateFileUrl
+                          const downloadHref = privateFileUrl || item.media_url
+                          return (
+                            <article key={item.id} className="membership-resource-card">
+                              <div className="item-meta">{item.type === 'download' ? 'Descargable' : item.type === 'image' ? 'Imagen' : item.type === 'link' ? 'Link' : item.type === 'embed' ? 'Embed' : 'Texto'}</div>
+                              <h3>{item.title}</h3>
+                              {item.summary ? <p>{item.summary}</p> : null}
+
+                              {item.type === 'image' && imageSrc ? (
+                                <img src={imageSrc} alt={item.title} className="membership-resource-image" />
+                              ) : null}
+
+                              {item.type === 'text' && item.body ? (
+                                <div className="article-body">{item.body}</div>
+                              ) : null}
+
+                              {item.type === 'embed' && item.media_url ? (
+                                <div className="video-frame">
+                                  <iframe src={item.media_url} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+                                </div>
+                              ) : null}
+
+                              {item.type === 'embed' && item.body ? (
+                                <div className="article-body">{item.body}</div>
+                              ) : null}
+
+                              {item.type === 'download' && downloadHref ? (
+                                <a className="membership-cta secondary" href={downloadHref} target="_blank" rel="noopener noreferrer">
+                                  Descargar {item.file_name || 'archivo'}
+                                </a>
+                              ) : null}
+
+                              {item.type === 'link' && item.media_url ? (
+                                <a className="membership-cta secondary" href={item.media_url} target="_blank" rel="noopener noreferrer">
+                                  Abrir recurso
+                                </a>
+                              ) : null}
+
+                              {item.body ? <RichBody html={item.body} /> : null}
+                            </article>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {courses.map((course) => {
+                    const modules = (course.modules || [])
+                      .slice()
+                      .sort((a, b) => (a.position || 0) - (b.position || 0))
                     return (
-                      <article key={item.id} className="membership-resource-card">
-                        <div className="item-meta">{item.type === 'download' ? 'Descargable' : item.type === 'image' ? 'Imagen' : item.type === 'link' ? 'Link' : item.type === 'embed' ? 'Embed' : 'Texto'}</div>
-                        <h3>{item.title}</h3>
-                        {item.summary ? <p>{item.summary}</p> : null}
-
-                        {item.type === 'image' && imageSrc ? (
-                          <img src={imageSrc} alt={item.title} className="membership-resource-image" />
+                      <section key={course.id} className="membership-section">
+                        <h2>{course.title}</h2>
+                        {course.subtitle ? (
+                          <p style={{ color: 'var(--muted)', marginTop: -8 }}>{course.subtitle}</p>
                         ) : null}
-
-                        {item.type === 'text' && item.body ? (
-                          <div className="article-body">{item.body}</div>
-                        ) : null}
-
-                        {item.type === 'embed' && item.media_url ? (
-                          <div className="video-frame">
-                            <iframe src={item.media_url} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+                        {modules.length === 0 ? (
+                          <div className="membership-locked" style={{ marginTop: 12 }}>
+                            Próximamente.
                           </div>
-                        ) : null}
-
-                        {item.type === 'embed' && item.body ? (
-                          <div className="article-body">{item.body}</div>
-                        ) : null}
-
-                        {item.type === 'download' && downloadHref ? (
-                          <a className="membership-cta secondary" href={downloadHref} target="_blank" rel="noopener noreferrer">
-                            Descargar {item.file_name || 'archivo'}
-                          </a>
-                        ) : null}
-
-                        {item.type === 'link' && item.media_url ? (
-                          <a className="membership-cta secondary" href={item.media_url} target="_blank" rel="noopener noreferrer">
-                            Abrir recurso
-                          </a>
-                        ) : null}
-                      </article>
+                        ) : (
+                          modules.map((mod) => {
+                            const lessons = (mod.lessons || [])
+                              .filter((l) => userIsStaff || l.status === 'published')
+                              .sort((a, b) => (a.position || 0) - (b.position || 0))
+                            return (
+                              <div key={mod.id} style={{ marginTop: 18 }}>
+                                <h3 style={{ fontSize: 20, marginBottom: 10 }}>{mod.title}</h3>
+                                {lessons.length === 0 ? (
+                                  <p className="item-meta">Sin clases publicadas todavía.</p>
+                                ) : (
+                                  <ul className="membership-list">
+                                    {lessons.map((l) => (
+                                      <li key={l.id}>
+                                        <Link href={`/membresias/${tier.slug}/${course.slug}/${l.slug}`}>
+                                          <span>
+                                            <strong>{l.title}</strong>
+                                            {l.summary ? <div className="item-meta">{l.summary}</div> : null}
+                                          </span>
+                                          <span className="item-meta">
+                                            {l.lesson_type === 'live_session'
+                                              ? l.live_session_at
+                                                ? `En vivo · ${new Date(l.live_session_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
+                                                : 'En vivo'
+                                              : l.lesson_type === 'article'
+                                                ? 'Artículo'
+                                                : l.lesson_type === 'attachment'
+                                                  ? 'Descargas'
+                                                  : 'Video'}
+                                          </span>
+                                        </Link>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </section>
                     )
                   })}
+                </>
+              )}
+            </div>
+
+            <aside className="membership-detail-sidebar">
+              <section className="membership-detail-card">
+                <h3>Estado</h3>
+                <p>
+                  {hasAccess || userIsStaff
+                    ? 'Tenés acceso a esta membresía.'
+                    : 'No tenés acceso activo todavía.'}
+                </p>
+                <div className="membership-detail-inline">
+                  <span>{tier.billing_period === 'monthly' ? 'Mensual' : tier.billing_period === 'annual' ? 'Anual' : 'Única'}</span>
+                  <span>{tier.is_featured ? 'Destacada' : 'Standard'}</span>
                 </div>
               </section>
-            ) : null}
 
-            {courses.map((course) => {
-              const modules = (course.modules || [])
-                .slice()
-                .sort((a, b) => (a.position || 0) - (b.position || 0))
-              return (
-                <section key={course.id} className="membership-section">
-                  <h2>{course.title}</h2>
-                  {course.subtitle ? (
-                    <p style={{ color: 'var(--muted)', marginTop: -8 }}>{course.subtitle}</p>
-                  ) : null}
-                  {modules.length === 0 ? (
-                    <div className="membership-locked" style={{ marginTop: 12 }}>
-                      Próximamente.
-                    </div>
-                  ) : (
-                    modules.map((mod) => {
-                      const lessons = (mod.lessons || [])
-                        .filter((l) => userIsStaff || l.status === 'published')
-                        .sort((a, b) => (a.position || 0) - (b.position || 0))
-                      return (
-                        <div key={mod.id} style={{ marginTop: 18 }}>
-                          <h3 style={{ fontSize: 20, marginBottom: 10 }}>{mod.title}</h3>
-                          {lessons.length === 0 ? (
-                            <p className="item-meta">Sin clases publicadas todavía.</p>
-                          ) : (
-                            <ul className="membership-list">
-                              {lessons.map((l) => (
-                                <li key={l.id}>
-                                  <Link href={`/membresia/${tier.slug}/${course.slug}/${l.slug}`}>
-                                    <span>
-                                      <strong>{l.title}</strong>
-                                      {l.summary ? <div className="item-meta">{l.summary}</div> : null}
-                                    </span>
-                                    <span className="item-meta">
-                                      {l.lesson_type === 'live_session'
-                                        ? l.live_session_at
-                                          ? `En vivo · ${new Date(l.live_session_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
-                                          : 'En vivo'
-                                        : l.lesson_type === 'article'
-                                          ? 'Artículo'
-                                          : l.lesson_type === 'attachment'
-                                            ? 'Descargas'
-                                          : 'Video'}
-                                    </span>
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
-                </section>
-              )
-            })}
-            </>
-          )}
+              <section className="membership-detail-card">
+                <h3>Beneficios</h3>
+                {features.length > 0 ? (
+                  <ul className="membership-detail-list">
+                    {features.map((feature, index) => (
+                      <li key={index}>{feature}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No hay beneficios cargados todavía.</p>
+                )}
+              </section>
+            </aside>
+          </div>
         </div>
       </section>
     </PublicSiteShell>

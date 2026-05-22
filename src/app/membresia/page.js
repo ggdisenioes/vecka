@@ -7,6 +7,11 @@ import './membership.css'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = {
+  title: 'Membresías Club VeCKA — Cosé con propósito',
+  description: 'Sumate al Club VeCKA. Membresías mensuales con acceso a talleres, materiales y comunidad privada.',
+}
+
 function periodLabel(period) {
   return period === 'monthly' ? 'mes' : period === 'annual' ? 'año' : period === 'lifetime' ? 'pago único' : ''
 }
@@ -14,6 +19,7 @@ function periodLabel(period) {
 export default async function MembresiaLandingPage() {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
+  const shouldUseDirectAccessLabel = Boolean(user) || userIsStaff
 
   let tiersQuery = getSupabaseAdmin()
     .from('membership_tiers')
@@ -41,16 +47,54 @@ export default async function MembresiaLandingPage() {
   }
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/membresia">
+    <PublicSiteShell user={user} loginHref="/login?next=/membresias">
       <section className="membership-shell">
         <div className="membership-container">
-          <header className="membership-hero">
-            <span className="membership-kicker">Club VeCKA</span>
-            <h1>Membresías</h1>
-            <p>
-              Accedé a contenido exclusivo: clases en video, artículos, materiales descargables y
-              sesiones en vivo. Elegí el nivel que mejor se ajuste a tu camino.
-            </p>
+          <header
+            className="membership-hero"
+            style={{
+              background: 'linear-gradient(135deg, #1e3d2e 0%, #2a5244 50%, #1a3530 100%)',
+              borderRadius: 22,
+              padding: '40px 32px',
+              color: '#fff',
+              position: 'relative',
+              overflow: 'hidden',
+              marginBottom: 32,
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: -56,
+                right: -30,
+                width: 220,
+                height: 220,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(151,206,184,.18) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -70,
+                left: '22%',
+                width: 180,
+                height: 180,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(224,168,187,.12) 0%, transparent 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            <div style={{ position: 'relative' }}>
+              <span className="membership-kicker" style={{ color: '#97ceb8' }}>Club VeCKA</span>
+              <h1 style={{ color: '#fff', marginBottom: 12 }}>Membresías</h1>
+              <p style={{ color: 'oklch(88% 0.02 60)', maxWidth: 680 }}>
+                Accedé a contenido exclusivo: clases en video, artículos, materiales descargables y
+                sesiones en vivo. Elegí el nivel que mejor se ajuste a tu camino.
+              </p>
+            </div>
           </header>
 
           {userIsStaff ? (
@@ -64,32 +108,84 @@ export default async function MembresiaLandingPage() {
               Próximamente vamos a abrir las membresías. ¡Quedate atenta!
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 22, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24, alignItems: 'start' }}>
               {tiers.map((tier) => {
                 const active = activeTierIds.has(tier.id)
                 const features = Array.isArray(tier.features) ? tier.features : []
                 const period = periodLabel(tier.billing_period)
+                const ctaLabel = active || shouldUseDirectAccessLabel
+                  ? 'Ir a la membresía →'
+                  : tier.trial_days > 0
+                    ? 'Probar gratis →'
+                    : 'Suscribirme →'
+
                 return (
                   <div
                     key={tier.id}
                     style={{
                       background: '#fff',
-                      borderRadius: 18,
-                      border: tier.is_featured ? '2px solid #5e9e8a' : '1px solid oklch(88% 0.012 60)',
+                      borderRadius: 16,
+                      border: tier.is_featured ? '2px solid #5e9e8a' : '1px solid oklch(90% 0.012 60)',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
                       position: 'relative',
-                      boxShadow: tier.is_featured ? '0 4px 24px rgba(94,158,138,.15)' : 'none',
+                      boxShadow: tier.is_featured ? '0 20px 48px rgba(94,158,138,.14)' : '0 2px 8px rgba(0,0,0,.05)',
+                      minHeight: 100,
                     }}
                   >
-                    {tier.is_featured && (
-                      <div style={{ background: '#5e9e8a', color: '#fff', textAlign: 'center', padding: '6px 0', fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                        Más popular
+                    <div
+                      style={{
+                        height: 180,
+                        background: tier.is_featured
+                          ? 'linear-gradient(135deg, #5e9e8a 0%, #4a7d6e 100%)'
+                          : 'linear-gradient(135deg, #dceae3 0%, #f0dee7 100%)',
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,.26) 0%, transparent 60%)',
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontFamily: "'Cormorant Garamond', serif",
+                          fontSize: 20,
+                          fontWeight: 600,
+                          color: tier.is_featured ? 'rgba(255,255,255,.46)' : 'rgba(0,0,0,.28)',
+                          textAlign: 'center',
+                          padding: '0 20px',
+                          position: 'relative',
+                        }}
+                      >
+                        {tier.name}
                       </div>
-                    )}
+                      <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                        <span
+                          className="membership-pill"
+                          style={{
+                            background: tier.is_featured ? 'rgba(255,255,255,.16)' : '#f0dee7',
+                            color: tier.is_featured ? '#fff' : '#5e9e8a',
+                          }}
+                        >
+                          Membresía
+                        </span>
+                      </div>
+                      {active ? (
+                        <div style={{ position: 'absolute', top: 12, left: 12 }}>
+                          <span className="membership-pill active">Suscripta</span>
+                        </div>
+                      ) : null}
+                    </div>
 
-                    <div style={{ padding: '26px 26px 0' }}>
+                    <div style={{ padding: '20px' }}>
                       {active && (
                         <div style={{ marginBottom: 10 }}>
                           <span style={{ fontSize: 11, background: '#d4f0e6', color: '#2e7d6a', borderRadius: 20, padding: '3px 10px', fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>Tu membresía activa</span>
@@ -104,14 +200,17 @@ export default async function MembresiaLandingPage() {
                         </div>
                       ) : null}
 
-                      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 700, margin: '0 0 8px' }}>{tier.name}</h2>
+                      <div style={{ fontSize: 11, color: 'oklch(52% 0.018 50)', fontFamily: "'DM Sans', sans-serif", marginBottom: 6 }}>
+                        Club VeCKA
+                      </div>
+                      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 600, margin: '0 0 6px', color: 'oklch(18% 0.022 50)' }}>{tier.name}</h2>
                       {tier.description && (
-                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(52% 0.018 50)', margin: '0 0 16px', lineHeight: 1.5 }}>{tier.description}</p>
+                        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)', margin: '0 0 12px', lineHeight: 1.5 }}>{tier.description}</p>
                       )}
 
                       {tier.price_ars > 0 ? (
-                        <div style={{ margin: '16px 0', display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 38, fontWeight: 700, color: '#1a3a6e', lineHeight: 1 }}>
+                        <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 700, color: '#5e9e8a', lineHeight: 1 }}>
                             ${Number(tier.price_ars).toLocaleString('es-AR')}
                           </span>
                           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(52% 0.018 50)' }}>
@@ -119,7 +218,7 @@ export default async function MembresiaLandingPage() {
                           </span>
                         </div>
                       ) : (
-                        <div style={{ margin: '16px 0', fontFamily: "'DM Sans', sans-serif", fontSize: 18, fontWeight: 700, color: '#5e9e8a' }}>Gratis</div>
+                        <div style={{ margin: '14px 0 8px', fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 700, color: '#5e9e8a' }}>Gratis</div>
                       )}
 
                       {tier.trial_days > 0 && !active && (
@@ -129,8 +228,8 @@ export default async function MembresiaLandingPage() {
                       )}
 
                       {features.length > 0 && (
-                        <ul style={{ listStyle: 'none', margin: '0 0 20px', padding: 0 }}>
-                          {features.map((f, i) => (
+                        <ul style={{ listStyle: 'none', margin: '0 0 18px', padding: 0 }}>
+                          {features.slice(0, 4).map((f, i) => (
                             <li key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'oklch(40% 0.018 50)', lineHeight: 1.6, marginBottom: 4 }}>
                               <span style={{ color: '#5e9e8a', flexShrink: 0, fontWeight: 700 }}>✓</span>
                               {f}
@@ -138,25 +237,32 @@ export default async function MembresiaLandingPage() {
                           ))}
                         </ul>
                       )}
-                    </div>
 
-                    <div style={{ padding: '0 26px 26px', marginTop: 'auto' }}>
-                      <Link
-                        href={`/membresia/${tier.slug}`}
-                        style={{
-                          display: 'block', textAlign: 'center',
-                          padding: '13px 24px',
-                          background: tier.is_featured ? '#5e9e8a' : '#fff',
-                          color: tier.is_featured ? '#fff' : '#5e9e8a',
-                          border: `2px solid #5e9e8a`,
-                          borderRadius: 10,
-                          fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 700,
-                          textDecoration: 'none',
-                          transition: 'all .15s',
-                        }}
-                      >
-                        {active ? 'Ver mi membresía →' : tier.trial_days > 0 ? 'Probar gratis →' : 'Suscribirme →'}
-                      </Link>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 16 }}>
+                        <div style={{ fontSize: 12, color: 'oklch(52% 0.018 50)', fontFamily: "'DM Sans', sans-serif" }}>
+                          {features.length > 0 ? `${features.length} beneficios incluidos` : 'Acceso exclusivo'}
+                        </div>
+                        <Link
+                          href={`/membresias/${tier.slug}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '8px 16px',
+                            background: shouldUseDirectAccessLabel || tier.is_featured ? '#5e9e8a' : '#fff',
+                            color: shouldUseDirectAccessLabel || tier.is_featured ? '#fff' : '#5e9e8a',
+                            border: '1.5px solid #5e9e8a',
+                            borderRadius: 8,
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {ctaLabel}
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )
@@ -169,7 +275,7 @@ export default async function MembresiaLandingPage() {
               <p style={{ fontFamily: "'DM Sans', sans-serif", color: 'oklch(52% 0.018 50)', marginBottom: 14 }}>
                 Ya tenés cuenta? Iniciá sesión para ver tu membresía activa.
               </p>
-              <Link href="/login?next=/membresia" className="membership-cta secondary">
+                <Link href="/login?next=/membresias" className="membership-cta secondary">
                 Iniciar sesión
               </Link>
             </div>

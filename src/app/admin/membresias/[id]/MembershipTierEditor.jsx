@@ -512,7 +512,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
               Contenido
             </button>
             {status === 'published' ? (
-              <Link className="admin-button ghost" href={`/membresia/${tier.slug}`} target="_blank">
+              <Link className="admin-button ghost" href={`/membresias/${tier.slug}`} target="_blank">
                 Ver pública
               </Link>
             ) : (

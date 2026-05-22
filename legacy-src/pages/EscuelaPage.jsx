@@ -82,7 +82,7 @@ export default function EscuelaPage() {
               {memberships.map((m) => (
                 <a
                   key={m.id}
-                  href={`/membresia/${m.slug}`}
+                  href={`/membresias/${m.slug}`}
                   style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #5e9e8a, #4a7d6e)', borderRadius: 16, padding: isMobile ? '28px 22px' : '32px 28px', textDecoration: 'none', color: '#fff', transition: 'transform .2s', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}

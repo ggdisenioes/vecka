@@ -44,9 +44,9 @@ export default function PublicSiteShell({ children, user = null, loginHref = '/l
 
           <nav className="site-shell-footer-nav" aria-label="Secciones principales">
             <Link href="/">Inicio</Link>
-            <Link href="/escuela">Escuela</Link>
+            <Link href="/talleres">Talleres</Link>
             <Link href="/tienda">Tienda</Link>
-            <Link href="/membresia">Membresías</Link>
+            <Link href="/membresias">Membresías</Link>
             <Link href="/contacto">Contacto</Link>
           </nav>
         </div>

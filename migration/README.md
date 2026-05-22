@@ -26,6 +26,9 @@ npm run migration:users -- --email=clienta@ejemplo.com
 npm run migration:users -- --dry-run
 npm run migration:membership-tiers
 npm run migration:membership-grants
+npm run migration:membership-content -- --inventory
+npm run migration:membership-content -- --tier-slug=club-vecka-costura --source-ids=10537,14017 --dry-run
+npm run migration:membership-content -- --tier-slug=club-vecka-costura --source-ids=10537,14017
 ```
 
 ## Qué hace `01-users`
@@ -40,7 +43,24 @@ npm run migration:membership-grants
 
 - `02-membership-tiers` migra `wc_membership_plan` hacia `membership_tiers`.
 - `03-membership-grants` migra `wc_user_membership` hacia `membership_grants`.
+- `04-membership-content` inventaria e importa contenido de WordPress hacia `membership_content_items`.
 - No importa cursos ni productos. Solo usa productos relacionados para inferir precio y período del tier.
+
+## Contenido de membresías
+
+El flujo correcto para traer contenido de WordPress es:
+
+1. Ejecutar `npm run migration:membership-content -- --inventory`.
+2. Revisar `migration/exports/membership-content.inventory.json`.
+3. Elegir los IDs que pertenecen a la membresía destino.
+4. Ejecutar un dry-run con `--tier-slug=<slug> --source-ids=... --dry-run`.
+5. Ejecutar la importación real con los mismos parámetros sin `--dry-run`.
+6. Publicar cada item desde `/admin/membresias/[id]` cuando esté revisado.
+
+Notas:
+- El importador guarda el HTML de WordPress en `body`.
+- Si el contenido trae `img`, `iframe` o links embebidos, se conservan.
+- Si más adelante querés mover media a Supabase Storage, hacelo en una segunda pasada.
 
 ## Orden recomendado
 

@@ -1,24 +1,22 @@
-import { redirect } from 'next/navigation'
+import LoginScreen from './LoginScreen'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = {
+  title: 'Iniciar sesión — VeCKA',
+  description: 'Ingresá a tu cuenta de VeCKA.',
+}
 
 export default async function LoginPage({ searchParams }) {
   const nextPath = typeof searchParams?.next === 'string' && searchParams.next.startsWith('/')
     ? searchParams.next
     : '/'
-  const target = new URL(nextPath, 'http://localhost')
 
-  target.searchParams.set('auth', 'login')
-
-  if (searchParams?.error) {
-    target.searchParams.set('error', searchParams.error)
-  }
-
-  if (searchParams?.success) {
-    target.searchParams.set('success', searchParams.success)
-  }
-
-  target.searchParams.set('next', nextPath)
-
-  redirect(`${target.pathname}${target.search}`)
+  return (
+    <LoginScreen
+      nextPath={nextPath}
+      initialError={typeof searchParams?.error === 'string' ? searchParams.error : null}
+      initialSuccess={typeof searchParams?.success === 'string' ? searchParams.success : null}
+    />
+  )
 }

@@ -69,7 +69,7 @@ export default function Header() {
       page: 'escuela',
       sub: [
         { label: 'Cursos', onClick: () => navigate('escuela') },
-        { label: 'Membresías', onClick: () => window.location.assign('/membresia') },
+        { label: 'Membresías', onClick: () => window.location.assign('/membresias') },
       ],
     },
     { label: 'TIENDA', page: 'tienda' },

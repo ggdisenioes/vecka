@@ -119,6 +119,8 @@ export function revalidateMemberships() {
   revalidatePath('/')
   revalidatePath('/admin/membresias')
   revalidatePath('/admin/membresias/[id]', 'page')
+  revalidatePath('/membresias')
+  revalidatePath('/membresias/[slug]', 'page')
   revalidatePath('/membresia')
   revalidatePath('/membresia/[slug]', 'page')
 }

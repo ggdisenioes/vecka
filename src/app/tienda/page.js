@@ -3,6 +3,11 @@ import { getLegacyFrontData } from '@/lib/legacy-front'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = {
+  title: 'Tienda — VeCKA',
+  description: 'Moldes digitales, moldes impresos y mercería seleccionada por VeCKA.',
+}
+
 export default async function TiendaPage() {
   const data = await getLegacyFrontData()
 

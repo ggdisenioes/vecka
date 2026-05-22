@@ -19,7 +19,7 @@ export default async function MembershipLessonPage({ params }) {
   const supabase = await getSupabaseServer()
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
-  if (!user) redirect(`/login?next=/membresia/${slug}/${courseSlug}/${lessonSlug}`)
+  if (!user) redirect(`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`)
 
   // Localiza el tier (debe estar publicado).
   const { data: tier } = await supabase
@@ -50,7 +50,7 @@ export default async function MembershipLessonPage({ params }) {
     (!grant.expires_at || new Date(grant.expires_at) > new Date())
   )
   if (!hasAccess) {
-    redirect(`/membresia/${slug}`)
+    redirect(`/membresias/${slug}`)
   }
 
   // Lección + módulo padre (para verificar que pertenece al curso).
@@ -75,12 +75,12 @@ export default async function MembershipLessonPage({ params }) {
     .order('sort_order', { ascending: true })
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/membresia/${slug}/${courseSlug}/${lessonSlug}`}>
+    <PublicSiteShell user={user} loginHref={`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`}>
       <section className="membership-shell">
         <div className="membership-container">
           <div className="breadcrumb-row">
-            <Link href="/membresia">Membresías</Link> ·{' '}
-            <Link href={`/membresia/${tier.slug}`}>{tier.name}</Link> ·{' '}
+            <Link href="/membresias">Membresías</Link> ·{' '}
+            <Link href={`/membresias/${tier.slug}`}>{tier.name}</Link> ·{' '}
             <span>{course.title}</span>
           </div>
 
@@ -171,7 +171,7 @@ export default async function MembershipLessonPage({ params }) {
           ) : null}
 
           <div style={{ marginTop: 22 }}>
-            <Link href={`/membresia/${tier.slug}`} className="membership-cta secondary">
+            <Link href={`/membresias/${tier.slug}`} className="membership-cta secondary">
               ← Volver al nivel
             </Link>
           </div>

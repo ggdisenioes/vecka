@@ -390,9 +390,31 @@
 }
 
 .article-body {
-  white-space: pre-wrap;
   line-height: 1.65;
   font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.article-body :where(p, ul, ol, blockquote, figure, h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+}
+
+.article-body :where(ul, ol) {
+  padding-left: 1.25rem;
+}
+
+.article-body :where(img, iframe, video) {
+  max-width: 100%;
+  display: block;
+  border-radius: 14px;
+}
+
+.article-body a {
+  color: var(--accent, #1d5f55);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .breadcrumb-row {

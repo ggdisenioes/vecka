@@ -12,7 +12,8 @@
     "preview": "next start",
     "migration:users": "node migration/etl/01-users.js",
     "migration:membership-tiers": "node migration/etl/02-membership-tiers.js",
-    "migration:membership-grants": "node migration/etl/03-membership-grants.js"
+    "migration:membership-grants": "node migration/etl/03-membership-grants.js",
+    "migration:membership-content": "node migration/etl/04-membership-content.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
