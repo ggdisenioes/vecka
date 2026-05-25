@@ -1420,10 +1420,7 @@
 
 .membership-detail-hero {
   margin-top: 32px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
-  gap: 42px;
-  align-items: start;
+  display: block;
 }
 
 .membership-detail-hero-copy {
@@ -1435,11 +1432,14 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .membership-detail-hero-copy p {
   max-width: 680px;
-  margin: 18px 0 0;
+  margin: 18px auto 0;
   color: var(--vck-muted);
   line-height: 1.7;
 }
@@ -1505,12 +1505,57 @@
   font-weight: 700;
 }
 
+.summary-kicker {
+  margin: 0;
+  color: var(--vck-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.membership-summary-row {
+  width: min(100%, 1040px);
+  margin: 28px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.membership-summary-card {
+  min-height: 100%;
+  text-align: center;
+}
+
+.membership-summary-card .membership-detail-price {
+  margin-top: 14px;
+}
+
+.membership-summary-card .membership-detail-primary {
+  margin-top: 18px;
+}
+
+.membership-summary-card .membership-detail-meta {
+  margin-top: 16px;
+  gap: 6px;
+}
+
+.membership-summary-card .membership-detail-list {
+  text-align: left;
+}
+
 .membership-detail-grid {
   margin-top: 56px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 42px;
   align-items: start;
+}
+
+.membership-detail-grid-full {
+  display: block;
+  margin-top: 40px;
 }
 
 .membership-detail-main {
@@ -2110,6 +2155,7 @@
   .lovable-tier-card,
   .lovable-order-summary,
   .membership-detail-hero-copy,
+  .membership-summary-card,
   .membership-detail-side {
     border-radius: 22px;
     padding: 24px;
@@ -2122,6 +2168,11 @@
 
   .membership-detail-hero-copy {
     min-height: auto;
+  }
+
+  .membership-summary-row {
+    grid-template-columns: 1fr;
+    max-width: 520px;
   }
 
   .membership-detail-grid {

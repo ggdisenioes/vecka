@@ -137,11 +137,11 @@ export default async function MembershipTierPage({ params, searchParams }) {
                 )}
               </div>
             </div>
+          </header>
 
-            <aside className="membership-detail-side">
-              <p className="summary-kicker" style={{ color: 'var(--vck-primary)', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', margin: 0 }}>
-                Tu membresía
-              </p>
+          <div className="membership-summary-row">
+            <section className="membership-detail-card membership-summary-card">
+              <p className="summary-kicker">Tu membresía</p>
               <div className="membership-detail-price">
                 <div className="membership-detail-price-value">
                   {Number(tier.price_ars || 0) > 0 ? formatPrice(tier.price_ars) : 'Gratis'}
@@ -150,13 +150,6 @@ export default async function MembershipTierPage({ params, searchParams }) {
                   {Number(tier.price_ars || 0) > 0 ? `ARS / ${periodLabel(tier.billing_period)}` : 'Acceso sin cargo'}
                 </div>
               </div>
-
-              <div className="membership-detail-meta">
-                <div><strong>{courses.length}</strong> talleres incluidos</div>
-                <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
-                <div><strong>{features.length}</strong> beneficios</div>
-              </div>
-
               {hasAccess ? (
                 <Link className="membership-detail-primary" href={directAccessHref}>
                   Ir a la membresía →
@@ -166,8 +159,28 @@ export default async function MembershipTierPage({ params, searchParams }) {
                   Sumarme ahora →
                 </Link>
               )}
-            </aside>
-          </header>
+            </section>
+
+            <section className="membership-detail-card membership-summary-card">
+              <h3>Estado</h3>
+              <p>{hasAccess ? 'Tenés acceso a esta membresía.' : 'Todavía no tenés acceso activo.'}</p>
+              <div className="membership-detail-meta">
+                <div><strong>{courses.length}</strong> talleres incluidos</div>
+                <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
+              </div>
+            </section>
+
+            <section className="membership-detail-card membership-summary-card">
+              <h3>Beneficios</h3>
+              {features.length > 0 ? (
+                <ul className="membership-detail-list">
+                  {features.slice(0, 4).map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
+                </ul>
+              ) : (
+                <p>No hay beneficios cargados todavía.</p>
+              )}
+            </section>
+          </div>
 
           {userIsStaff ? (
             <div className="membership-admin-banner" style={{ marginTop: 24 }}>
@@ -185,7 +198,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
             <div className="membership-status pending">Tu pago está pendiente de confirmación.</div>
           ) : null}
 
-          <div className="membership-detail-grid">
+          <div className="membership-detail-grid membership-detail-grid-full">
             <div className="membership-detail-main">
               {!hasAccess ? (
                 <section className="membership-section">
@@ -324,24 +337,6 @@ export default async function MembershipTierPage({ params, searchParams }) {
                 </>
               )}
             </div>
-
-            <aside className="membership-detail-sidebar">
-              <section className="membership-detail-card">
-                <h3>Estado</h3>
-                <p>{hasAccess ? 'Tenés acceso a esta membresía.' : 'Todavía no tenés acceso activo.'}</p>
-              </section>
-
-              <section className="membership-detail-card">
-                <h3>Beneficios</h3>
-                {features.length > 0 ? (
-                  <ul className="membership-detail-list">
-                    {features.map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
-                  </ul>
-                ) : (
-                  <p>No hay beneficios cargados todavía.</p>
-                )}
-              </section>
-            </aside>
           </div>
         </div>
       </section>
