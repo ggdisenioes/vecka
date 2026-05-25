@@ -10,9 +10,24 @@ function isPortableWordPressHash(hash) {
 }
 
 export async function migrateLegacyPasswordAndSignIn({ email, password, supabase }) {
+  const upgraded = await upgradeLegacyPassword({ email, password })
+
+  if (!upgraded) {
+    return false
+  }
+
+  const retry = await supabase.auth.signInWithPassword({ email: upgraded.email, password })
+  if (retry.error) {
+    throw new Error(`Legacy reauthentication failed: ${retry.error.message}`)
+  }
+
+  return true
+}
+
+export async function upgradeLegacyPassword({ email, password }) {
   const normalizedEmail = normalizeEmail(email)
   if (!normalizedEmail || !password) {
-    return false
+    return null
   }
 
   const admin = getSupabaseAdmin()
@@ -28,7 +43,7 @@ export async function migrateLegacyPasswordAndSignIn({ email, password, supabase
   }
 
   if (!profile?.id) {
-    return false
+    return null
   }
 
   const { data: legacyPassword, error: legacyError } = await admin
@@ -42,26 +57,21 @@ export async function migrateLegacyPasswordAndSignIn({ email, password, supabase
   }
 
   if (!legacyPassword?.phpass_hash || legacyPassword.migrated) {
-    return false
+    return null
   }
 
   if (!isPortableWordPressHash(legacyPassword.phpass_hash)) {
-    return false
+    return null
   }
 
   const valid = wordpressHash.CheckPassword(password, legacyPassword.phpass_hash)
   if (!valid) {
-    return false
+    return null
   }
 
   const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password })
   if (updateError) {
     throw new Error(`Legacy password upgrade failed: ${updateError.message}`)
-  }
-
-  const retry = await supabase.auth.signInWithPassword({ email: profile.email || normalizedEmail, password })
-  if (retry.error) {
-    throw new Error(`Legacy reauthentication failed: ${retry.error.message}`)
   }
 
   const { error: markMigratedError } = await admin
@@ -76,5 +86,8 @@ export async function migrateLegacyPasswordAndSignIn({ email, password, supabase
     throw new Error(`Legacy password migration flag failed: ${markMigratedError.message}`)
   }
 
-  return true
+  return {
+    email: profile.email || normalizedEmail,
+    userId: profile.id,
+  }
 }

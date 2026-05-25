@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { signIn, signUp } from '../auth/actions'
+import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
 function GoogleMark() {
   return (
@@ -24,9 +24,141 @@ function AuthField({ label, ...props }) {
   )
 }
 
+function getSafeInternalPath(value, fallback = '/') {
+  const input = String(value || '').trim()
+  return input.startsWith('/') ? input : fallback
+}
+
+function getPostLoginPath(role, requestedPath) {
+  const safePath = getSafeInternalPath(requestedPath, '/')
+  const isStaff = role === 'admin' || role === 'editorial'
+
+  if (safePath === '/admin' || safePath.startsWith('/admin/')) {
+    return isStaff ? safePath : '/cuenta'
+  }
+
+  if (safePath === '/cuenta' || safePath.startsWith('/cuenta')) {
+    return isStaff ? '/admin' : safePath
+  }
+
+  if (safePath === '/login' || safePath.startsWith('/login?') || safePath === '/') {
+    return isStaff ? '/admin' : '/cuenta'
+  }
+
+  return safePath
+}
+
+function getFriendlyAuthError(error) {
+  const message = error?.message || ''
+
+  if (message.toLowerCase().includes('invalid login credentials')) {
+    return 'Email o contraseña incorrectos.'
+  }
+
+  if (message.toLowerCase().includes('email not confirmed')) {
+    return 'Tenés que confirmar tu email antes de entrar.'
+  }
+
+  return message || 'No pudimos iniciar sesión. Probá nuevamente.'
+}
+
 export default function LoginScreen({ nextPath = '/', initialError = null, initialSuccess = null, initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode === 'signup' ? 'signup' : 'login')
+  const [message, setMessage] = useState(initialSuccess || initialError || '')
+  const [messageType, setMessageType] = useState(initialError ? 'error' : initialSuccess ? 'success' : '')
+  const [loading, setLoading] = useState(false)
   const heading = useMemo(() => (mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'), [mode])
+
+  async function readProfileRole(userId) {
+    const supabase = getSupabaseBrowser()
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    return data?.role || 'student'
+  }
+
+  async function handleLogin(email, password) {
+    const supabase = getSupabaseBrowser()
+    let result = await supabase.auth.signInWithPassword({ email, password })
+
+    if (result.error) {
+      const migration = await fetch('/api/auth/legacy-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (migration.ok) {
+        const migrated = await migration.json().catch(() => ({}))
+        result = await supabase.auth.signInWithPassword({
+          email: migrated.email || email,
+          password,
+        })
+      }
+    }
+
+    if (result.error) {
+      throw new Error(getFriendlyAuthError(result.error))
+    }
+
+    const userId = result.data?.user?.id
+    if (!userId) {
+      throw new Error('No se pudo recuperar la sesión.')
+    }
+
+    const role = await readProfileRole(userId)
+    window.location.assign(getPostLoginPath(role, nextPath))
+  }
+
+  async function handleSignup(formData) {
+    const supabase = getSupabaseBrowser()
+    const email = String(formData.get('email') || '').trim()
+    const password = String(formData.get('password') || '')
+    const fullName = String(formData.get('full_name') || '').trim()
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName },
+      },
+    })
+
+    if (error) {
+      throw new Error(getFriendlyAuthError(error))
+    }
+
+    setMode('login')
+    setMessageType('success')
+    setMessage('Cuenta creada. Ya podés iniciar sesión.')
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setLoading(true)
+    setMessage('')
+    setMessageType('')
+
+    const formData = new FormData(event.currentTarget)
+    const email = String(formData.get('email') || '').trim()
+    const password = String(formData.get('password') || '')
+
+    try {
+      if (mode === 'login') {
+        await handleLogin(email, password)
+      } else {
+        await handleSignup(formData)
+      }
+    } catch (error) {
+      setMessageType('error')
+      setMessage(error.message || 'No pudimos procesar la solicitud.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <main className="lovable-login">
@@ -42,32 +174,45 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
 
       <div className="lovable-divider">o</div>
 
-      {(initialError || initialSuccess) ? (
-        <div className={`lovable-message ${initialError ? 'error' : 'success'}`}>
-          {initialError || initialSuccess}
+      {message ? (
+        <div className={`lovable-message ${messageType}`}>
+          {message}
         </div>
       ) : null}
 
-      <form action={mode === 'login' ? signIn : signUp} className="lovable-form">
+      <form onSubmit={handleSubmit} className="lovable-form">
         {mode === 'signup' ? <AuthField label="Nombre completo" name="full_name" placeholder="Tu nombre" /> : null}
         <AuthField label="Email" name="email" type="email" required />
         <AuthField label="Contraseña" name="password" type="password" required />
         <input name="next" type="hidden" value={nextPath} />
-        <input name="auth_page" type="hidden" value="/login" />
 
-        <button type="submit" className="lovable-button" style={{ marginTop: 0 }}>
-          {mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+        <button type="submit" className="lovable-button" style={{ marginTop: 0 }} disabled={loading}>
+          {loading ? 'Procesando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
         </button>
       </form>
 
       <p className="lovable-auth-link">
         {mode === 'login' ? '¿No tenés cuenta?' : '¿Ya tenés cuenta?'}{' '}
         {mode === 'login' ? (
-          <button type="button" onClick={() => setMode('signup')}>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('signup')
+              setMessage('')
+              setMessageType('')
+            }}
+          >
             Crear cuenta
           </button>
         ) : (
-          <button type="button" onClick={() => setMode('login')}>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login')
+              setMessage('')
+              setMessageType('')
+            }}
+          >
             Iniciar sesión
           </button>
         )}

@@ -62,6 +62,24 @@ Notas:
 - Si el contenido trae `img`, `iframe` o links embebidos, se conservan.
 - Si más adelante querés mover media a Supabase Storage, hacelo en una segunda pasada.
 
+## Archivos de WordPress
+
+La única carpeta de WordPress que tenés que copiar para traer imágenes, PDFs y adjuntos es:
+
+```text
+wp-content/uploads/
+```
+
+Copiala localmente en:
+
+```text
+migration/imports/uploads/
+```
+
+No copies plugins, themes ni todo `public_html`. El contenido textual de membresías, cursos y productos sale del dump SQL (`wp_posts`, `wp_postmeta` y tablas de WooCommerce/LearnDash); `uploads/` sólo aporta archivos enlazados desde ese contenido.
+
+`migration/imports/` está ignorado por Git porque puede pesar varios GB. La ubicación final no es el repo: después se sube a Supabase Storage y se reescriben las URLs.
+
 ## Orden recomendado
 
 1. Aplicar migraciones de Supabase.
