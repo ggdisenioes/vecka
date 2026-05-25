@@ -234,7 +234,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
                           const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
                           const mediaHref = privateFileUrl || item.media_url
                           return (
-                            <article key={item.id} className="membership-resource-card">
+                            <article key={item.id} className={`membership-resource-card type-${item.type || 'text'}`}>
                               <div className="item-meta">{contentTypeLabel(item.type)}</div>
                               <h3>{item.title}</h3>
                               {item.summary ? <p>{item.summary}</p> : null}
