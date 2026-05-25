@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['.next', 'dist', 'legacy-src', 'node_modules']),
+  globalIgnores(['.next', 'dist', 'legacy-src', 'node_modules', 'uploads', 'migration/imports']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

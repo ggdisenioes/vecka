@@ -1419,10 +1419,10 @@
 }
 
 .membership-detail-hero {
-  margin-top: 24px;
+  margin-top: 32px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 42px;
   align-items: start;
 }
 
@@ -1430,12 +1430,16 @@
   border: 1px solid var(--vck-border);
   border-radius: 28px;
   background: var(--vck-card);
-  padding: 32px;
+  min-height: 260px;
+  padding: clamp(32px, 4vw, 52px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .membership-detail-hero-copy p {
   max-width: 680px;
-  margin: 14px 0 0;
+  margin: 18px 0 0;
   color: var(--vck-muted);
   line-height: 1.7;
 }
@@ -1455,11 +1459,11 @@
   top: 96px;
   border: 1px solid var(--vck-border);
   border-radius: 28px;
-  padding: 28px;
+  padding: 32px;
 }
 
 .membership-detail-price {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .membership-detail-price-value {
@@ -1476,10 +1480,10 @@
 }
 
 .membership-detail-meta {
-  margin-top: 24px;
+  margin-top: 28px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   color: var(--vck-muted);
   font-size: 14px;
 }
@@ -1494,7 +1498,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 28px;
   border-radius: 999px;
   background: var(--vck-primary);
   color: var(--vck-primary-foreground);
@@ -1502,23 +1506,29 @@
 }
 
 .membership-detail-grid {
-  margin-top: 40px;
+  margin-top: 56px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 42px;
   align-items: start;
+}
+
+.membership-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
 .membership-detail-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 24px;
 }
 
 .membership-detail-card {
   border: 1px solid var(--vck-border);
-  border-radius: 22px;
-  padding: 22px;
+  border-radius: 24px;
+  padding: 28px;
 }
 
 .membership-detail-card h3 {
@@ -1540,7 +1550,63 @@
   padding-left: 18px;
   color: var(--vck-muted);
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.85;
+}
+
+.membership-detail-main .membership-section {
+  margin-bottom: 0;
+  padding: clamp(28px, 4vw, 44px);
+  border-radius: 28px;
+}
+
+.membership-detail-main .membership-section h2 {
+  margin-bottom: 22px;
+  font-size: clamp(32px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.membership-detail-main .membership-section h3 {
+  margin: 0 0 18px;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.1;
+}
+
+.membership-detail-main .membership-list {
+  gap: 14px;
+}
+
+.membership-detail-main .membership-list a,
+.membership-detail-main .membership-list .item {
+  align-items: flex-start;
+  gap: 20px;
+  padding: 18px 20px;
+  border-radius: 18px;
+}
+
+.membership-detail-main .membership-list .item-meta {
+  line-height: 1.55;
+}
+
+.membership-detail-main .membership-content-grid {
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.membership-detail-main .membership-resource-card {
+  border-radius: 24px;
+  padding: clamp(24px, 3vw, 34px);
+  gap: 18px;
+}
+
+.membership-detail-main .membership-resource-card h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.08;
+}
+
+.membership-detail-main .membership-resource-card p,
+.membership-detail-main .article-body {
+  line-height: 1.8;
 }
 
 .membership-status {
@@ -2021,5 +2087,36 @@
   .membership-detail-side {
     border-radius: 22px;
     padding: 24px;
+  }
+
+  .membership-detail-hero {
+    gap: 18px;
+    margin-top: 22px;
+  }
+
+  .membership-detail-hero-copy {
+    min-height: auto;
+  }
+
+  .membership-detail-grid {
+    gap: 24px;
+    margin-top: 34px;
+  }
+
+  .membership-detail-main {
+    gap: 22px;
+  }
+
+  .membership-detail-main .membership-section,
+  .membership-detail-main .membership-resource-card,
+  .membership-detail-card {
+    border-radius: 22px;
+    padding: 24px;
+  }
+
+  .membership-detail-main .membership-list a,
+  .membership-detail-main .membership-list .item {
+    flex-direction: column;
+    gap: 8px;
   }
 }

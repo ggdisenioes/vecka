@@ -76,9 +76,11 @@ Copiala localmente en:
 migration/imports/uploads/
 ```
 
+Si ya la copiaste en la raíz del proyecto como `uploads/`, también sirve para trabajar localmente. No la subas a GitHub: puede pesar varios GB y contener PDFs/archivos privados de clientas o productos pagos.
+
 No copies plugins, themes ni todo `public_html`. El contenido textual de membresías, cursos y productos sale del dump SQL (`wp_posts`, `wp_postmeta` y tablas de WooCommerce/LearnDash); `uploads/` sólo aporta archivos enlazados desde ese contenido.
 
-`migration/imports/` está ignorado por Git porque puede pesar varios GB. La ubicación final no es el repo: después se sube a Supabase Storage y se reescriben las URLs.
+`migration/imports/` y `uploads/` están ignorados por Git porque pueden pesar varios GB. La ubicación final no es el repo: después se sube a Supabase Storage y se reescriben las URLs.
 
 ## Orden recomendado
 
