@@ -39,6 +39,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const { slug } = await params
   const sp = await searchParams
   const paymentStatus = sp?.payment || null
+  const subscriptionStatus = sp?.subscription || null
 
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
@@ -196,6 +197,11 @@ export default async function MembershipTierPage({ params, searchParams }) {
           ) : null}
           {paymentStatus === 'pending' ? (
             <div className="membership-status pending">Tu pago está pendiente de confirmación.</div>
+          ) : null}
+          {subscriptionStatus === 'pending' ? (
+            <div className="membership-status pending">
+              Recibimos tu solicitud de suscripción. El acceso se activa automáticamente cuando Mercado Pago acredita el primer pago.
+            </div>
           ) : null}
 
           <div className="membership-detail-grid membership-detail-grid-full">

@@ -4,22 +4,10 @@ import { useState } from 'react'
 
 const PAYMENT_METHODS = [
   {
-    id: 'transferencia',
-    label: 'Transferencia bancaria',
-    desc: '10% off · te enviamos los datos al confirmar',
-    icon: 'bank',
-  },
-  {
     id: 'mercadopago',
-    label: 'Mercado Pago',
-    desc: 'Hasta 3 cuotas fijas desde $50.000',
+    label: 'Mercado Pago recurrente',
+    desc: 'Se activa automáticamente cuando se acredita el primer pago',
     icon: 'wallet',
-  },
-  {
-    id: 'tarjeta',
-    label: 'Tarjeta internacional',
-    desc: 'Pago en USD para fuera de Argentina',
-    icon: 'card',
   },
 ]
 
@@ -76,7 +64,7 @@ export default function MembershipCheckoutForm({ tier }) {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'No se pudo iniciar el pago.')
+        setError(data.error || 'No se pudo iniciar la suscripción.')
         return
       }
 
@@ -128,7 +116,7 @@ export default function MembershipCheckoutForm({ tier }) {
       {error ? <div className="lovable-message error">{error}</div> : null}
 
       <button type="button" className="lovable-button" style={{ width: 'auto', paddingInline: 28 }} onClick={handleSubmit} disabled={loading}>
-        {loading ? 'Procesando…' : 'Confirmar inscripción'}
+        {loading ? 'Procesando…' : 'Activar suscripción'}
       </button>
     </>
   )

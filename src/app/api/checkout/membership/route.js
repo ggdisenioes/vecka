@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
-import { getSupabaseServer } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import {
+  createMercadoPagoPreapproval,
+  normalizeMercadoPagoSubscriptionStatus,
+} from '@/lib/mercadopago-subscriptions'
 
 export async function POST(request) {
   const { user } = await getCurrentAuth()
@@ -13,9 +16,6 @@ export async function POST(request) {
   if (!payload.tierId) {
     return NextResponse.json({ error: 'tierId es requerido' }, { status: 400 })
   }
-  const paymentMethod = ['transferencia', 'mercadopago', 'tarjeta'].includes(payload.paymentMethod)
-    ? payload.paymentMethod
-    : 'mercadopago'
   const notes = typeof payload.notes === 'string' ? payload.notes.slice(0, 500) : null
 
   const supabase = getSupabaseAdmin()
@@ -33,6 +33,13 @@ export async function POST(request) {
 
   if (!tier.price_ars || tier.price_ars <= 0) {
     return NextResponse.json({ error: 'Esta membresía no tiene precio configurado.' }, { status: 400 })
+  }
+
+  if (!['monthly', 'annual'].includes(tier.billing_period)) {
+    return NextResponse.json(
+      { error: 'MercadoPago recurrente solo está disponible para membresías mensuales o anuales.' },
+      { status: 400 },
+    )
   }
 
   // Validate and apply coupon
@@ -63,61 +70,79 @@ export async function POST(request) {
     }
   }
 
-  const { data: profile } = await (await getSupabaseServer())
+  const { data: profile } = await supabase
     .from('profiles')
     .select('email, full_name, display_name')
     .eq('id', user.id)
     .maybeSingle()
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vecka.com.ar'
+  const checkoutProfile = {
+    email: profile?.email || user.email,
+    full_name: profile?.full_name,
+    display_name: profile?.display_name,
+  }
 
-  const preference = {
-    items: [
-      {
-        id: tier.id,
-        title: tier.name,
-        description: tier.description || `Membresía ${tier.name}`,
-        quantity: 1,
-        currency_id: 'ARS',
-        unit_price: Math.max(1, Math.round(finalPrice)),
+  const { data: subscription, error: subscriptionError } = await supabase
+    .from('membership_subscriptions')
+    .upsert({
+      provider: 'mercadopago',
+      tier_id: tier.id,
+      user_id: user.id,
+      status: 'pending',
+      amount: finalPrice,
+      currency: 'ARS',
+      billing_period: tier.billing_period,
+      coupon_id: couponId,
+      metadata: {
+        checkout_notes: notes,
+        checkout_amount: finalPrice,
       },
-    ],
-    payer: {
-      email: profile?.email || user.email || '',
-      name: profile?.display_name || profile?.full_name || '',
-    },
-    back_urls: {
-      success: `${baseUrl}/membresias/${tier.slug}?payment=success`,
-      failure: `${baseUrl}/membresias/${tier.slug}?payment=failure`,
-      pending: `${baseUrl}/membresias/${tier.slug}?payment=pending`,
-    },
-    auto_return: 'approved',
-    notification_url: `${baseUrl}/api/webhooks/mercadopago`,
-    external_reference: JSON.stringify({ tierId: tier.id, userId: user.id, couponId, paymentMethod }),
-    metadata: { tierId: tier.id, userId: user.id, couponId, paymentMethod, notes },
+    }, { onConflict: 'provider,tier_id,user_id' })
+    .select('id')
+    .single()
+
+  if (subscriptionError || !subscription) {
+    console.error('Membership subscription create error:', subscriptionError)
+    return NextResponse.json({ error: 'No se pudo preparar la suscripción.' }, { status: 500 })
   }
 
-  const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-    },
-    body: JSON.stringify(preference),
-  })
-
-  if (!mpResponse.ok) {
-    const err = await mpResponse.text()
-    console.error('MercadoPago preference error:', err)
-    return NextResponse.json({ error: 'No se pudo crear la preferencia de pago.' }, { status: 502 })
+  let mpData
+  try {
+    mpData = await createMercadoPagoPreapproval({
+      subscriptionId: subscription.id,
+      tier,
+      profile: checkoutProfile,
+      amount: finalPrice,
+      notes,
+    })
+  } catch (err) {
+    console.error('MercadoPago preapproval error:', err)
+    return NextResponse.json({ error: 'No se pudo iniciar la suscripción en MercadoPago.' }, { status: 502 })
   }
 
-  const mpData = await mpResponse.json()
+  if (!mpData?.id || !mpData?.init_point) {
+    console.error('MercadoPago preapproval missing init point:', mpData)
+    return NextResponse.json({ error: 'MercadoPago no devolvió el link de suscripción.' }, { status: 502 })
+  }
+
+  await supabase
+    .from('membership_subscriptions')
+    .update({
+      provider_subscription_id: mpData.id,
+      status: normalizeMercadoPagoSubscriptionStatus(mpData.status),
+      metadata: {
+        checkout_notes: notes,
+        checkout_amount: finalPrice,
+        mercadopago_preapproval: mpData,
+      },
+    })
+    .eq('id', subscription.id)
 
   return NextResponse.json({
     initPoint: mpData.init_point,
     sandboxInitPoint: mpData.sandbox_init_point,
-    preferenceId: mpData.id,
+    subscriptionId: subscription.id,
+    providerSubscriptionId: mpData.id,
     finalPrice,
     couponApplied: !!couponId,
   })

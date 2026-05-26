@@ -18,9 +18,9 @@ function formatPrice(value) {
 }
 
 function periodLabel(period) {
-  if (period === 'annual') return 'año'
+  if (period === 'annual') return 'Suscripción anual'
   if (period === 'lifetime') return 'pago único'
-  return 'mes'
+  return 'Suscripción mensual'
 }
 
 export default async function MembershipCheckoutPage({ params }) {
@@ -65,7 +65,7 @@ export default async function MembershipCheckoutPage({ params }) {
           <section>
             <h1>Finalizar inscripción</h1>
             <p className="lovable-checkout-subtitle">
-              Elegí tu método de pago. Confirmamos tu acceso por mail apenas registremos el pago.
+              Vas a crear una suscripción recurrente en Mercado Pago. El acceso se activa automáticamente cuando se acredita el primer pago.
             </p>
             <MembershipCheckoutForm tier={tier} />
           </section>
@@ -79,10 +79,10 @@ export default async function MembershipCheckoutPage({ params }) {
 
             <div className="lovable-summary-line">
               <span>Inicio</span>
-              <strong>Inmediato</strong>
+              <strong>Al acreditarse</strong>
             </div>
             <div className="lovable-summary-line">
-              <span>Duración</span>
+              <span>Cobro</span>
               <strong>{periodLabel(tier.billing_period)}</strong>
             </div>
 
@@ -100,7 +100,7 @@ export default async function MembershipCheckoutPage({ params }) {
             <div className="lovable-summary-divider" />
 
             <div className="lovable-summary-total">
-              <span>Total</span>
+              <span>Total recurrente</span>
               <strong>{formatPrice(tier.price_ars)}</strong>
             </div>
             {Number(tier.price_usd || 0) > 0 ? (
