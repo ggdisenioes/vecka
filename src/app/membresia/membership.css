@@ -1350,6 +1350,30 @@
   border: 5px solid var(--vck-primary);
 }
 
+.lovable-selected-plan {
+  margin-top: 18px;
+  border: 1px solid var(--vck-border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--vck-secondary) 42%, transparent);
+  padding: 18px 20px;
+  display: grid;
+  gap: 4px;
+}
+
+.lovable-selected-plan span,
+.lovable-selected-plan small {
+  color: var(--vck-muted);
+  font-size: 13px;
+}
+
+.lovable-selected-plan strong {
+  color: var(--vck-foreground);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+
 .lovable-order-summary {
   position: sticky;
   top: 96px;
@@ -1710,6 +1734,51 @@
 .membership-status.pending {
   background: #fff4d7;
   color: #7b5a11;
+}
+
+.payment-pending-shell {
+  min-height: 62vh;
+  display: grid;
+  place-items: center;
+  padding: 64px 24px;
+}
+
+.payment-pending-card {
+  width: min(100%, 640px);
+  border: 1px solid var(--vck-border);
+  border-radius: 28px;
+  background: var(--vck-card);
+  padding: clamp(28px, 5vw, 46px);
+  text-align: center;
+  box-shadow: var(--vck-shadow-soft);
+}
+
+.payment-pending-card h1 {
+  margin: 10px 0 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(38px, 6vw, 58px);
+  line-height: 1.02;
+  font-weight: 600;
+}
+
+.payment-pending-card p {
+  max-width: 500px;
+  margin: 16px auto 0;
+  color: var(--vck-muted);
+  line-height: 1.7;
+}
+
+.payment-pending-card .membership-status {
+  margin: 24px auto 0;
+  text-align: left;
+}
+
+.payment-pending-countdown {
+  font-size: 14px;
+}
+
+.payment-pending-card .membership-cta {
+  margin: 24px auto 0;
 }
 
 .home-hero {

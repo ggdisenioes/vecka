@@ -24,6 +24,17 @@ export function billingPeriodToAutoRecurring(period) {
   throw new Error('MercadoPago recurrente solo admite membresías mensuales o anuales.')
 }
 
+export function getPaymentPendingUrl(tierSlug, params = {}) {
+  const siteUrl = getPublicSiteUrl()
+  const url = new URL(`${siteUrl}/checkout/${tierSlug}/pendiente`)
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, String(value))
+    }
+  }
+  return url.toString()
+}
+
 export function normalizeMercadoPagoSubscriptionStatus(status) {
   if (status === 'cancelled' || status === 'canceled') return 'cancelled'
   if (status === 'authorized') return 'authorized'
@@ -72,9 +83,8 @@ async function mercadoPagoFetch(path, options = {}) {
   return response.json()
 }
 
-export async function createMercadoPagoPreapproval({ subscriptionId, externalReference, tier, profile, amount }) {
-  const siteUrl = getPublicSiteUrl()
-  const autoRecurring = billingPeriodToAutoRecurring(tier.billing_period)
+export async function createMercadoPagoPreapproval({ subscriptionId, externalReference, tier, profile, amount, paymentPlan }) {
+  const autoRecurring = billingPeriodToAutoRecurring(paymentPlan?.billingPeriod || tier.billing_period)
   const payerEmail = profile?.email
 
   if (!payerEmail) {
@@ -92,8 +102,61 @@ export async function createMercadoPagoPreapproval({ subscriptionId, externalRef
         transaction_amount: Math.max(1, Math.round(Number(amount || 0))),
         currency_id: 'ARS',
       },
-      back_url: `${siteUrl}/membresias/${tier.slug}?subscription=pending`,
+      back_url: getPaymentPendingUrl(tier.slug, {
+        payment: 'pending',
+        mode: paymentPlan?.paymentMode || 'subscription',
+        plan: paymentPlan?.id || tier.billing_period,
+      }),
       status: 'pending',
+    }),
+  })
+}
+
+export async function createMercadoPagoPaymentPreference({ externalReference, tier, profile, amount, paymentPlan, notes }) {
+  const siteUrl = getPublicSiteUrl()
+  const payerEmail = profile?.email
+
+  if (!payerEmail) {
+    throw new Error('La cuenta no tiene email para crear el pago.')
+  }
+
+  const pendingBase = {
+    mode: paymentPlan?.paymentMode || 'one_time',
+    plan: paymentPlan?.id || 'annual',
+  }
+
+  return mercadoPagoFetch('/checkout/preferences', {
+    method: 'POST',
+    body: JSON.stringify({
+      items: [
+        {
+          id: `${tier.id}:${paymentPlan?.id || 'one_time'}`,
+          title: `${tier.name} - ${paymentPlan?.label || 'Pago único'}`,
+          description: paymentPlan?.description || tier.description || undefined,
+          quantity: 1,
+          unit_price: Math.max(1, Math.round(Number(amount || 0))),
+          currency_id: 'ARS',
+        },
+      ],
+      payer: {
+        email: payerEmail,
+        name: profile?.display_name || profile?.full_name || undefined,
+      },
+      back_urls: {
+        success: getPaymentPendingUrl(tier.slug, { ...pendingBase, payment: 'success' }),
+        failure: getPaymentPendingUrl(tier.slug, { ...pendingBase, payment: 'failure' }),
+        pending: getPaymentPendingUrl(tier.slug, { ...pendingBase, payment: 'pending' }),
+      },
+      auto_return: 'approved',
+      notification_url: `${siteUrl}/api/webhooks/mercadopago`,
+      external_reference: externalReference,
+      metadata: {
+        notes: notes || undefined,
+        tier_id: tier.id,
+        payment_plan_id: paymentPlan?.id || 'one_time',
+        payment_mode: paymentPlan?.paymentMode || 'one_time',
+        billing_period: paymentPlan?.billingPeriod || 'annual',
+      },
     }),
   })
 }

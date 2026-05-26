@@ -6,6 +6,7 @@ import {
   PUBLIC_MEMBERSHIP_SLUGS,
   getClubAccessFromGrants,
 } from '@/lib/memberships'
+import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import './membership.css'
@@ -15,20 +16,6 @@ export const dynamic = 'force-dynamic'
 export const metadata = {
   title: 'Membresías Club VeCKA — Cosé con propósito',
   description: 'Sumate al Club VeCKA. Membresías mensuales con acceso ilimitado a talleres, molde exclusivo y comunidad privada.',
-}
-
-function formatPrice(value) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-}
-
-function periodLabel(period) {
-  if (period === 'annual') return 'año'
-  if (period === 'lifetime') return 'pago único'
-  return 'mes'
 }
 
 function statusCopy(tier, userIsStaff) {
@@ -48,6 +35,9 @@ function statusCopy(tier, userIsStaff) {
 export default async function MembresiaLandingPage() {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
+  const paymentPlans = getPublicMembershipPaymentPlans()
+  const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
+  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
 
   const tiersQuery = getSupabaseAdmin()
     .from('membership_tiers')
@@ -118,7 +108,7 @@ export default async function MembresiaLandingPage() {
               <h2>Sumate al Club</h2>
             </div>
             <p>
-              Una sola opción pública, con pago recurrente por Mercado Pago.
+              Una sola opción pública, con pago mensual recurrente o pago anual único por Mercado Pago.
             </p>
           </div>
 
@@ -166,9 +156,12 @@ export default async function MembresiaLandingPage() {
 
                     <div className="lovable-tier-footer">
                       <div className="lovable-tier-price">
-                        <strong>{Number(tier.price_ars || 0) > 0 ? formatPrice(tier.price_ars) : 'Gratis'}</strong>
-                        {Number(tier.price_ars || 0) > 0 ? <span>/ {periodLabel(tier.billing_period)}</span> : null}
+                        <strong>{formatPriceArs(monthlyPlan.priceArs)}</strong>
+                        <span>/ mes</span>
                       </div>
+                      <p className="lovable-tier-usd">
+                        O pago anual único: {formatPriceArs(annualPlan.priceArs)}
+                      </p>
                       {Number(tier.price_usd || 0) > 0 ? (
                         <p className="lovable-tier-usd">o USD {Number(tier.price_usd).toLocaleString('es-AR')} para residentes fuera de Argentina</p>
                       ) : null}

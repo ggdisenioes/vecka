@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 
-const PAYMENT_METHODS = [
-  {
-    id: 'mercadopago',
-    label: 'Mercado Pago recurrente',
-    desc: 'Se activa automáticamente cuando se acredita el primer pago',
-    icon: 'wallet',
-  },
-]
+function formatPrice(value) {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0))
+}
 
 function PaymentIcon({ type }) {
   if (type === 'card') {
@@ -41,13 +40,20 @@ function PaymentIcon({ type }) {
   )
 }
 
-export default function MembershipCheckoutForm({ tier }) {
-  const [paymentMethod, setPaymentMethod] = useState('mercadopago')
+export default function MembershipCheckoutForm({ tier, paymentPlans = [] }) {
+  const plans = paymentPlans.length ? paymentPlans : []
+  const [paymentPlanId, setPaymentPlanId] = useState(plans[0]?.id || 'monthly')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const selectedPlan = plans.find((plan) => plan.id === paymentPlanId) || plans[0]
 
   async function handleSubmit() {
+    if (!selectedPlan) {
+      setError('No hay una opción de pago configurada.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -57,14 +63,14 @@ export default function MembershipCheckoutForm({ tier }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tierId: tier.id,
-          paymentMethod,
+          paymentPlanId: selectedPlan.id,
           notes: notes.trim() || undefined,
         }),
       })
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'No se pudo iniciar la suscripción.')
+        setError(data.error || 'No se pudo iniciar el pago.')
         return
       }
 
@@ -79,28 +85,37 @@ export default function MembershipCheckoutForm({ tier }) {
   return (
     <>
       <fieldset className="lovable-payment-options">
-        <legend>Método de pago</legend>
-        {PAYMENT_METHODS.map((method) => {
-          const selected = paymentMethod === method.id
+        <legend>Forma de pago</legend>
+        {plans.map((plan) => {
+          const selected = paymentPlanId === plan.id
+          const icon = plan.paymentMode === 'subscription' ? 'wallet' : 'card'
           return (
-            <label key={method.id} className={`lovable-payment-option${selected ? ' selected' : ''}`}>
+            <label key={plan.id} className={`lovable-payment-option${selected ? ' selected' : ''}`}>
               <input
                 type="radio"
-                name="paymentMethod"
-                value={method.id}
+                name="paymentPlan"
+                value={plan.id}
                 checked={selected}
-                onChange={() => setPaymentMethod(method.id)}
+                onChange={() => setPaymentPlanId(plan.id)}
               />
-              <span className="lovable-payment-icon"><PaymentIcon type={method.icon} /></span>
+              <span className="lovable-payment-icon"><PaymentIcon type={icon} /></span>
               <span className="lovable-payment-copy">
-                <strong>{method.label}</strong>
-                <span>{method.desc}</span>
+                <strong>{plan.checkoutLabel} · {formatPrice(plan.priceArs)}</strong>
+                <span>{plan.description}</span>
               </span>
               <span className="lovable-radio-dot" />
             </label>
           )
         })}
       </fieldset>
+
+      {selectedPlan ? (
+        <div className="lovable-selected-plan">
+          <span>{selectedPlan.totalLabel}</span>
+          <strong>{formatPrice(selectedPlan.priceArs)} {selectedPlan.id === 'monthly' ? '/ mes' : ''}</strong>
+          <small>{selectedPlan.accessLabel}</small>
+        </div>
+      ) : null}
 
       <label className="lovable-field" style={{ marginTop: 32 }}>
         <span>Comentarios para Vero (opcional)</span>
@@ -116,7 +131,7 @@ export default function MembershipCheckoutForm({ tier }) {
       {error ? <div className="lovable-message error">{error}</div> : null}
 
       <button type="button" className="lovable-button" style={{ width: 'auto', paddingInline: 28 }} onClick={handleSubmit} disabled={loading}>
-        {loading ? 'Procesando…' : 'Activar suscripción'}
+        {loading ? 'Procesando…' : selectedPlan?.ctaLabel || 'Continuar a Mercado Pago'}
       </button>
     </>
   )

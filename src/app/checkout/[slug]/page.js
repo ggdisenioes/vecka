@@ -3,25 +3,12 @@ import { notFound, redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth } from '@/lib/auth'
 import { PUBLIC_MEMBERSHIP_NAME, getClubAccessFromGrants, isPublicMembershipSlug } from '@/lib/memberships'
+import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import MembershipCheckoutForm from './MembershipCheckoutForm'
 import '../../membresia/membership.css'
 
 export const dynamic = 'force-dynamic'
-
-function formatPrice(value) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-}
-
-function periodLabel(period) {
-  if (period === 'annual') return 'Suscripción anual'
-  if (period === 'lifetime') return 'pago único'
-  return 'Suscripción mensual'
-}
 
 export default async function MembershipCheckoutPage({ params }) {
   const { slug } = await params
@@ -55,6 +42,7 @@ export default async function MembershipCheckoutPage({ params }) {
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
+  const paymentPlans = getPublicMembershipPaymentPlans()
 
   return (
     <PublicSiteShell user={user} loginHref={`/login?next=/checkout/${slug}`}>
@@ -65,9 +53,9 @@ export default async function MembershipCheckoutPage({ params }) {
           <section>
             <h1>Finalizar inscripción</h1>
             <p className="lovable-checkout-subtitle">
-              Vas a crear una suscripción recurrente en Mercado Pago. El acceso se activa automáticamente cuando se acredita el primer pago.
+              Elegí cómo querés pagar el Club. El acceso se activa automáticamente cuando Mercado Pago acredita el pago.
             </p>
-            <MembershipCheckoutForm tier={tier} />
+            <MembershipCheckoutForm tier={tier} paymentPlans={paymentPlans} />
           </section>
 
           <aside className="lovable-order-summary">
@@ -81,10 +69,12 @@ export default async function MembershipCheckoutPage({ params }) {
               <span>Inicio</span>
               <strong>Al acreditarse</strong>
             </div>
-            <div className="lovable-summary-line">
-              <span>Cobro</span>
-              <strong>{periodLabel(tier.billing_period)}</strong>
-            </div>
+            {paymentPlans.map((plan) => (
+              <div key={plan.id} className="lovable-summary-line">
+                <span>{plan.checkoutLabel}</span>
+                <strong>{formatPriceArs(plan.priceArs)} {plan.id === 'monthly' ? '/ mes' : ''}</strong>
+              </div>
+            ))}
 
             {features.length > 0 ? (
               <ul className="lovable-summary-benefits">
@@ -100,8 +90,8 @@ export default async function MembershipCheckoutPage({ params }) {
             <div className="lovable-summary-divider" />
 
             <div className="lovable-summary-total">
-              <span>Total recurrente</span>
-              <strong>{formatPrice(tier.price_ars)}</strong>
+              <span>Opciones</span>
+              <strong>2</strong>
             </div>
             {Number(tier.price_usd || 0) > 0 ? (
               <p className="lovable-tier-usd" style={{ textAlign: 'right' }}>

@@ -9,6 +9,7 @@ import {
   getClubAccessFromGrants,
   isPublicMembershipSlug,
 } from '@/lib/memberships'
+import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import '../membership.css'
 
@@ -17,20 +18,6 @@ export const dynamic = 'force-dynamic'
 function RichBody({ html }) {
   if (!html) return null
   return <div className="article-body" dangerouslySetInnerHTML={{ __html: html }} />
-}
-
-function formatPrice(value) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-}
-
-function periodLabel(period) {
-  if (period === 'annual') return 'año'
-  if (period === 'lifetime') return 'vitalicia'
-  return 'mes'
 }
 
 function contentTypeLabel(type) {
@@ -123,6 +110,9 @@ export default async function MembershipTierPage({ params, searchParams }) {
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
+  const paymentPlans = getPublicMembershipPaymentPlans()
+  const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
+  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
   const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
   const checkoutHref = user ? `/checkout/${tier.slug}` : `/login?next=/checkout/${tier.slug}`
 
@@ -160,10 +150,10 @@ export default async function MembershipTierPage({ params, searchParams }) {
               <p className="summary-kicker">Tu membresía</p>
               <div className="membership-detail-price">
                 <div className="membership-detail-price-value">
-                  {Number(tier.price_ars || 0) > 0 ? formatPrice(tier.price_ars) : 'Gratis'}
+                  {formatPriceArs(monthlyPlan.priceArs)}
                 </div>
                 <div className="membership-detail-price-meta">
-                  {Number(tier.price_ars || 0) > 0 ? `ARS / ${periodLabel(tier.billing_period)}` : 'Acceso sin cargo'}
+                  ARS / mes · anual {formatPriceArs(annualPlan.priceArs)}
                 </div>
               </div>
               {hasAccess ? (

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
 import { isPublicMembershipSlug } from '@/lib/memberships'
+import { getPublicMembershipPaymentPlan } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { createMercadoPagoPreapproval } from '@/lib/mercadopago-subscriptions'
+import { createMercadoPagoPaymentPreference, createMercadoPagoPreapproval } from '@/lib/mercadopago-subscriptions'
 
 export async function POST(request) {
   const { user } = await getCurrentAuth()
@@ -15,6 +16,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'tierId es requerido' }, { status: 400 })
   }
   const notes = typeof payload.notes === 'string' ? payload.notes.slice(0, 500) : null
+  const paymentPlan = getPublicMembershipPaymentPlan(payload.paymentPlanId)
 
   const supabase = getSupabaseAdmin()
 
@@ -33,11 +35,11 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
   }
 
-  if (!tier.price_ars || tier.price_ars <= 0) {
+  if (!paymentPlan.priceArs || paymentPlan.priceArs <= 0) {
     return NextResponse.json({ error: 'Esta membresía no tiene precio configurado.' }, { status: 400 })
   }
 
-  if (!['monthly', 'annual'].includes(tier.billing_period)) {
+  if (paymentPlan.paymentMode === 'subscription' && !['monthly', 'annual'].includes(paymentPlan.billingPeriod)) {
     return NextResponse.json(
       { error: 'MercadoPago recurrente solo está disponible para membresías mensuales o anuales.' },
       { status: 400 },
@@ -45,7 +47,7 @@ export async function POST(request) {
   }
 
   // Validate and apply coupon
-  let finalPrice = Number(tier.price_ars)
+  let finalPrice = Number(paymentPlan.priceArs)
   let couponId = null
   if (payload.couponId) {
     const { data: coupon } = await supabase
@@ -85,30 +87,45 @@ export async function POST(request) {
   }
 
   const externalReference = JSON.stringify({
-    flow: 'membership_preapproval',
+    flow: paymentPlan.paymentMode === 'subscription' ? 'membership_preapproval' : 'membership_payment',
     tierId: tier.id,
     userId: user.id,
     couponId,
     amount: finalPrice,
+    paymentPlanId: paymentPlan.id,
+    paymentMode: paymentPlan.paymentMode,
+    billingPeriod: paymentPlan.billingPeriod,
   })
 
   let mpData
   try {
-    mpData = await createMercadoPagoPreapproval({
-      externalReference,
-      tier,
-      profile: checkoutProfile,
-      amount: finalPrice,
-      notes,
-    })
+    if (paymentPlan.paymentMode === 'subscription') {
+      mpData = await createMercadoPagoPreapproval({
+        externalReference,
+        tier,
+        profile: checkoutProfile,
+        amount: finalPrice,
+        paymentPlan,
+        notes,
+      })
+    } else {
+      mpData = await createMercadoPagoPaymentPreference({
+        externalReference,
+        tier,
+        profile: checkoutProfile,
+        amount: finalPrice,
+        paymentPlan,
+        notes,
+      })
+    }
   } catch (err) {
-    console.error('MercadoPago preapproval error:', err)
-    return NextResponse.json({ error: 'No se pudo iniciar la suscripción en MercadoPago.' }, { status: 502 })
+    console.error('MercadoPago checkout error:', err)
+    return NextResponse.json({ error: 'No se pudo iniciar el pago en MercadoPago.' }, { status: 502 })
   }
 
   if (!mpData?.id || !mpData?.init_point) {
-    console.error('MercadoPago preapproval missing init point:', mpData)
-    return NextResponse.json({ error: 'MercadoPago no devolvió el link de suscripción.' }, { status: 502 })
+    console.error('MercadoPago checkout missing init point:', mpData)
+    return NextResponse.json({ error: 'MercadoPago no devolvió el link de pago.' }, { status: 502 })
   }
 
   return NextResponse.json({
@@ -118,5 +135,7 @@ export async function POST(request) {
     providerSubscriptionId: mpData.id,
     finalPrice,
     couponApplied: !!couponId,
+    paymentPlanId: paymentPlan.id,
+    paymentMode: paymentPlan.paymentMode,
   })
 }

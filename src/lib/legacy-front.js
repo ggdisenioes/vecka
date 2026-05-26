@@ -201,6 +201,15 @@ function purchaseStatusLabel(grant) {
   return 'Pendiente'
 }
 
+function purchaseAmount(grant) {
+  const match = String(grant.notes || '').match(/Monto acreditado:\s*ARS\s*([0-9]+(?:[.,][0-9]+)?)/i)
+  if (!match) return Number(grant.membership_tiers?.price_ars || 0)
+
+  const normalized = match[1].replace(/\./g, '').replace(',', '.')
+  const amount = Number(normalized)
+  return Number.isFinite(amount) ? amount : Number(grant.membership_tiers?.price_ars || 0)
+}
+
 function mapMembershipPurchase(grant) {
   const tier = grant.membership_tiers || {}
   const date = grant.granted_at || grant.starts_at || grant.created_at
@@ -210,7 +219,7 @@ function mapMembershipPurchase(grant) {
     id: reference ? String(reference) : `MEM-${String(grant.id || '').slice(0, 8)}`,
     date,
     items: tier.name || 'Membresía VeCKA',
-    total: Number(tier.price_ars || 0),
+    total: purchaseAmount(grant),
     status: purchaseStatusLabel(grant),
     currency: 'ARS',
   }
@@ -282,9 +291,9 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
           .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       : Promise.resolve({ data: [], error: null }),
     serverSupabase
-      ? serverSupabase
+        ? serverSupabase
           .from('membership_grants')
-          .select('id, tier_id, access_status, grant_type, granted_at, starts_at, payment_reference, membership_tiers(id, name, price_ars)')
+          .select('id, tier_id, access_status, grant_type, granted_at, starts_at, payment_reference, notes, membership_tiers(id, name, price_ars)')
           .eq('user_id', user.id)
           .or('grant_type.eq.payment,payment_reference.not.is.null')
           .order('granted_at', { ascending: false })

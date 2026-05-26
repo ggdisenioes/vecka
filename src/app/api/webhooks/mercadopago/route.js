@@ -129,6 +129,7 @@ async function activateMembership({
   paymentReference,
   paymentNotes,
   expiresAt,
+  billingPeriod,
 }) {
   const now = new Date().toISOString()
 
@@ -172,7 +173,7 @@ async function activateMembership({
     to: profile.email,
     name,
     tierName: tier.name,
-    billingPeriod: tier.billing_period,
+    billingPeriod: billingPeriod || tier.billing_period,
     amountArs: amount,
     paymentReference,
     expiresAt,
@@ -183,7 +184,7 @@ async function activateMembership({
     to: profile.email,
     name,
     tierName: tier.name,
-    billingPeriod: tier.billing_period,
+    billingPeriod: billingPeriod || tier.billing_period,
     expiresAt,
     tierSlug: tier.slug,
   }).catch(() => {})
@@ -205,19 +206,19 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
   const tierId = meta.tierId || payment.metadata?.tierId
   const userId = meta.userId || payment.metadata?.userId
   const couponId = meta.couponId || payment.metadata?.couponId || null
-  const selectedMethod = meta.paymentMethod || payment.metadata?.paymentMethod || payment.metadata?.payment_method || null
-  const checkoutNotes = payment.metadata?.notes || null
+  const selectedMethod = meta.paymentPlanId || meta.paymentMethod || payment.metadata?.paymentPlanId || payment.metadata?.payment_method || null
+  const checkoutNotes = meta.notes || payment.metadata?.notes || null
 
   if (!tierId || !userId) return
 
   const { tier, profile } = await getTierAndProfile(supabase, tierId, userId)
+  const billingPeriod = meta.billingPeriod || payment.metadata?.billing_period || tier?.billing_period || 'monthly'
   const email = profile?.email
   const name = profile?.display_name || profile?.full_name || ''
 
   if (payment.status === 'approved') {
-    const expiresAt = tier?.billing_period === 'annual'
-      ? addBillingPeriod(new Date(), 'annual')
-      : addBillingPeriod(new Date(), 'monthly')
+    const amount = Number(payment.transaction_amount || meta.amount || 0)
+    const expiresAt = addBillingPeriod(new Date(), billingPeriod)
 
     const activation = await activateMembership({
       supabase,
@@ -226,12 +227,15 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
       userId,
       tierId,
       couponId,
-      amount: payment.transaction_amount,
-      paymentReference: String(payment.id),
+      amount,
+      paymentReference: `mp-pay:${payment.id}`,
       expiresAt,
+      billingPeriod,
       paymentNotes: [
         `MercadoPago · ${payment.payment_method_id || ''} · ${payment.status_detail || ''}`,
-        selectedMethod ? `Elegido en checkout: ${selectedMethod}` : null,
+        amount ? `Monto acreditado: ARS ${amount}` : null,
+        selectedMethod ? `Plan: ${selectedMethod}` : null,
+        billingPeriod ? `Periodo de acceso: ${billingPeriod}` : null,
         checkoutNotes ? `Comentario: ${checkoutNotes}` : null,
       ].filter(Boolean).join(' · '),
     })
@@ -298,6 +302,8 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
   const tierId = meta.tierId || preapproval.metadata?.tierId
   const userId = meta.userId || preapproval.metadata?.userId
   const couponId = meta.couponId || preapproval.metadata?.couponId || null
+  const billingPeriod = meta.billingPeriod || preapproval.metadata?.billing_period || null
+  const paymentPlanId = meta.paymentPlanId || preapproval.metadata?.payment_plan_id || null
 
   if (!tierId || !userId) return
 
@@ -313,7 +319,7 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
 
   if (approved) {
     const approvedAt = getAuthorizedPaymentApprovedAt(authorizedPayment)
-    const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), tier.billing_period)
+    const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), billingPeriod || tier.billing_period)
 
     const activation = await activateMembership({
       supabase,
@@ -325,12 +331,15 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
       amount,
       paymentReference: `mp-sub:${preapprovalId}:${providerPaymentId}`,
       expiresAt,
+      billingPeriod: billingPeriod || tier.billing_period,
       paymentNotes: [
         'MercadoPago suscripción recurrente',
+        amount ? `Monto acreditado: ARS ${amount}` : null,
         `Preapproval: ${preapprovalId}`,
         `Pago autorizado: ${providerPaymentId}`,
+        paymentPlanId ? `Plan: ${paymentPlanId}` : null,
         `Evento: ${eventType}`,
-      ].join(' · '),
+      ].filter(Boolean).join(' · '),
     })
 
     if (!activation?.alreadyApplied) {
