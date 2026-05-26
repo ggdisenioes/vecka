@@ -21,6 +21,7 @@ export default async function AccountPage() {
       initialProducts={data.products}
       initialUser={data.user}
       initialUserMemberships={data.userMemberships || []}
+      initialUserPurchases={data.userPurchases || []}
     />
   )
 }

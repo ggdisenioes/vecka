@@ -56,6 +56,7 @@ export default function App({
   initialSelectedCourseId = null,
   initialMemberships = [],
   initialUserMemberships = [],
+  initialUserPurchases = [],
   bankInfo = null,
   bankInfoUsd = null,
   acceptedCurrencies = ['ARS'],
@@ -69,6 +70,7 @@ export default function App({
       initialUser={initialUser}
       initialMemberships={initialMemberships}
       initialUserMemberships={initialUserMemberships}
+      initialUserPurchases={initialUserPurchases}
       bankInfoUsd={bankInfoUsd}
       acceptedCurrencies={acceptedCurrencies}
       bankInfo={bankInfo}

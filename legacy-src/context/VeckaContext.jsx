@@ -307,6 +307,7 @@ export function VeckaProvider({
   initialSelectedCourseId = null,
   initialMemberships = [],
   initialUserMemberships = [],
+  initialUserPurchases = [],
   bankInfo = null,
   bankInfoUsd = null,
   acceptedCurrencies = ['ARS'],
@@ -332,6 +333,7 @@ export function VeckaProvider({
   const [products, setProducts] = useState(initialProducts);
   const [memberships] = useState(initialMemberships);
   const [userMemberships] = useState(initialUserMemberships);
+  const [userPurchases] = useState(initialUserPurchases);
   const [selectedCourseId, setSelectedCourseId] = useState(initialSelectedCourseId);
   const [cartOpen, setCartOpen] = useState(false);
   const [authModal, setAuthModal] = useState(null);
@@ -538,6 +540,7 @@ export function VeckaProvider({
         products,
         memberships,
         userMemberships,
+        userPurchases,
         bankInfo,
         bankInfoUsd,
         acceptedCurrencies,

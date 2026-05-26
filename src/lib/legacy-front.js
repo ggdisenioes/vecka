@@ -194,6 +194,28 @@ function mapLegacyUser(user, profile) {
   }
 }
 
+function purchaseStatusLabel(grant) {
+  if (grant.access_status === 'active') return 'Completado'
+  if (grant.access_status === 'cancelled') return 'Cancelado'
+  if (grant.access_status === 'expired') return 'Vencido'
+  return 'Pendiente'
+}
+
+function mapMembershipPurchase(grant) {
+  const tier = grant.membership_tiers || {}
+  const date = grant.granted_at || grant.starts_at || grant.created_at
+  const reference = grant.payment_reference || grant.id
+
+  return {
+    id: reference ? String(reference) : `MEM-${String(grant.id || '').slice(0, 8)}`,
+    date,
+    items: tier.name || 'Membresía VeCKA',
+    total: Number(tier.price_ars || 0),
+    status: purchaseStatusLabel(grant),
+    currency: 'ARS',
+  }
+}
+
 const LEGACY_COURSE_TREE_SELECT = `
   *,
   materials:course_materials!course_materials_course_id_fkey(*),
@@ -220,7 +242,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
   const staffPreview = courseSlug && isStaff(profile)
   const serverSupabase = user ? await getSupabaseServer() : null
 
-  const [coursesResult, productsResult, selectedCourse, enrollmentsResult, userGrantsResult] = await Promise.all([
+  const [coursesResult, productsResult, selectedCourse, enrollmentsResult, userGrantsResult, userPurchasesResult] = await Promise.all([
     supabase
       .from('courses')
       .select(LEGACY_COURSE_TREE_SELECT)
@@ -259,6 +281,14 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
           .eq('access_status', 'active')
           .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       : Promise.resolve({ data: [], error: null }),
+    serverSupabase
+      ? serverSupabase
+          .from('membership_grants')
+          .select('id, tier_id, access_status, grant_type, granted_at, starts_at, payment_reference, membership_tiers(id, name, price_ars)')
+          .eq('user_id', user.id)
+          .or('grant_type.eq.payment,payment_reference.not.is.null')
+          .order('granted_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (coursesResult.error) {
@@ -271,6 +301,10 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
 
   if (enrollmentsResult?.error) {
     throw new Error(`Error loading enrollments: ${enrollmentsResult.error.message}`)
+  }
+
+  if (userPurchasesResult?.error) {
+    throw new Error(`Error loading purchases: ${userPurchasesResult.error.message}`)
   }
 
   const rawCourses = coursesResult.data || []
@@ -308,6 +342,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
   })
   const products = (productsResult.data || []).map((product, index) => mapLegacyProduct(product, index))
   const legacyUser = mapLegacyUser(user, profile)
+  const userPurchases = (userPurchasesResult?.data || []).map((grant) => mapMembershipPurchase(grant))
   const selectedLegacyCourse = selectedCourse
     ? courses.find((course) => course.slug === selectedCourse.slug) || null
     : null
@@ -318,5 +353,6 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
     user: legacyUser,
     selectedCourseId: selectedLegacyCourse?.id || null,
     userMemberships,
+    userPurchases,
   }
 }

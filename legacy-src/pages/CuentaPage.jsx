@@ -6,7 +6,7 @@ import { Btn, Badge, ProgressBar, inputStyle } from '../components/Primitives';
 import { CourseCard } from '../components/Cards';
 
 export default function CuentaPage() {
-  const { user, navigate, courses, fmt, userMemberships } = useVecka();
+  const { user, navigate, courses, fmt, userMemberships, userPurchases } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const [tab, setTab] = useState('cursos');
   const px = isMobile ? '16px' : isTablet ? '32px' : '80px';
@@ -15,6 +15,7 @@ export default function CuentaPage() {
 
   const enrolledCourses = courses.filter(c => c.enrolled);
   const activeMemberships = (userMemberships || []).filter(m => m.accessStatus === 'active');
+  const purchases = userPurchases || [];
   const tabs = [
     { id: 'cursos', label: 'Mis Cursos', icon: 'book' },
     ...(activeMemberships.length > 0 ? [{ id: 'membresia', label: isMobile ? 'Membresía' : 'Mi Membresía', icon: 'star' }] : []),
@@ -42,7 +43,7 @@ export default function CuentaPage() {
               </div>
             </div>
             <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', gap: isMobile ? 20 : 28 }}>
-              {[[enrolledCourses.length, 'Cursos'], [MOCK_USER_STUDENT_DATA.completedLessons, 'Clases'], [MOCK_USER_STUDENT_DATA.purchases.length, 'Compras']].map(([val, label]) => (
+              {[[enrolledCourses.length, 'Cursos'], [MOCK_USER_STUDENT_DATA.completedLessons, 'Clases'], [purchases.length, 'Compras']].map(([val, label]) => (
                 <div key={label} style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#5e9e8a' }}>{val}</div>
                   <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(55% 0.018 50)' }}>{label}</div>
@@ -170,9 +171,9 @@ export default function CuentaPage() {
         {tab === 'compras' && (
           <div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 28, marginBottom: 20 }}>Historial de compras</h2>
-            {isMobile ? (
+            {purchases.length === 0 ? null : isMobile ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {MOCK_USER_STUDENT_DATA.purchases.map(p => (
+                {purchases.map(p => (
                   <div key={p.id} style={{ background: '#fff', borderRadius: 14, padding: '18px 18px', border: '1px solid oklch(88% 0.012 60)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                       <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#5e9e8a' }}>{p.id}</span>
@@ -180,7 +181,7 @@ export default function CuentaPage() {
                     </div>
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{p.items}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(55% 0.018 50)' }}>{p.date}</span>
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'oklch(55% 0.018 50)' }}>{p.date ? new Date(p.date).toLocaleDateString('es-AR') : ''}</span>
                       <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, color: '#5e9e8a' }}>${p.total.toLocaleString('es-AR')}</span>
                     </div>
                   </div>
@@ -191,11 +192,11 @@ export default function CuentaPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 1fr 130px 110px', padding: '13px 22px', background: 'oklch(96% 0.012 60)', fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 700, color: 'oklch(52% 0.018 50)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   {['Orden', 'Producto', 'Fecha', 'Total', 'Estado'].map(h => <div key={h}>{h}</div>)}
                 </div>
-                {MOCK_USER_STUDENT_DATA.purchases.map(p => (
+                {purchases.map(p => (
                   <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 1fr 130px 110px', padding: '16px 22px', borderTop: '1px solid oklch(93% 0.01 60)', alignItems: 'center' }}>
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 700, color: '#5e9e8a' }}>{p.id}</div>
                     <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>{p.items}</div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)' }}>{p.date}</div>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)' }}>{p.date ? new Date(p.date).toLocaleDateString('es-AR') : ''}</div>
                     <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 700, color: '#5e9e8a' }}>${p.total.toLocaleString('es-AR')}</div>
                     <Badge color="#4a7d6e" bg="#d4f0e6">{p.status}</Badge>
                   </div>
