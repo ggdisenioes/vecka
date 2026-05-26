@@ -3,7 +3,7 @@ export const PUBLIC_MEMBERSHIP_PAYMENT_PLAN_IDS = {
   ANNUAL: 'annual',
 }
 
-const DEFAULT_MONTHLY_PRICE_ARS = 33000
+const DEFAULT_MONTHLY_PRICE_ARS = 22000
 const DEFAULT_ANNUAL_PRICE_ARS = 498000
 
 function envPrice(name, fallback) {
