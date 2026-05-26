@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
 import { isPublicMembershipSlug } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import {
-  createMercadoPagoPreapproval,
-  normalizeMercadoPagoSubscriptionStatus,
-} from '@/lib/mercadopago-subscriptions'
+import { createMercadoPagoPreapproval } from '@/lib/mercadopago-subscriptions'
 
 export async function POST(request) {
   const { user } = await getCurrentAuth()
@@ -87,34 +84,18 @@ export async function POST(request) {
     display_name: profile?.display_name,
   }
 
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('membership_subscriptions')
-    .upsert({
-      provider: 'mercadopago',
-      tier_id: tier.id,
-      user_id: user.id,
-      status: 'pending',
-      amount: finalPrice,
-      currency: 'ARS',
-      billing_period: tier.billing_period,
-      coupon_id: couponId,
-      metadata: {
-        checkout_notes: notes,
-        checkout_amount: finalPrice,
-      },
-    }, { onConflict: 'provider,tier_id,user_id' })
-    .select('id')
-    .single()
-
-  if (subscriptionError || !subscription) {
-    console.error('Membership subscription create error:', subscriptionError)
-    return NextResponse.json({ error: 'No se pudo preparar la suscripción.' }, { status: 500 })
-  }
+  const externalReference = JSON.stringify({
+    flow: 'membership_preapproval',
+    tierId: tier.id,
+    userId: user.id,
+    couponId,
+    amount: finalPrice,
+  })
 
   let mpData
   try {
     mpData = await createMercadoPagoPreapproval({
-      subscriptionId: subscription.id,
+      externalReference,
       tier,
       profile: checkoutProfile,
       amount: finalPrice,
@@ -130,23 +111,10 @@ export async function POST(request) {
     return NextResponse.json({ error: 'MercadoPago no devolvió el link de suscripción.' }, { status: 502 })
   }
 
-  await supabase
-    .from('membership_subscriptions')
-    .update({
-      provider_subscription_id: mpData.id,
-      status: normalizeMercadoPagoSubscriptionStatus(mpData.status),
-      metadata: {
-        checkout_notes: notes,
-        checkout_amount: finalPrice,
-        mercadopago_preapproval: mpData,
-      },
-    })
-    .eq('id', subscription.id)
-
   return NextResponse.json({
     initPoint: mpData.init_point,
     sandboxInitPoint: mpData.sandbox_init_point,
-    subscriptionId: subscription.id,
+    subscriptionId: null,
     providerSubscriptionId: mpData.id,
     finalPrice,
     couponApplied: !!couponId,

@@ -57,10 +57,6 @@ function getAuthorizedPaymentAmount(payload) {
   )
 }
 
-function getAuthorizedPaymentCurrency(payload) {
-  return payload?.payment?.currency_id || payload?.currency_id || 'ARS'
-}
-
 function getAuthorizedPaymentApprovedAt(payload) {
   return (
     payload?.payment?.date_approved
@@ -96,6 +92,15 @@ async function getTierAndProfile(supabase, tierId, userId) {
   return { tier, profile }
 }
 
+function parseExternalReference(value) {
+  try {
+    const parsed = JSON.parse(String(value || '{}'))
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 async function incrementCouponUsage(supabase, couponId) {
   if (!couponId) return
 
@@ -113,36 +118,6 @@ async function incrementCouponUsage(supabase, couponId) {
     .eq('id', couponId)
 }
 
-async function recordPaymentEvent(supabase, event) {
-  if (!event.provider_event_id) return { alreadyApproved: false }
-
-  const { data: existing } = await supabase
-    .from('membership_payment_events')
-    .select('id, status')
-    .eq('provider', 'mercadopago')
-    .eq('provider_event_id', event.provider_event_id)
-    .maybeSingle()
-
-  if (existing) {
-    await supabase
-      .from('membership_payment_events')
-      .update(event)
-      .eq('id', existing.id)
-
-    return { alreadyApproved: APPROVED_STATUSES.has(String(existing.status || '').toLowerCase()) }
-  }
-
-  const { error } = await supabase
-    .from('membership_payment_events')
-    .insert(event)
-
-  if (error) {
-    console.error('MercadoPago payment event insert error:', error)
-  }
-
-  return { alreadyApproved: false }
-}
-
 async function activateMembership({
   supabase,
   tier,
@@ -156,6 +131,22 @@ async function activateMembership({
   expiresAt,
 }) {
   const now = new Date().toISOString()
+
+  const { data: existingGrant } = await supabase
+    .from('membership_grants')
+    .select('id, payment_reference, access_status')
+    .eq('tier_id', tierId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (
+    existingGrant?.payment_reference
+    && paymentReference
+    && existingGrant.payment_reference === paymentReference
+    && existingGrant.access_status === 'active'
+  ) {
+    return { alreadyApplied: true }
+  }
 
   await supabase
     .from('membership_grants')
@@ -196,6 +187,8 @@ async function activateMembership({
     expiresAt,
     tierSlug: tier.slug,
   }).catch(() => {})
+
+  return { alreadyApplied: false }
 }
 
 async function handleLegacyPaymentNotification(supabase, paymentId) {
@@ -226,7 +219,7 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
       ? addBillingPeriod(new Date(), 'annual')
       : addBillingPeriod(new Date(), 'monthly')
 
-    await activateMembership({
+    const activation = await activateMembership({
       supabase,
       tier,
       profile,
@@ -243,7 +236,9 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
       ].filter(Boolean).join(' · '),
     })
 
-    await incrementCouponUsage(supabase, couponId)
+    if (!activation?.alreadyApplied) {
+      await incrementCouponUsage(supabase, couponId)
+    }
   } else if (FAILED_STATUSES.has(String(payment.status || '').toLowerCase()) && email && tier) {
     sendPaymentFailedEmail({
       to: email,
@@ -261,34 +256,14 @@ async function handlePreapprovalNotification(supabase, preapprovalId) {
   })
   if (!preapproval) return
 
-  const localSubscriptionId = preapproval.external_reference || preapproval.metadata?.subscription_id || null
+  const meta = parseExternalReference(preapproval.external_reference)
+  const tierId = meta.tierId || preapproval.metadata?.tierId
+  const userId = meta.userId || preapproval.metadata?.userId
   const status = normalizeMercadoPagoSubscriptionStatus(preapproval.status)
-  const patch = {
-    provider_subscription_id: preapproval.id,
-    status,
-    next_payment_at: preapproval.next_payment_date || null,
-    metadata: { mercadopago_preapproval: preapproval },
-  }
 
-  if (status === 'authorized') {
-    patch.started_at = preapproval.date_created || new Date().toISOString()
-  }
+  if (!tierId || !userId) return
 
-  if (status === 'cancelled') {
-    patch.cancelled_at = new Date().toISOString()
-  }
-
-  let query = supabase.from('membership_subscriptions')
-
-  if (localSubscriptionId) {
-    query = query.update(patch).eq('id', localSubscriptionId)
-  } else {
-    query = query.update(patch).eq('provider', 'mercadopago').eq('provider_subscription_id', preapproval.id)
-  }
-
-  const { data: updated } = await query.select('id, tier_id, user_id').maybeSingle()
-
-  if (updated && ['cancelled', 'paused', 'expired', 'failed'].includes(status)) {
+  if (['cancelled', 'paused', 'expired', 'failed'].includes(status)) {
     await supabase
       .from('membership_grants')
       .update({
@@ -296,8 +271,8 @@ async function handlePreapprovalNotification(supabase, preapprovalId) {
         cancelled_at: new Date().toISOString(),
         notes: `MercadoPago suscripción ${status}`,
       })
-      .eq('tier_id', updated.tier_id)
-      .eq('user_id', updated.user_id)
+      .eq('tier_id', tierId)
+      .eq('user_id', userId)
 
     revalidateMemberships()
   }
@@ -313,38 +288,25 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
   const preapprovalId = getPreapprovalIdFromAuthorizedPayment(authorizedPayment)
   if (!preapprovalId) return
 
-  const { data: subscription } = await supabase
-    .from('membership_subscriptions')
-    .select('id, tier_id, user_id, coupon_id, billing_period, started_at, provider_subscription_id')
-    .eq('provider', 'mercadopago')
-    .eq('provider_subscription_id', preapprovalId)
-    .maybeSingle()
+  const preapproval = await getMercadoPagoPreapproval(preapprovalId).catch((error) => {
+    console.error('MercadoPago preapproval fetch error:', error)
+    return null
+  })
+  if (!preapproval) return
 
-  if (!subscription) return
+  const meta = parseExternalReference(preapproval.external_reference)
+  const tierId = meta.tierId || preapproval.metadata?.tierId
+  const userId = meta.userId || preapproval.metadata?.userId
+  const couponId = meta.couponId || preapproval.metadata?.couponId || null
 
-  const { tier, profile } = await getTierAndProfile(supabase, subscription.tier_id, subscription.user_id)
+  if (!tierId || !userId) return
+
+  const { tier, profile } = await getTierAndProfile(supabase, tierId, userId)
   if (!tier) return
 
   const status = getPaymentStatus(authorizedPayment)
   const providerPaymentId = getAuthorizedPaymentId(authorizedPayment, paymentId)
-  const eventReference = `${eventType}:${paymentId}`
   const amount = getAuthorizedPaymentAmount(authorizedPayment)
-  const currency = getAuthorizedPaymentCurrency(authorizedPayment)
-
-  const { alreadyApproved } = await recordPaymentEvent(supabase, {
-    provider: 'mercadopago',
-    provider_event_id: eventReference,
-    provider_payment_id: providerPaymentId,
-    provider_subscription_id: preapprovalId,
-    subscription_id: subscription.id,
-    tier_id: subscription.tier_id,
-    user_id: subscription.user_id,
-    amount,
-    currency,
-    status,
-    event_type: eventType,
-    raw_payload: authorizedPayment,
-  })
 
   const approved = APPROVED_STATUSES.has(status)
   const failed = FAILED_STATUSES.has(status)
@@ -353,50 +315,28 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
     const approvedAt = getAuthorizedPaymentApprovedAt(authorizedPayment)
     const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), tier.billing_period)
 
-    if (!alreadyApproved) {
-      await activateMembership({
-        supabase,
-        tier,
-        profile,
-        userId: subscription.user_id,
-        tierId: subscription.tier_id,
-        couponId: subscription.coupon_id,
-        amount,
-        paymentReference: `mp-sub:${preapprovalId}:${providerPaymentId}`,
-        expiresAt,
-        paymentNotes: [
-          'MercadoPago suscripción recurrente',
-          `Preapproval: ${preapprovalId}`,
-          `Pago autorizado: ${providerPaymentId}`,
-        ].join(' · '),
-      })
+    const activation = await activateMembership({
+      supabase,
+      tier,
+      profile,
+      userId,
+      tierId,
+      couponId,
+      amount,
+      paymentReference: `mp-sub:${preapprovalId}:${providerPaymentId}`,
+      expiresAt,
+      paymentNotes: [
+        'MercadoPago suscripción recurrente',
+        `Preapproval: ${preapprovalId}`,
+        `Pago autorizado: ${providerPaymentId}`,
+        `Evento: ${eventType}`,
+      ].join(' · '),
+    })
 
-      await incrementCouponUsage(supabase, subscription.coupon_id)
+    if (!activation?.alreadyApplied) {
+      await incrementCouponUsage(supabase, couponId)
     }
-
-    await supabase
-      .from('membership_subscriptions')
-      .update({
-        status: 'authorized',
-        last_payment_at: approvedAt,
-        next_payment_at: expiresAt,
-        started_at: subscription.started_at || approvedAt,
-        metadata: {
-          mercadopago_authorized_payment: authorizedPayment,
-        },
-      })
-      .eq('id', subscription.id)
   } else if (failed) {
-    await supabase
-      .from('membership_subscriptions')
-      .update({
-        status: 'failed',
-        metadata: {
-          mercadopago_authorized_payment: authorizedPayment,
-        },
-      })
-      .eq('id', subscription.id)
-
     if (profile?.email) {
       sendPaymentFailedEmail({
         to: profile.email,

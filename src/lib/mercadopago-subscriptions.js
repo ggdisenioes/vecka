@@ -72,7 +72,7 @@ async function mercadoPagoFetch(path, options = {}) {
   return response.json()
 }
 
-export async function createMercadoPagoPreapproval({ subscriptionId, tier, profile, amount }) {
+export async function createMercadoPagoPreapproval({ subscriptionId, externalReference, tier, profile, amount }) {
   const siteUrl = getPublicSiteUrl()
   const autoRecurring = billingPeriodToAutoRecurring(tier.billing_period)
   const payerEmail = profile?.email
@@ -85,7 +85,7 @@ export async function createMercadoPagoPreapproval({ subscriptionId, tier, profi
     method: 'POST',
     body: JSON.stringify({
       reason: tier.name,
-      external_reference: subscriptionId,
+      external_reference: externalReference || subscriptionId,
       payer_email: payerEmail,
       auto_recurring: {
         ...autoRecurring,
