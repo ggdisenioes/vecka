@@ -68,7 +68,7 @@ export default function MembershipCheckoutForm({ tier }) {
         return
       }
 
-      window.location.href = data.initPoint
+      window.location.href = data.sandboxInitPoint || data.initPoint
     } catch {
       setError('Error de conexión. Intentá de nuevo.')
     } finally {

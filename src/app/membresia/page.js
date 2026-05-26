@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
+import {
+  PUBLIC_MEMBERSHIP_NAME,
+  PUBLIC_MEMBERSHIP_SLUGS,
+  getClubAccessFromGrants,
+} from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import './membership.css'
@@ -43,19 +48,16 @@ function statusCopy(tier, userIsStaff) {
 export default async function MembresiaLandingPage() {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
-  const shouldUseDirectAccessLabel = Boolean(user) || userIsStaff
 
-  let tiersQuery = getSupabaseAdmin()
+  const tiersQuery = getSupabaseAdmin()
     .from('membership_tiers')
     .select('id, slug, name, description, sort_order, status, price_ars, price_usd, billing_period, features, is_featured, trial_days, created_at')
+    .in('slug', PUBLIC_MEMBERSHIP_SLUGS)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
-  if (!userIsStaff) {
-    tiersQuery = tiersQuery.eq('status', 'published')
-  }
-
-  const { data: tiers } = await tiersQuery
+  const { data: rawTiers } = await tiersQuery
+  const tiers = userIsStaff ? (rawTiers || []) : (rawTiers || []).filter((tier) => tier.status === 'published')
 
   let activeTierIds = new Set()
   let activeCounts = new Map()
@@ -78,14 +80,11 @@ export default async function MembresiaLandingPage() {
     const supabase = await getSupabaseServer()
     const { data: grants } = await supabase
       .from('membership_grants')
-      .select('tier_id, access_status, expires_at')
+      .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
       .eq('user_id', user.id)
 
-    activeTierIds = new Set(
-      (grants || [])
-        .filter((g) => g.access_status === 'active' && (!g.expires_at || new Date(g.expires_at) > new Date()))
-        .map((g) => g.tier_id),
-    )
+    const access = getClubAccessFromGrants(grants || [])
+    if (access.hasAccess) activeTierIds = new Set((tiers || []).map((tier) => tier.id))
   }
 
   return (
@@ -98,8 +97,8 @@ export default async function MembresiaLandingPage() {
               Una membresía que <em>empieza con vos</em>
             </h1>
             <p>
-              Elegí el mes de inicio que más te conviene. Todas las membresías incluyen los mismos beneficios:
-              solo cambia cuándo empezás a coser.
+              La membresía nueva del Club abre a fines de mayo / principios de junio.
+              Desde el alta, accedés al contenido habilitado para tu etapa de inscripción.
             </p>
             <ul className="lovable-benefits">
               {['Talleres online ilimitados', 'Molde digital exclusivo / mes', 'Comunidad privada + soporte'].map((benefit) => (
@@ -116,18 +115,12 @@ export default async function MembresiaLandingPage() {
           <div className="lovable-section-head">
             <div>
               <p className="lovable-section-kicker">Cohortes disponibles</p>
-              <h2>Elegí cuándo empezás</h2>
+              <h2>Sumate al Club</h2>
             </div>
             <p>
-              Cada cohorte arranca el primer día del mes. Tenés acceso completo durante toda tu suscripción.
+              Una sola opción pública, con pago recurrente por Mercado Pago.
             </p>
           </div>
-
-          {userIsStaff ? (
-            <div className="membership-admin-banner" style={{ marginTop: 24 }}>
-              Vista administradora: acá ves también membresías en borrador o archivadas.
-            </div>
-          ) : null}
 
           {(!tiers || tiers.length === 0) ? (
             <div className="membership-locked" style={{ marginTop: 32 }}>
@@ -139,12 +132,12 @@ export default async function MembresiaLandingPage() {
                 const active = activeTierIds.has(tier.id)
                 const features = Array.isArray(tier.features) ? tier.features : []
                 const status = statusCopy(tier, userIsStaff)
-                const ctaLabel = active || shouldUseDirectAccessLabel
+                const ctaLabel = active
                   ? 'Ir a la membresía'
                   : tier.trial_days > 0
                     ? 'Probar gratis'
                     : 'Sumarme ahora'
-                const ctaHref = active || shouldUseDirectAccessLabel
+                const ctaHref = active
                   ? `/membresias/${tier.slug}`
                   : `/checkout/${tier.slug}`
 
@@ -152,7 +145,7 @@ export default async function MembresiaLandingPage() {
                   <article key={tier.id} className={`lovable-tier-card${tier.is_featured ? ' featured' : ''}`}>
                     {tier.is_featured ? <span className="lovable-featured-badge">Destacada</span> : null}
                     <span className={status.className}>{status.label}</span>
-                    <h3>{tier.name}</h3>
+                    <h3>{PUBLIC_MEMBERSHIP_NAME}</h3>
                     {tier.description ? <p>{tier.description}</p> : null}
 
                     <div className="lovable-tier-meta">
@@ -179,7 +172,7 @@ export default async function MembresiaLandingPage() {
                       {Number(tier.price_usd || 0) > 0 ? (
                         <p className="lovable-tier-usd">o USD {Number(tier.price_usd).toLocaleString('es-AR')} para residentes fuera de Argentina</p>
                       ) : null}
-                      <Link className={`lovable-button${active || shouldUseDirectAccessLabel ? '' : tier.is_featured ? '' : ' outline'}`} href={ctaHref}>
+                      <Link className={`lovable-button${active ? '' : tier.is_featured ? '' : ' outline'}`} href={ctaHref}>
                         {ctaLabel} →
                       </Link>
                     </div>

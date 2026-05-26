@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+dist-ssr
+uploads
+u210132504_HPex9.sql
+u210132504_HPex9.sql.gz
+supabase/.temp
+migration/logs
+migration/exports
+migration/imports
+migration/tmp
+.env
+.env.local
+.env.*.local
+*.local
+.DS_Store

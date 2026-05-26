@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
-import { getSupabaseServer } from '@/lib/supabase/server'
+import { getClubAccessFromGrants, isPublicMembershipSlug } from '@/lib/memberships'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import LessonVideoPlayer from './LessonVideoPlayer'
 import '../../../membership.css'
 
@@ -16,45 +17,42 @@ function vimeoEmbed(url) {
 
 export default async function MembershipLessonPage({ params }) {
   const { slug, courseSlug, lessonSlug } = await params
-  const supabase = await getSupabaseServer()
+  const admin = getSupabaseAdmin()
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
   if (!user) redirect(`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`)
+  if (!isPublicMembershipSlug(slug) && !userIsStaff) notFound()
 
   // Localiza el tier (debe estar publicado).
-  const { data: tier } = await supabase
+  const { data: tier } = await admin
     .from('membership_tiers')
     .select('id, slug, name, status')
     .eq('slug', slug)
     .maybeSingle()
   if (!tier || (tier.status !== 'published' && !userIsStaff)) notFound()
 
-  // Curso por slug — RLS protege el contenido si el usuario no tiene acceso.
-  const { data: course } = await supabase
+  // Curso por slug; el acceso se valida contra los grants activos del Club.
+  const { data: course } = await admin
     .from('courses')
-    .select('id, slug, title')
+    .select('id, slug, title, status')
     .eq('slug', courseSlug)
     .maybeSingle()
   if (!course) notFound()
+  if (course.status !== 'published' && !userIsStaff) notFound()
 
   // Verificar grant activo del tier.
-  const { data: grant } = await supabase
+  const { data: grants } = await admin
     .from('membership_grants')
-    .select('access_status, expires_at')
-    .eq('tier_id', tier.id)
+    .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
     .eq('user_id', user.id)
-    .maybeSingle()
 
-  const hasAccess = userIsStaff || (
-    grant?.access_status === 'active' &&
-    (!grant.expires_at || new Date(grant.expires_at) > new Date())
-  )
+  const hasAccess = userIsStaff || getClubAccessFromGrants(grants || []).hasAccess
   if (!hasAccess) {
     redirect(`/membresias/${slug}`)
   }
 
   // Lección + módulo padre (para verificar que pertenece al curso).
-  const { data: lesson } = await supabase
+  const { data: lesson } = await admin
     .from('course_lessons')
     .select(`
       id, slug, title, summary, body, status, lesson_type,
@@ -66,9 +64,10 @@ export default async function MembershipLessonPage({ params }) {
     .maybeSingle()
 
   if (!lesson || lesson.module?.course_id !== course.id) notFound()
+  if (lesson.status !== 'published' && !userIsStaff) notFound()
 
   // Materiales adjuntos.
-  const { data: materials } = await supabase
+  const { data: materials } = await admin
     .from('course_materials')
     .select('id, file_name, mime_type, size_bytes, sort_order')
     .eq('lesson_id', lesson.id)

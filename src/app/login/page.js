@@ -1,5 +1,6 @@
 import LoginScreen from './LoginScreen'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
+import { getSafeInternalPath } from '@/lib/auth-redirects'
 import { getCurrentAuth } from '@/lib/auth'
 import '../membresia/membership.css'
 
@@ -13,9 +14,7 @@ export const metadata = {
 export default async function LoginPage({ searchParams }) {
   const sp = await searchParams
   const requestedPath = sp?.next || sp?.redirect
-  const nextPath = typeof requestedPath === 'string' && requestedPath.startsWith('/')
-    ? requestedPath
-    : '/'
+  const nextPath = getSafeInternalPath(requestedPath, '/')
   const { user } = await getCurrentAuth()
 
   return (

@@ -1135,6 +1135,15 @@
   opacity: 0.78;
 }
 
+.lovable-google-button:not(:disabled) {
+  cursor: pointer;
+}
+
+.lovable-google-button:not(:disabled):hover {
+  border-color: var(--vck-primary);
+  background: #fff;
+}
+
 .lovable-google-mark {
   width: 16px;
   height: 16px;

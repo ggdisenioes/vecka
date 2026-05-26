@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
+import { isPublicMembershipSlug } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import {
   createMercadoPagoPreapproval,
@@ -28,6 +29,10 @@ export async function POST(request) {
     .maybeSingle()
 
   if (!tier) {
+    return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
+  }
+
+  if (!isPublicMembershipSlug(tier.slug)) {
     return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
   }
 

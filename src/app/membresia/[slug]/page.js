@@ -2,8 +2,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
+import {
+  CONTENT_MEMBERSHIP_SLUG,
+  PUBLIC_MEMBERSHIP_NAME,
+  canAccessMembershipContentItem,
+  getClubAccessFromGrants,
+  isPublicMembershipSlug,
+} from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { getSupabaseServer } from '@/lib/supabase/server'
 import '../membership.css'
 
 export const dynamic = 'force-dynamic'
@@ -44,6 +50,9 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
   const admin = getSupabaseAdmin()
+  const isPublicTierRoute = isPublicMembershipSlug(slug)
+
+  if (!isPublicTierRoute && !userIsStaff) notFound()
 
   const { data: tier } = await admin
     .from('membership_tiers')
@@ -55,21 +64,25 @@ export default async function MembershipTierPage({ params, searchParams }) {
   if (tier.status !== 'published' && !userIsStaff) notFound()
 
   let grant = null
+  let clubAccess = { hasAccess: false, isFounder: false, grant: null, grants: [] }
   if (user) {
-    const supabase = await getSupabaseServer()
-    const { data } = await supabase
+    const { data } = await admin
       .from('membership_grants')
-      .select('access_status, expires_at, granted_at, grant_type')
-      .eq('tier_id', tier.id)
+      .select('tier_id, access_status, expires_at, granted_at, starts_at, grant_type, membership_tiers(slug, billing_period, price_ars, features, description)')
       .eq('user_id', user.id)
-      .maybeSingle()
-    grant = data
+    clubAccess = getClubAccessFromGrants(data || [])
+    grant = clubAccess.grant
   }
 
-  const hasAccess = userIsStaff || (
-    grant?.access_status === 'active' &&
-    (!grant.expires_at || new Date(grant.expires_at) > new Date())
-  )
+  const hasAccess = userIsStaff || clubAccess.hasAccess
+
+  const { data: contentTier } = isPublicTierRoute
+    ? await admin
+        .from('membership_tiers')
+        .select('id')
+        .eq('slug', CONTENT_MEMBERSHIP_SLUG)
+        .maybeSingle()
+    : { data: tier }
 
   const { data: tierCourses } = await admin
     .from('membership_tier_courses')
@@ -91,11 +104,11 @@ export default async function MembershipTierPage({ params, searchParams }) {
     .filter((course) => userIsStaff || course.status === 'published')
 
   let contentItems = []
-  if (hasAccess) {
+  if (hasAccess && contentTier?.id) {
     let itemsQuery = admin
       .from('membership_content_items')
       .select('*')
-      .eq('tier_id', tier.id)
+      .eq('tier_id', contentTier.id)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
 
@@ -104,7 +117,9 @@ export default async function MembershipTierPage({ params, searchParams }) {
     }
 
     const { data: items } = await itemsQuery
-    contentItems = items || []
+    contentItems = userIsStaff
+      ? (items || [])
+      : (items || []).filter((item) => canAccessMembershipContentItem(item, clubAccess))
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
@@ -120,7 +135,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
           <header className="membership-detail-hero">
             <div className="membership-detail-hero-copy">
               <span className="lovable-eyebrow">CLUB VECKA</span>
-              <h1>{tier.name}</h1>
+              <h1>{isPublicTierRoute ? PUBLIC_MEMBERSHIP_NAME : tier.name}</h1>
               {tier.description ? <p>{tier.description}</p> : null}
 
               <div className="pill-row membership-detail-pills" style={{ marginTop: 20 }}>

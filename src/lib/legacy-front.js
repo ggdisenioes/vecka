@@ -1,5 +1,6 @@
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getCourseBySlug } from '@/lib/lms'
+import { buildPublicMembershipSummary, getClubAccessFromGrants } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { getSupabasePublic } from '@/lib/supabase/public'
 import { getSupabaseServer } from '@/lib/supabase/server'
@@ -284,6 +285,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
 
   // Membership-based course access
   const activeGrants = userGrantsResult?.data || []
+  const clubAccess = getClubAccessFromGrants(activeGrants)
   const activeTierIds = activeGrants.map((g) => g.tier_id).filter(Boolean)
   let membershipCourseIds = new Set()
   if (activeTierIds.length > 0) {
@@ -294,20 +296,7 @@ export async function getLegacyFrontData({ courseSlug } = {}) {
     membershipCourseIds = new Set((tierCourses || []).map((tc) => tc.course_id))
   }
 
-  const userMemberships = activeGrants.map((g) => ({
-    id: g.id,
-    tierId: g.tier_id,
-    tierSlug: g.membership_tiers?.slug || null,
-    tierName: g.membership_tiers?.name || 'Membresía',
-    billingPeriod: g.membership_tiers?.billing_period || null,
-    priceArs: Number(g.membership_tiers?.price_ars || 0),
-    features: Array.isArray(g.membership_tiers?.features) ? g.membership_tiers.features : [],
-    description: g.membership_tiers?.description || '',
-    grantedAt: g.granted_at || null,
-    startsAt: g.starts_at || null,
-    expiresAt: g.expires_at || null,
-    accessStatus: g.access_status,
-  }))
+  const userMemberships = buildPublicMembershipSummary(clubAccess)
 
   const courses = mergedCourses.map((course, index) => {
     const enrolled = enrolledCourseIds.has(course.id)

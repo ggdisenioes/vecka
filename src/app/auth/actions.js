@@ -1,52 +1,12 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { buildLoginPageUrl, buildRelativeUrl, getPostLoginPath, getSafeInternalPath } from '@/lib/auth-redirects'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { migrateLegacyPasswordAndSignIn } from '@/lib/legacy-passwords'
 
-function getSafeInternalPath(value, fallback = '/') {
-  const input = String(value || '').trim()
-
-  if (!input.startsWith('/')) {
-    return fallback
-  }
-
-  return input
-}
-
 function buildAuthModalUrl(path, params = {}) {
-  const url = new URL(path, 'http://localhost')
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      url.searchParams.set(key, value)
-    }
-  })
-
-  return `${url.pathname}${url.search}`
-}
-
-function buildLoginPageUrl(nextPath, params = {}) {
-  return buildAuthModalUrl('/login', { ...params, next: nextPath })
-}
-
-function getPostLoginPath(role, requestedPath) {
-  const safePath = getSafeInternalPath(requestedPath, '/')
-  const isStaff = role === 'admin' || role === 'editorial'
-
-  if (safePath === '/admin' || safePath.startsWith('/admin/')) {
-    return isStaff ? safePath : '/cuenta'
-  }
-
-  if (safePath === '/cuenta' || safePath.startsWith('/cuenta')) {
-    return isStaff ? '/admin' : safePath
-  }
-
-  if (safePath === '/login' || safePath.startsWith('/login?')) {
-    return isStaff ? '/admin' : '/cuenta'
-  }
-
-  return safePath
+  return buildRelativeUrl(path, params)
 }
 
 export async function signIn(formData) {

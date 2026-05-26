@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth } from '@/lib/auth'
+import { PUBLIC_MEMBERSHIP_NAME, getClubAccessFromGrants, isPublicMembershipSlug } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { getSupabaseServer } from '@/lib/supabase/server'
 import MembershipCheckoutForm from './MembershipCheckoutForm'
 import '../../membresia/membership.css'
 
@@ -27,6 +27,10 @@ export default async function MembershipCheckoutPage({ params }) {
   const { slug } = await params
   const { user } = await getCurrentAuth()
 
+  if (!isPublicMembershipSlug(slug)) {
+    notFound()
+  }
+
   if (!user) {
     redirect(`/login?next=/checkout/${slug}`)
   }
@@ -41,16 +45,12 @@ export default async function MembershipCheckoutPage({ params }) {
 
   if (!tier) notFound()
 
-  const supabase = await getSupabaseServer()
-  const { data: grant } = await supabase
+  const { data: grants } = await admin
     .from('membership_grants')
-    .select('access_status, expires_at')
-    .eq('tier_id', tier.id)
+    .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
     .eq('user_id', user.id)
-    .maybeSingle()
 
-  const hasAccess = grant?.access_status === 'active' && (!grant.expires_at || new Date(grant.expires_at) > new Date())
-  if (hasAccess) {
+  if (getClubAccessFromGrants(grants || []).hasAccess) {
     redirect(`/membresias/${tier.slug}`)
   }
 
@@ -72,7 +72,7 @@ export default async function MembershipCheckoutPage({ params }) {
 
           <aside className="lovable-order-summary">
             <p className="summary-kicker">Tu pedido</p>
-            <h2>{tier.name}</h2>
+            <h2>{PUBLIC_MEMBERSHIP_NAME}</h2>
             {tier.description ? <p className="lovable-checkout-subtitle">{tier.description}</p> : null}
 
             <div className="lovable-summary-divider" />

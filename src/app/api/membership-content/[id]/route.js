@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
+import { canAccessMembershipContentItem, getClubAccessFromGrants } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-
-function hasValidGrant(grant) {
-  return (
-    grant?.access_status === 'active' &&
-    (!grant.expires_at || new Date(grant.expires_at) > new Date())
-  )
-}
 
 export async function GET(_request, { params }) {
   const { user, profile } = await getCurrentAuth()
@@ -20,7 +14,7 @@ export async function GET(_request, { params }) {
 
   const { data: item, error } = await supabase
     .from('membership_content_items')
-    .select('id, tier_id, status, bucket_name, storage_path')
+    .select('id, tier_id, status, bucket_name, storage_path, legacy_wp_id, created_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -33,14 +27,13 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ error: 'Content not found' }, { status: 404 })
     }
 
-    const { data: grant } = await supabase
+    const { data: grants } = await supabase
       .from('membership_grants')
-      .select('access_status, expires_at')
-      .eq('tier_id', item.tier_id)
+      .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
       .eq('user_id', user.id)
-      .maybeSingle()
 
-    if (!hasValidGrant(grant)) {
+    const access = getClubAccessFromGrants(grants || [])
+    if (!canAccessMembershipContentItem(item, access)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

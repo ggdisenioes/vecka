@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { getPostLoginPath, getSafeInternalPath } from '@/lib/auth-redirects'
 import { getSupabaseBrowser } from '@/lib/supabase/browser'
 
 function GoogleMark() {
@@ -24,30 +25,6 @@ function AuthField({ label, ...props }) {
   )
 }
 
-function getSafeInternalPath(value, fallback = '/') {
-  const input = String(value || '').trim()
-  return input.startsWith('/') ? input : fallback
-}
-
-function getPostLoginPath(role, requestedPath) {
-  const safePath = getSafeInternalPath(requestedPath, '/')
-  const isStaff = role === 'admin' || role === 'editorial'
-
-  if (safePath === '/admin' || safePath.startsWith('/admin/')) {
-    return isStaff ? safePath : '/cuenta'
-  }
-
-  if (safePath === '/cuenta' || safePath.startsWith('/cuenta')) {
-    return isStaff ? '/admin' : safePath
-  }
-
-  if (safePath === '/login' || safePath.startsWith('/login?') || safePath === '/') {
-    return isStaff ? '/admin' : '/cuenta'
-  }
-
-  return safePath
-}
-
 function getFriendlyAuthError(error) {
   const message = error?.message || ''
 
@@ -67,6 +44,7 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
   const [message, setMessage] = useState(initialSuccess || initialError || '')
   const [messageType, setMessageType] = useState(initialError ? 'error' : initialSuccess ? 'success' : '')
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const heading = useMemo(() => (mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'), [mode])
 
   async function readProfileRole(userId) {
@@ -136,6 +114,36 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
     setMessage('Cuenta creada. Ya podés iniciar sesión.')
   }
 
+  async function handleGoogleLogin() {
+    setOauthLoading(true)
+    setMessage('')
+    setMessageType('')
+
+    try {
+      const supabase = getSupabaseBrowser()
+      const safeNextPath = getSafeInternalPath(nextPath, '/')
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNextPath)}`
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      })
+
+      if (error) {
+        throw new Error(getFriendlyAuthError(error))
+      }
+    } catch (error) {
+      setOauthLoading(false)
+      setMessageType('error')
+      setMessage(error.message || 'No pudimos iniciar sesión con Google.')
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     setLoading(true)
@@ -167,9 +175,9 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
         {mode === 'login' ? 'Bienvenida de vuelta a VeCKA.' : 'Creá tu acceso para comprar y ver tus clases.'}
       </p>
 
-      <button type="button" className="lovable-google-button" disabled>
+      <button type="button" className="lovable-google-button" onClick={handleGoogleLogin} disabled={loading || oauthLoading}>
         <GoogleMark />
-        Continuar con Google
+        {oauthLoading ? 'Conectando con Google...' : 'Continuar con Google'}
       </button>
 
       <div className="lovable-divider">o</div>
@@ -186,7 +194,7 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
         <AuthField label="Contraseña" name="password" type="password" required />
         <input name="next" type="hidden" value={nextPath} />
 
-        <button type="submit" className="lovable-button" style={{ marginTop: 0 }} disabled={loading}>
+        <button type="submit" className="lovable-button" style={{ marginTop: 0 }} disabled={loading || oauthLoading}>
           {loading ? 'Procesando...' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
         </button>
       </form>
