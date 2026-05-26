@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
-const FROM = 'Vecka <hola@vecka.com.ar>'
+const SUPPORT_EMAIL = 'soporte@vecka.com.ar'
+const FROM = process.env.RESEND_FROM_EMAIL || `VeCKA <${SUPPORT_EMAIL}>`
 
 function getResend() {
   if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY no configurada')
@@ -66,6 +67,7 @@ export async function sendWelcomeEmail({ to, name, tierName, billingPeriod, expi
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
     subject: `¡Tu membresía ${tierName} está activa!`,
     html: baseTemplate({ title: `Membresía ${tierName} activada`, preheader: `Tu acceso a ${tierName} ya está disponible.`, body }),
@@ -79,8 +81,11 @@ export async function sendPaymentConfirmationEmail({ to, name, tierName, billing
     : 'sin vencimiento'
 
   const body = `
-    <p style="font-family:'Cormorant Garamond',Georgia,serif;font-size:26px;font-weight:700;margin:0 0 16px;">Pago confirmado ✓</p>
-    <p>Hola <strong>${name || 'alumna'}</strong>, recibimos tu pago correctamente.</p>
+    <p style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;margin:0 0 12px;color:#3a2e28;">Gracias por sumarte a VeCKA</p>
+    <p style="margin:0 0 16px;">Hola <strong>${name || 'alumna'}</strong>, tu pago fue confirmado y ya dejamos activo tu acceso a <strong>${tierName}</strong>.</p>
+    <div style="background:#eef7f3;border:1px solid #d5eadf;border-radius:12px;padding:18px 20px;margin:22px 0;">
+      <p style="margin:0;color:#2f6b4f;font-size:14px;">Nos alegra acompañarte en este espacio de costura. Guardá este email como comprobante de tu compra.</p>
+    </div>
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f5f0;border-radius:10px;padding:18px 22px;margin:20px 0;font-size:14px;">
       <tr><td style="padding:5px 0;color:#8a7a6e;">Membresía</td><td style="padding:5px 0;font-weight:600;text-align:right;">${tierName}${period ? ` · ${period}` : ''}</td></tr>
       ${amountArs ? `<tr><td style="padding:5px 0;color:#8a7a6e;">Importe</td><td style="padding:5px 0;font-weight:600;text-align:right;">$${Number(amountArs).toLocaleString('es-AR')} ARS</td></tr>` : ''}
@@ -94,9 +99,31 @@ export async function sendPaymentConfirmationEmail({ to, name, tierName, billing
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
-    subject: `Pago confirmado · ${tierName}`,
-    html: baseTemplate({ title: 'Pago confirmado', preheader: `Tu pago de ${tierName} fue procesado exitosamente.`, body }),
+    subject: `Gracias por tu compra · ${tierName}`,
+    html: baseTemplate({ title: 'Gracias por tu compra', preheader: `Tu pago de ${tierName} fue procesado exitosamente.`, body }),
+  })
+}
+
+export async function sendSignupWelcomeEmail({ to, name }) {
+  const loginUrl = `${siteUrl()}/login?next=/cuenta`
+  const body = `
+    <p style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;margin:0 0 12px;color:#3a2e28;">Bienvenida a VeCKA</p>
+    <p>Hola <strong>${name || 'alumna'}</strong>, tu cuenta ya está creada.</p>
+    <p>Desde tu perfil podés ver tus cursos, membresías, compras y accesos disponibles.</p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${loginUrl}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Entrar a mi cuenta →</a>
+    </p>
+    <p style="color:#8a7a6e;font-size:13px;">Si necesitás ayuda, respondé este email y te damos una mano.</p>
+  `
+
+  return getResend().emails.send({
+    from: FROM,
+    replyTo: SUPPORT_EMAIL,
+    to,
+    subject: 'Tu cuenta de VeCKA está lista',
+    html: baseTemplate({ title: 'Tu cuenta de VeCKA', preheader: 'Tu cuenta ya está creada.', body }),
   })
 }
 
@@ -118,6 +145,7 @@ export async function sendCheckoutAccountCreatedEmail({ to, name, temporaryPassw
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
     subject: 'Tu acceso a VeCKA',
     html: baseTemplate({ title: 'Tu cuenta de VeCKA', preheader: 'Creamos tu cuenta y tu contraseña temporal.', body }),
@@ -137,6 +165,7 @@ export async function sendPaymentFailedEmail({ to, name, tierName, tierSlug }) {
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
     subject: `No pudimos procesar tu pago · ${tierName}`,
     html: baseTemplate({ title: 'Error en el pago', preheader: `Hubo un problema procesando tu pago para ${tierName}.`, body }),
@@ -155,6 +184,7 @@ export async function sendExpiryWarningEmail({ to, name, tierName, expiresAt, ti
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
     subject: `Tu membresía ${tierName} vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`,
     html: baseTemplate({ title: 'Tu membresía vence pronto', preheader: `Tu acceso a ${tierName} vence en ${daysLeft} días.`, body }),
@@ -173,6 +203,7 @@ export async function sendExpiryExpiredEmail({ to, name, tierName, tierSlug }) {
 
   return getResend().emails.send({
     from: FROM,
+    replyTo: SUPPORT_EMAIL,
     to,
     subject: `Tu membresía ${tierName} expiró`,
     html: baseTemplate({ title: 'Membresía expirada', preheader: `Tu acceso a ${tierName} ha expirado.`, body }),

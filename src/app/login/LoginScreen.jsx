@@ -114,6 +114,12 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
       throw new Error(getFriendlyAuthError(error))
     }
 
+    fetch('/api/auth/signup-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, fullName }),
+    }).catch(() => {})
+
     setMode('login')
     setMessageType('success')
     setMessage('Cuenta creada. Ya podés iniciar sesión.')

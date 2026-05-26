@@ -16,6 +16,7 @@ uploads
 .env.local
 .env.*.local
 *.local
+client_secret_*.json
 supabase/.temp
 migration/logs
 migration/exports

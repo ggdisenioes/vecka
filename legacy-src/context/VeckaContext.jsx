@@ -498,6 +498,25 @@ export function VeckaProvider({
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const updateUserProfile = (payload) => {
+    return fetch('/api/account/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el perfil');
+      }
+
+      if (data.user) {
+        setUser(data.user);
+      }
+
+      return data.user;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     if (typeof window !== 'undefined') {
@@ -550,6 +569,7 @@ export function VeckaProvider({
         createProduct,
         updateProduct,
         deleteProduct,
+        updateUserProfile,
         fmt,
         notify,
       }}

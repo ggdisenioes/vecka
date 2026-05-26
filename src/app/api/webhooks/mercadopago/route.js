@@ -196,17 +196,18 @@ async function activateMembership({
   if (!profile?.email || !tier) return
 
   const name = profile.display_name || profile.full_name || ''
+  const emailTasks = []
 
   if (temporaryPassword) {
-    sendCheckoutAccountCreatedEmail({
+    emailTasks.push(sendCheckoutAccountCreatedEmail({
       to: profile.email,
       name,
       temporaryPassword,
       tierName: tier.name,
-    }).catch(() => {})
+    }))
   }
 
-  sendPaymentConfirmationEmail({
+  emailTasks.push(sendPaymentConfirmationEmail({
     to: profile.email,
     name,
     tierName: tier.name,
@@ -215,16 +216,18 @@ async function activateMembership({
     paymentReference,
     expiresAt,
     tierSlug: tier.slug,
-  }).catch(() => {})
+  }))
 
-  sendWelcomeEmail({
+  emailTasks.push(sendWelcomeEmail({
     to: profile.email,
     name,
     tierName: tier.name,
     billingPeriod: billingPeriod || tier.billing_period,
     expiresAt,
     tierSlug: tier.slug,
-  }).catch(() => {})
+  }))
+
+  await Promise.allSettled(emailTasks)
 
   return { alreadyApplied: false }
 }

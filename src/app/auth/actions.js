@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { buildLoginPageUrl, buildRelativeUrl, getPostLoginPath, getSafeInternalPath } from '@/lib/auth-redirects'
 import { getSupabaseServer } from '@/lib/supabase/server'
 import { migrateLegacyPasswordAndSignIn } from '@/lib/legacy-passwords'
+import { sendSignupWelcomeEmail } from '@/lib/email'
 
 function buildAuthModalUrl(path, params = {}) {
   return buildRelativeUrl(path, params)
@@ -52,6 +53,7 @@ export async function signUp(formData) {
   const supabase = await getSupabaseServer()
   const email = String(formData.get('email') || '').trim()
   const password = String(formData.get('password') || '')
+  const fullName = String(formData.get('full_name') || '').trim()
   const nextPath = getSafeInternalPath(formData.get('next'), '/')
   const useLoginPage = formData.get('auth_page') === '/login'
 
@@ -60,7 +62,7 @@ export async function signUp(formData) {
     password,
     options: {
       data: {
-        full_name: String(formData.get('full_name') || '').trim(),
+        full_name: fullName,
       },
     },
   })
@@ -71,6 +73,8 @@ export async function signUp(formData) {
     }
     redirect(buildAuthModalUrl(nextPath, { auth: 'login', error: error.message, next: nextPath }))
   }
+
+  await sendSignupWelcomeEmail({ to: email, name: fullName }).catch(() => {})
 
   if (useLoginPage) {
     redirect(buildLoginPageUrl(nextPath, { success: 'Cuenta creada. Ya podés iniciar sesión.' }))

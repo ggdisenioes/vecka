@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useVecka, MOCK_USER_STUDENT_DATA } from '../context/VeckaContext';
 import { useResponsive } from '../hooks/useResponsive';
 import Icon from '../components/Icon';
@@ -6,10 +6,64 @@ import { Btn, Badge, ProgressBar, inputStyle } from '../components/Primitives';
 import { CourseCard } from '../components/Cards';
 
 export default function CuentaPage() {
-  const { user, navigate, courses, fmt, userMemberships, userPurchases } = useVecka();
+  const { user, navigate, courses, userMemberships, userPurchases, updateUserProfile, notify } = useVecka();
   const { isMobile, isTablet } = useResponsive();
   const [tab, setTab] = useState('cursos');
+  const [profileForm, setProfileForm] = useState({ fullName: user?.name || '', password: '', confirmPassword: '' });
+  const [profileError, setProfileError] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
   const px = isMobile ? '16px' : isTablet ? '32px' : '80px';
+
+  useEffect(() => {
+    setProfileForm((current) => ({
+      ...current,
+      fullName: user?.name || '',
+    }));
+  }, [user?.name]);
+
+  const setProfileField = (field, value) => {
+    setProfileError('');
+    setProfileForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault();
+    setProfileError('');
+
+    const fullName = profileForm.fullName.trim();
+    const password = profileForm.password;
+    const confirmPassword = profileForm.confirmPassword;
+
+    if (!fullName) {
+      setProfileError('Ingresá tu nombre completo.');
+      return;
+    }
+
+    if (password || confirmPassword) {
+      if (password.length < 8) {
+        setProfileError('La contraseña debe tener al menos 8 caracteres.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setProfileError('Las contraseñas no coinciden.');
+        return;
+      }
+    }
+
+    setProfileSaving(true);
+    try {
+      await updateUserProfile({
+        fullName,
+        password: password || undefined,
+      });
+      setProfileForm((current) => ({ ...current, password: '', confirmPassword: '' }));
+      notify('Perfil actualizado correctamente.');
+    } catch (error) {
+      setProfileError(error.message || 'No pudimos guardar los cambios.');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   if (!user) { navigate('home'); return null; }
 
@@ -209,17 +263,57 @@ export default function CuentaPage() {
         {tab === 'perfil' && (
           <div style={{ maxWidth: 520 }}>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 28, marginBottom: 22 }}>Mi Perfil</h2>
-            <div style={{ background: '#fff', borderRadius: 16, padding: isMobile ? 22 : 28, border: '1px solid oklch(88% 0.012 60)' }}>
+            <form onSubmit={handleProfileSubmit} style={{ background: '#fff', borderRadius: 16, padding: isMobile ? 22 : 28, border: '1px solid oklch(88% 0.012 60)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>
-                {[['Nombre completo', user.name], ['Email', user.email], ['Contraseña', '••••••••']].map(([label, val]) => (
-                  <div key={label}>
-                    <label style={{ ...labelStyle, display: 'block' }}>{label}</label>
-                    <input defaultValue={val} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} />
-                  </div>
-                ))}
+                <div>
+                  <label style={{ ...labelStyle, display: 'block' }}>Nombre completo</label>
+                  <input
+                    value={profileForm.fullName}
+                    onChange={(event) => setProfileField('fullName', event.target.value)}
+                    style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, display: 'block' }}>Email</label>
+                  <input
+                    value={user.email}
+                    style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', color: 'oklch(50% 0.018 50)' }}
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, display: 'block' }}>Nueva contraseña (opcional)</label>
+                  <input
+                    type="password"
+                    value={profileForm.password}
+                    onChange={(event) => setProfileField('password', event.target.value)}
+                    style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                    minLength={8}
+                    placeholder="Dejala vacía si no querés cambiarla"
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, display: 'block' }}>Repetir nueva contraseña</label>
+                  <input
+                    type="password"
+                    value={profileForm.confirmPassword}
+                    onChange={(event) => setProfileField('confirmPassword', event.target.value)}
+                    style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                    minLength={8}
+                    placeholder="Repetí la contraseña nueva"
+                  />
+                </div>
               </div>
-              <Btn size="lg" style={{ width: '100%', justifyContent: 'center' }}>Guardar cambios</Btn>
-            </div>
+              {profileError && (
+                <div style={{ marginBottom: 16, borderRadius: 10, padding: '12px 14px', fontFamily: "'DM Sans', sans-serif", fontSize: 12, background: '#fce8e1', color: '#8a3b26' }}>
+                  {profileError}
+                </div>
+              )}
+              <Btn size="lg" style={{ width: '100%', justifyContent: 'center' }} disabled={profileSaving}>
+                {profileSaving ? 'Guardando...' : 'Guardar cambios'}
+              </Btn>
+            </form>
           </div>
         )}
       </div>
