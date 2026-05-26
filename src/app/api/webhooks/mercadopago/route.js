@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { sendWelcomeEmail, sendPaymentConfirmationEmail, sendPaymentFailedEmail } from '@/lib/email'
+import { sendWelcomeEmail, sendPaymentConfirmationEmail, sendPaymentFailedEmail, sendCheckoutAccountCreatedEmail } from '@/lib/email'
 import { revalidateMemberships } from '@/lib/admin-api'
+import { ensureMembershipCheckoutUser, findMembershipCheckoutUser } from '@/lib/membership-accounts'
 import {
   addBillingPeriod,
   getMercadoPagoAuthorizedPayment,
@@ -92,12 +93,37 @@ async function getTierAndProfile(supabase, tierId, userId) {
   return { tier, profile }
 }
 
+async function getTier(supabase, tierId) {
+  const { data: tier } = await supabase
+    .from('membership_tiers')
+    .select('id, slug, name, billing_period, price_ars')
+    .eq('id', tierId)
+    .maybeSingle()
+
+  return tier || null
+}
+
 function parseExternalReference(value) {
   try {
     const parsed = JSON.parse(String(value || '{}'))
     return parsed && typeof parsed === 'object' ? parsed : {}
   } catch {
     return {}
+  }
+}
+
+function getCheckoutMeta(meta = {}, metadata = {}) {
+  return {
+    tierId: meta.tierId || meta.t || metadata?.tierId || metadata?.tier_id || null,
+    userId: meta.userId || meta.u || metadata?.userId || metadata?.user_id || null,
+    email: meta.customerEmail || meta.email || meta.e || metadata?.customerEmail || metadata?.customer_email || null,
+    fullName: meta.customerName || meta.name || meta.n || metadata?.customerName || metadata?.customer_name || null,
+    couponId: meta.couponId || meta.c || metadata?.couponId || metadata?.coupon_id || null,
+    amount: meta.amount || meta.a || metadata?.amount || null,
+    paymentPlanId: meta.paymentPlanId || meta.p || metadata?.paymentPlanId || metadata?.payment_plan_id || null,
+    paymentMode: meta.paymentMode || meta.m || metadata?.paymentMode || metadata?.payment_mode || null,
+    billingPeriod: meta.billingPeriod || meta.b || metadata?.billingPeriod || metadata?.billing_period || null,
+    notes: meta.notes || metadata?.notes || null,
   }
 }
 
@@ -130,6 +156,7 @@ async function activateMembership({
   paymentNotes,
   expiresAt,
   billingPeriod,
+  temporaryPassword,
 }) {
   const now = new Date().toISOString()
 
@@ -169,6 +196,16 @@ async function activateMembership({
   if (!profile?.email || !tier) return
 
   const name = profile.display_name || profile.full_name || ''
+
+  if (temporaryPassword) {
+    sendCheckoutAccountCreatedEmail({
+      to: profile.email,
+      name,
+      temporaryPassword,
+      tierName: tier.name,
+    }).catch(() => {})
+  }
+
   sendPaymentConfirmationEmail({
     to: profile.email,
     name,
@@ -203,53 +240,59 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
     // MercadoPago may send a non-JSON external reference.
   }
 
-  const tierId = meta.tierId || payment.metadata?.tierId
-  const userId = meta.userId || payment.metadata?.userId
-  const couponId = meta.couponId || payment.metadata?.couponId || null
-  const selectedMethod = meta.paymentPlanId || meta.paymentMethod || payment.metadata?.paymentPlanId || payment.metadata?.payment_method || null
-  const checkoutNotes = meta.notes || payment.metadata?.notes || null
+  const checkout = getCheckoutMeta(meta, payment.metadata)
+  const tierId = checkout.tierId
 
-  if (!tierId || !userId) return
-
-  const { tier, profile } = await getTierAndProfile(supabase, tierId, userId)
-  const billingPeriod = meta.billingPeriod || payment.metadata?.billing_period || tier?.billing_period || 'monthly'
-  const email = profile?.email
-  const name = profile?.display_name || profile?.full_name || ''
+  if (!tierId || (!checkout.userId && !checkout.email)) return
 
   if (payment.status === 'approved') {
-    const amount = Number(payment.transaction_amount || meta.amount || 0)
+    const account = await ensureMembershipCheckoutUser(supabase, {
+      userId: checkout.userId,
+      email: checkout.email,
+      fullName: checkout.fullName,
+    })
+    const { tier, profile } = await getTierAndProfile(supabase, tierId, account.userId)
+    if (!tier || !account.userId) return
+
+    const billingPeriod = checkout.billingPeriod || tier.billing_period || 'monthly'
+    const amount = Number(payment.transaction_amount || checkout.amount || 0)
     const expiresAt = addBillingPeriod(new Date(), billingPeriod)
 
     const activation = await activateMembership({
       supabase,
       tier,
-      profile,
-      userId,
+      profile: account.profile || profile,
+      userId: account.userId,
       tierId,
-      couponId,
+      couponId: checkout.couponId,
       amount,
       paymentReference: `mp-pay:${payment.id}`,
       expiresAt,
       billingPeriod,
+      temporaryPassword: account.temporaryPassword,
       paymentNotes: [
         `MercadoPago · ${payment.payment_method_id || ''} · ${payment.status_detail || ''}`,
         amount ? `Monto acreditado: ARS ${amount}` : null,
-        selectedMethod ? `Plan: ${selectedMethod}` : null,
+        checkout.paymentPlanId ? `Plan: ${checkout.paymentPlanId}` : null,
         billingPeriod ? `Periodo de acceso: ${billingPeriod}` : null,
-        checkoutNotes ? `Comentario: ${checkoutNotes}` : null,
+        checkout.notes ? `Comentario: ${checkout.notes}` : null,
       ].filter(Boolean).join(' · '),
     })
 
     if (!activation?.alreadyApplied) {
-      await incrementCouponUsage(supabase, couponId)
+      await incrementCouponUsage(supabase, checkout.couponId)
     }
-  } else if (FAILED_STATUSES.has(String(payment.status || '').toLowerCase()) && email && tier) {
-    sendPaymentFailedEmail({
-      to: email,
-      name,
-      tierName: tier.name,
-      tierSlug: tier.slug,
-    }).catch(() => {})
+  } else if (FAILED_STATUSES.has(String(payment.status || '').toLowerCase())) {
+    const tier = await getTier(supabase, tierId)
+    const email = checkout.email
+    if (email) {
+      sendPaymentFailedEmail({
+        to: email,
+        name: checkout.fullName || '',
+        tierName: tier?.name || 'El Club VeCKA',
+        tierSlug: tier?.slug,
+      }).catch(() => {})
+    }
   }
 }
 
@@ -261,11 +304,19 @@ async function handlePreapprovalNotification(supabase, preapprovalId) {
   if (!preapproval) return
 
   const meta = parseExternalReference(preapproval.external_reference)
-  const tierId = meta.tierId || preapproval.metadata?.tierId
-  const userId = meta.userId || preapproval.metadata?.userId
+  const checkout = getCheckoutMeta(meta, preapproval.metadata)
+  const tierId = checkout.tierId
+  let userId = checkout.userId
   const status = normalizeMercadoPagoSubscriptionStatus(preapproval.status)
 
-  if (!tierId || !userId) return
+  if (!tierId || (!userId && !checkout.email)) return
+
+  if (!userId && checkout.email) {
+    const account = await findMembershipCheckoutUser(supabase, checkout.email)
+    userId = account.userId
+  }
+
+  if (!userId) return
 
   if (['cancelled', 'paused', 'expired', 'failed'].includes(status)) {
     await supabase
@@ -299,15 +350,12 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
   if (!preapproval) return
 
   const meta = parseExternalReference(preapproval.external_reference)
-  const tierId = meta.tierId || preapproval.metadata?.tierId
-  const userId = meta.userId || preapproval.metadata?.userId
-  const couponId = meta.couponId || preapproval.metadata?.couponId || null
-  const billingPeriod = meta.billingPeriod || preapproval.metadata?.billing_period || null
-  const paymentPlanId = meta.paymentPlanId || preapproval.metadata?.payment_plan_id || null
+  const checkout = getCheckoutMeta(meta, preapproval.metadata)
+  const tierId = checkout.tierId
 
-  if (!tierId || !userId) return
+  if (!tierId || (!checkout.userId && !checkout.email)) return
 
-  const { tier, profile } = await getTierAndProfile(supabase, tierId, userId)
+  const tier = await getTier(supabase, tierId)
   if (!tier) return
 
   const status = getPaymentStatus(authorizedPayment)
@@ -318,38 +366,47 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
   const failed = FAILED_STATUSES.has(status)
 
   if (approved) {
+    const account = await ensureMembershipCheckoutUser(supabase, {
+      userId: checkout.userId,
+      email: checkout.email,
+      fullName: checkout.fullName,
+    })
+    const { profile } = await getTierAndProfile(supabase, tierId, account.userId)
     const approvedAt = getAuthorizedPaymentApprovedAt(authorizedPayment)
-    const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), billingPeriod || tier.billing_period)
+    const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), checkout.billingPeriod || tier.billing_period)
 
     const activation = await activateMembership({
       supabase,
       tier,
-      profile,
-      userId,
+      profile: account.profile || profile,
+      userId: account.userId,
       tierId,
-      couponId,
+      couponId: checkout.couponId,
       amount,
       paymentReference: `mp-sub:${preapprovalId}:${providerPaymentId}`,
       expiresAt,
-      billingPeriod: billingPeriod || tier.billing_period,
+      billingPeriod: checkout.billingPeriod || tier.billing_period,
+      temporaryPassword: account.temporaryPassword,
       paymentNotes: [
         'MercadoPago suscripción recurrente',
         amount ? `Monto acreditado: ARS ${amount}` : null,
         `Preapproval: ${preapprovalId}`,
         `Pago autorizado: ${providerPaymentId}`,
-        paymentPlanId ? `Plan: ${paymentPlanId}` : null,
+        checkout.paymentPlanId ? `Plan: ${checkout.paymentPlanId}` : null,
         `Evento: ${eventType}`,
       ].filter(Boolean).join(' · '),
     })
 
     if (!activation?.alreadyApplied) {
-      await incrementCouponUsage(supabase, couponId)
+      await incrementCouponUsage(supabase, checkout.couponId)
     }
   } else if (failed) {
-    if (profile?.email) {
+    const account = checkout.email ? await findMembershipCheckoutUser(supabase, checkout.email) : { profile: null }
+    const email = account.profile?.email || checkout.email
+    if (email) {
       sendPaymentFailedEmail({
-        to: profile.email,
-        name: profile.display_name || profile.full_name || '',
+        to: email,
+        name: account.profile?.display_name || account.profile?.full_name || checkout.fullName || '',
         tierName: tier.name,
         tierSlug: tier.slug,
       }).catch(() => {})

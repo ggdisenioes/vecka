@@ -32,6 +32,29 @@ export async function updateSession(request) {
   // needs to be refreshed. If we don't await it, the updated cookies never
   // make it into the response and the user appears logged out on the next
   // request.
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  const allowedPasswordChangePaths = [
+    '/cambiar-contrasena',
+    '/logout',
+    '/api/auth/change-password',
+  ]
+
+  if (
+    user?.user_metadata?.requires_password_change &&
+    !allowedPasswordChangePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  ) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/cambiar-contrasena'
+    redirectUrl.search = ''
+    redirectUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+    response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie))
+    return redirectResponse
+  }
+
   return response
 }

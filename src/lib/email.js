@@ -7,6 +7,10 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
+function siteUrl() {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://nuevo.vecka.com.ar').replace(/\/$/, '')
+}
+
 function periodLabel(period) {
   return period === 'monthly' ? 'mensual' : period === 'annual' ? 'anual' : period === 'lifetime' ? 'vitalicia' : ''
 }
@@ -93,6 +97,30 @@ export async function sendPaymentConfirmationEmail({ to, name, tierName, billing
     to,
     subject: `Pago confirmado · ${tierName}`,
     html: baseTemplate({ title: 'Pago confirmado', preheader: `Tu pago de ${tierName} fue procesado exitosamente.`, body }),
+  })
+}
+
+export async function sendCheckoutAccountCreatedEmail({ to, name, temporaryPassword, tierName }) {
+  const loginUrl = `${siteUrl()}/login?next=/cuenta`
+  const body = `
+    <p style="font-family:'Cormorant Garamond',Georgia,serif;font-size:26px;font-weight:700;margin:0 0 16px;">Tu cuenta de VeCKA ya está lista</p>
+    <p>Hola <strong>${name || 'alumna'}</strong>, creamos tu cuenta automáticamente después de confirmar tu pago de <strong>${tierName}</strong>.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f5f0;border-radius:10px;padding:18px 22px;margin:20px 0;font-size:14px;">
+      <tr><td style="padding:5px 0;color:#8a7a6e;">Email</td><td style="padding:5px 0;font-weight:600;text-align:right;">${to}</td></tr>
+      <tr><td style="padding:5px 0;color:#8a7a6e;">Contraseña temporal</td><td style="padding:5px 0;font-weight:700;text-align:right;">${temporaryPassword}</td></tr>
+    </table>
+    <p>En tu primer inicio de sesión te vamos a pedir que cambies esta contraseña por una propia.</p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${loginUrl}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Entrar a mi cuenta →</a>
+    </p>
+    <p style="color:#8a7a6e;font-size:13px;">Si no reconocés esta compra, respondé este email para que lo revisemos.</p>
+  `
+
+  return getResend().emails.send({
+    from: FROM,
+    to,
+    subject: 'Tu acceso a VeCKA',
+    html: baseTemplate({ title: 'Tu cuenta de VeCKA', preheader: 'Creamos tu cuenta y tu contraseña temporal.', body }),
   })
 }
 

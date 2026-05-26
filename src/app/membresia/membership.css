@@ -1265,6 +1265,15 @@
   align-items: start;
 }
 
+.lovable-membership-checkout-form {
+  margin-top: 32px;
+}
+
+.lovable-customer-fields {
+  display: grid;
+  gap: 14px;
+}
+
 .lovable-payment-options {
   margin-top: 32px;
   display: flex;

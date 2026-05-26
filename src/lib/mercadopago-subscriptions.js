@@ -107,6 +107,14 @@ export async function createMercadoPagoPreapproval({ subscriptionId, externalRef
         mode: paymentPlan?.paymentMode || 'subscription',
         plan: paymentPlan?.id || tier.billing_period,
       }),
+      metadata: {
+        tier_id: tier.id,
+        customer_email: payerEmail,
+        customer_name: profile?.display_name || profile?.full_name || undefined,
+        payment_plan_id: paymentPlan?.id || tier.billing_period,
+        payment_mode: paymentPlan?.paymentMode || 'subscription',
+        billing_period: paymentPlan?.billingPeriod || tier.billing_period,
+      },
       status: 'pending',
     }),
   })
@@ -153,6 +161,8 @@ export async function createMercadoPagoPaymentPreference({ externalReference, ti
       metadata: {
         notes: notes || undefined,
         tier_id: tier.id,
+        customer_email: payerEmail,
+        customer_name: profile?.display_name || profile?.full_name || undefined,
         payment_plan_id: paymentPlan?.id || 'one_time',
         payment_mode: paymentPlan?.paymentMode || 'one_time',
         billing_period: paymentPlan?.billingPeriod || 'annual',

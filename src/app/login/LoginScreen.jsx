@@ -87,6 +87,11 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
       throw new Error('No se pudo recuperar la sesión.')
     }
 
+    if (result.data?.user?.user_metadata?.requires_password_change) {
+      window.location.assign(`/cambiar-contrasena?next=${encodeURIComponent(nextPath)}`)
+      return
+    }
+
     const role = await readProfileRole(userId)
     window.location.assign(getPostLoginPath(role, nextPath))
   }

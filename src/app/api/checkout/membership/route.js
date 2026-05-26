@@ -7,16 +7,14 @@ import { createMercadoPagoPaymentPreference, createMercadoPagoPreapproval } from
 
 export async function POST(request) {
   const { user } = await getCurrentAuth()
-  if (!user) {
-    return NextResponse.json({ error: 'Debés iniciar sesión para continuar.' }, { status: 401 })
-  }
-
   const payload = await request.json().catch(() => ({}))
   if (!payload.tierId) {
     return NextResponse.json({ error: 'tierId es requerido' }, { status: 400 })
   }
   const notes = typeof payload.notes === 'string' ? payload.notes.slice(0, 500) : null
   const paymentPlan = getPublicMembershipPaymentPlan(payload.paymentPlanId)
+  const submittedEmail = String(payload.customerEmail || '').trim().toLowerCase()
+  const submittedName = String(payload.customerName || '').trim().slice(0, 120)
 
   const supabase = getSupabaseAdmin()
 
@@ -74,27 +72,38 @@ export async function POST(request) {
     }
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('email, full_name, display_name')
-    .eq('id', user.id)
-    .maybeSingle()
+  const { data: profile } = user
+    ? await supabase
+        .from('profiles')
+        .select('email, full_name, display_name')
+        .eq('id', user.id)
+        .maybeSingle()
+    : { data: null }
+
+  const customerEmail = (profile?.email || user?.email || submittedEmail).trim().toLowerCase()
+  const customerName = profile?.full_name || profile?.display_name || submittedName
+
+  if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    return NextResponse.json({ error: 'Ingresá un email válido para continuar.' }, { status: 400 })
+  }
 
   const checkoutProfile = {
-    email: profile?.email || user.email,
-    full_name: profile?.full_name,
-    display_name: profile?.display_name,
+    email: customerEmail,
+    full_name: customerName,
+    display_name: customerName,
   }
 
   const externalReference = JSON.stringify({
-    flow: paymentPlan.paymentMode === 'subscription' ? 'membership_preapproval' : 'membership_payment',
-    tierId: tier.id,
-    userId: user.id,
-    couponId,
-    amount: finalPrice,
-    paymentPlanId: paymentPlan.id,
-    paymentMode: paymentPlan.paymentMode,
-    billingPeriod: paymentPlan.billingPeriod,
+    f: paymentPlan.paymentMode === 'subscription' ? 'membership_preapproval' : 'membership_payment',
+    t: tier.id,
+    u: user?.id || null,
+    e: customerEmail,
+    n: customerName || null,
+    c: couponId,
+    a: finalPrice,
+    p: paymentPlan.id,
+    m: paymentPlan.paymentMode,
+    b: paymentPlan.billingPeriod,
   })
 
   let mpData

@@ -12,14 +12,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function MembershipCheckoutPage({ params }) {
   const { slug } = await params
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
 
   if (!isPublicMembershipSlug(slug)) {
     notFound()
-  }
-
-  if (!user) {
-    redirect(`/login?next=/checkout/${slug}`)
   }
 
   const admin = getSupabaseAdmin()
@@ -32,13 +28,15 @@ export default async function MembershipCheckoutPage({ params }) {
 
   if (!tier) notFound()
 
-  const { data: grants } = await admin
-    .from('membership_grants')
-    .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
-    .eq('user_id', user.id)
+  if (user) {
+    const { data: grants } = await admin
+      .from('membership_grants')
+      .select('tier_id, access_status, granted_at, starts_at, expires_at, membership_tiers(slug, billing_period, price_ars, features, description)')
+      .eq('user_id', user.id)
 
-  if (getClubAccessFromGrants(grants || []).hasAccess) {
-    redirect(`/membresias/${tier.slug}`)
+    if (getClubAccessFromGrants(grants || []).hasAccess) {
+      redirect(`/membresias/${tier.slug}`)
+    }
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
@@ -55,7 +53,15 @@ export default async function MembershipCheckoutPage({ params }) {
             <p className="lovable-checkout-subtitle">
               Elegí cómo querés pagar el Club. El acceso se activa automáticamente cuando Mercado Pago acredita el pago.
             </p>
-            <MembershipCheckoutForm tier={tier} paymentPlans={paymentPlans} />
+            <MembershipCheckoutForm
+              tier={tier}
+              paymentPlans={paymentPlans}
+              customer={{
+                email: profile?.email || user?.email || '',
+                fullName: profile?.full_name || profile?.display_name || user?.user_metadata?.full_name || '',
+                locked: Boolean(user),
+              }}
+            />
           </section>
 
           <aside className="lovable-order-summary">

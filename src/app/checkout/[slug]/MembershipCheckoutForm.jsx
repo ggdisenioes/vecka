@@ -40,17 +40,27 @@ function PaymentIcon({ type }) {
   )
 }
 
-export default function MembershipCheckoutForm({ tier, paymentPlans = [] }) {
+export default function MembershipCheckoutForm({ tier, paymentPlans = [], customer = {} }) {
   const plans = paymentPlans.length ? paymentPlans : []
   const [paymentPlanId, setPaymentPlanId] = useState(plans[0]?.id || 'monthly')
+  const [email, setEmail] = useState(customer.email || '')
+  const [fullName, setFullName] = useState(customer.fullName || '')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const selectedPlan = plans.find((plan) => plan.id === paymentPlanId) || plans[0]
+  const emailLocked = Boolean(customer.locked && customer.email)
 
-  async function handleSubmit() {
+  async function handleSubmit(event) {
+    event.preventDefault()
+
     if (!selectedPlan) {
       setError('No hay una opción de pago configurada.')
+      return
+    }
+
+    if (!email.trim()) {
+      setError('Ingresá tu email para continuar.')
       return
     }
 
@@ -64,6 +74,8 @@ export default function MembershipCheckoutForm({ tier, paymentPlans = [] }) {
         body: JSON.stringify({
           tierId: tier.id,
           paymentPlanId: selectedPlan.id,
+          customerEmail: email.trim(),
+          customerName: fullName.trim() || undefined,
           notes: notes.trim() || undefined,
         }),
       })
@@ -83,7 +95,31 @@ export default function MembershipCheckoutForm({ tier, paymentPlans = [] }) {
   }
 
   return (
-    <>
+    <form onSubmit={handleSubmit} className="lovable-membership-checkout-form">
+      <div className="lovable-customer-fields">
+        <label className="lovable-field">
+          <span>Email para crear tu acceso</span>
+          <input
+            className="lovable-input"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            readOnly={emailLocked}
+            required
+            placeholder="tu@email.com"
+          />
+        </label>
+        <label className="lovable-field">
+          <span>Nombre completo (opcional)</span>
+          <input
+            className="lovable-input"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            placeholder="Tu nombre"
+          />
+        </label>
+      </div>
+
       <fieldset className="lovable-payment-options">
         <legend>Forma de pago</legend>
         {plans.map((plan) => {
@@ -130,9 +166,9 @@ export default function MembershipCheckoutForm({ tier, paymentPlans = [] }) {
 
       {error ? <div className="lovable-message error">{error}</div> : null}
 
-      <button type="button" className="lovable-button" style={{ width: 'auto', paddingInline: 28 }} onClick={handleSubmit} disabled={loading}>
+      <button type="submit" className="lovable-button" style={{ width: 'auto', paddingInline: 28 }} disabled={loading}>
         {loading ? 'Procesando…' : selectedPlan?.ctaLabel || 'Continuar a Mercado Pago'}
       </button>
-    </>
+    </form>
   )
 }
