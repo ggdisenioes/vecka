@@ -13,9 +13,9 @@ function HeaderCta({ user, userRole, loginHref }) {
     const adminLabel = userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'
 
     return (
-      <a href={adminHref} className="site-shell-button ghost">
+      <Link href={adminHref} className="site-shell-button ghost">
         {adminLabel}
-      </a>
+      </Link>
     )
   }
 
@@ -64,9 +64,9 @@ export default function PublicSiteShell({ children, user = null, userRole = null
                 </Link>
               ))}
               {user ? (
-                <a href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'}>
+                <Link href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'}>
                   {userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'}
-                </a>
+                </Link>
               ) : (
                 <Link href={loginHref}>Iniciar sesión</Link>
               )}
