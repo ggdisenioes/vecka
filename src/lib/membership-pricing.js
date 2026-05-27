@@ -17,10 +17,13 @@ export function formatPriceArs(value) {
 }
 
 export function resolvePublicMembershipPlanPrices({ tier = {}, settings = {} } = {}) {
-  const tierMonthly = sanitizePrice(tier.price_ars)
-  const monthlyPriceArs = sanitizePrice(settings.public_membership_monthly_price_ars ?? tierMonthly)
+  const safeTier = tier && typeof tier === 'object' ? tier : {}
+  const safeSettings = settings && typeof settings === 'object' ? settings : {}
+
+  const tierMonthly = sanitizePrice(safeTier.price_ars)
+  const monthlyPriceArs = sanitizePrice(safeSettings.public_membership_monthly_price_ars ?? tierMonthly)
   const annualPriceArs = sanitizePrice(
-    settings.public_membership_annual_price_ars ?? (monthlyPriceArs > 0 ? monthlyPriceArs * 12 : 0),
+    safeSettings.public_membership_annual_price_ars ?? (monthlyPriceArs > 0 ? monthlyPriceArs * 12 : 0),
   )
 
   return {

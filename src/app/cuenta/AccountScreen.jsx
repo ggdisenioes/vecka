@@ -73,7 +73,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
         </div>
         <div className="account-hero-actions">
           {user.isStaff ? (
-            <Link href="/admin" className="membership-cta" style={{ width: 'fit-content' }}>
+            <Link href="/admin" prefetch={false} className="membership-cta" style={{ width: 'fit-content' }}>
               Panel de control
             </Link>
           ) : null}
@@ -232,7 +232,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
             {success ? <div className="lovable-message success">{success}</div> : null}
             <div className="account-form-actions">
               {user.isStaff ? (
-                <Link href="/admin" className="membership-cta" style={{ width: 'fit-content' }}>
+                <Link href="/admin" prefetch={false} className="membership-cta" style={{ width: 'fit-content' }}>
                   Panel de control
                 </Link>
               ) : null}
