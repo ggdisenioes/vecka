@@ -346,6 +346,10 @@
   margin-bottom: 24px;
 }
 
+.account-hero-actions {
+  margin-left: auto;
+}
+
 .account-avatar {
   width: 74px;
   height: 74px;
@@ -440,6 +444,13 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.account-form-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .account-field {
@@ -645,10 +656,15 @@
 
   .account-hero {
     align-items: flex-start;
+    flex-wrap: wrap;
   }
 
   .account-hero-copy h1 {
     font-size: 32px;
+  }
+
+  .account-hero-actions {
+    margin-left: 0;
   }
 
   .account-metrics,
