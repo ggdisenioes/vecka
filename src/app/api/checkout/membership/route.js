@@ -12,18 +12,25 @@ export async function POST(request) {
     return NextResponse.json({ error: 'tierId es requerido' }, { status: 400 })
   }
   const notes = typeof payload.notes === 'string' ? payload.notes.slice(0, 500) : null
-  const paymentPlan = getPublicMembershipPaymentPlan(payload.paymentPlanId)
   const submittedEmail = String(payload.customerEmail || '').trim().toLowerCase()
   const submittedName = String(payload.customerName || '').trim().slice(0, 120)
 
   const supabase = getSupabaseAdmin()
 
-  const { data: tier } = await supabase
-    .from('membership_tiers')
-    .select('id, slug, name, description, price_ars, billing_period, status')
-    .eq('id', payload.tierId)
-    .eq('status', 'published')
-    .maybeSingle()
+  const [{ data: tier }, { data: settings }] = await Promise.all([
+    supabase
+      .from('membership_tiers')
+      .select('id, slug, name, description, price_ars, billing_period, status')
+      .eq('id', payload.tierId)
+      .eq('status', 'published')
+      .maybeSingle(),
+    supabase
+      .from('platform_settings')
+      .select('public_membership_monthly_price_ars, public_membership_annual_price_ars')
+      .maybeSingle(),
+  ])
+
+  const paymentPlan = getPublicMembershipPaymentPlan(payload.paymentPlanId, { tier, settings: settings || {} })
 
   if (!tier) {
     return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })

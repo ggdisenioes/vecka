@@ -9,10 +9,13 @@ const NAV_ITEMS = [
 
 function HeaderCta({ user, userRole, loginHref }) {
   if (user) {
+    const adminHref = userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'
+    const adminLabel = userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'
+
     return (
-      <Link href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'} className="site-shell-button ghost">
-        {userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'}
-      </Link>
+      <a href={adminHref} className="site-shell-button ghost">
+        {adminLabel}
+      </a>
     )
   }
 
@@ -60,9 +63,13 @@ export default function PublicSiteShell({ children, user = null, userRole = null
                   {item.label}
                 </Link>
               ))}
-              <Link href={user ? (userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta') : loginHref}>
-                {user ? (userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta') : 'Iniciar sesión'}
-              </Link>
+              {user ? (
+                <a href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'}>
+                  {userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'}
+                </a>
+              ) : (
+                <Link href={loginHref}>Iniciar sesión</Link>
+              )}
               <Link href="/membresias" className="mobile-primary">Sumarme al Club</Link>
             </nav>
           </details>

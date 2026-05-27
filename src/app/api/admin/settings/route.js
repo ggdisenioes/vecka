@@ -24,6 +24,8 @@ export async function PATCH(request) {
     if (payload.checkoutBankEnabled !== undefined) patch.checkout_bank_enabled = Boolean(payload.checkoutBankEnabled)
     if (payload.checkoutArsEnabled !== undefined) patch.checkout_ars_enabled = Boolean(payload.checkoutArsEnabled)
     if (payload.checkoutUsdEnabled !== undefined) patch.checkout_usd_enabled = Boolean(payload.checkoutUsdEnabled)
+    if (payload.publicMembershipMonthlyPriceArs !== undefined) patch.public_membership_monthly_price_ars = payload.publicMembershipMonthlyPriceArs === '' ? null : Math.max(0, Number(payload.publicMembershipMonthlyPriceArs || 0))
+    if (payload.publicMembershipAnnualPriceArs !== undefined) patch.public_membership_annual_price_ars = payload.publicMembershipAnnualPriceArs === '' ? null : Math.max(0, Number(payload.publicMembershipAnnualPriceArs || 0))
     if (payload.bankHolderName !== undefined) patch.bank_holder_name = payload.bankHolderName || null
     if (payload.bankCbu !== undefined) patch.bank_cbu = payload.bankCbu || null
     if (payload.bankAlias !== undefined) patch.bank_alias = payload.bankAlias || null

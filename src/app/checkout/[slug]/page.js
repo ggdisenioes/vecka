@@ -19,12 +19,18 @@ export default async function MembershipCheckoutPage({ params }) {
   }
 
   const admin = getSupabaseAdmin()
-  const { data: tier } = await admin
+  const [{ data: tier }, { data: settings }] = await Promise.all([
+    admin
     .from('membership_tiers')
     .select('id, slug, name, description, price_ars, price_usd, billing_period, status, features')
     .eq('slug', slug)
     .eq('status', 'published')
-    .maybeSingle()
+    .maybeSingle(),
+    admin
+      .from('platform_settings')
+      .select('public_membership_monthly_price_ars, public_membership_annual_price_ars')
+      .maybeSingle(),
+  ])
 
   if (!tier) notFound()
 
@@ -40,10 +46,10 @@ export default async function MembershipCheckoutPage({ params }) {
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
-  const paymentPlans = getPublicMembershipPaymentPlans()
+  const paymentPlans = getPublicMembershipPaymentPlans({ tier, settings: settings || {} })
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/checkout/${slug}`}>
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=/checkout/${slug}`}>
       <main className="lovable-checkout">
         <Link href="/membresias" className="lovable-back-link">← Volver a membresías</Link>
 

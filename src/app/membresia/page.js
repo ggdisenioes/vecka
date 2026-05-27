@@ -35,9 +35,10 @@ function statusCopy(tier, userIsStaff) {
 export default async function MembresiaLandingPage() {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
-  const paymentPlans = getPublicMembershipPaymentPlans()
-  const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
-  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
+  const { data: settings } = await getSupabaseAdmin()
+    .from('platform_settings')
+    .select('public_membership_monthly_price_ars, public_membership_annual_price_ars')
+    .maybeSingle()
 
   const tiersQuery = getSupabaseAdmin()
     .from('membership_tiers')
@@ -48,6 +49,10 @@ export default async function MembresiaLandingPage() {
 
   const { data: rawTiers } = await tiersQuery
   const tiers = userIsStaff ? (rawTiers || []) : (rawTiers || []).filter((tier) => tier.status === 'published')
+  const publicTier = tiers[0] || rawTiers?.[0] || null
+  const paymentPlans = getPublicMembershipPaymentPlans({ tier: publicTier, settings: settings || {} })
+  const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
+  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
 
   let activeTierIds = new Set()
   let activeCounts = new Map()
@@ -78,7 +83,7 @@ export default async function MembresiaLandingPage() {
   }
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/membresias">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/membresias">
       <section className="membership-shell">
         <header className="lovable-hero">
           <div className="lovable-hero-inner">

@@ -101,6 +101,8 @@ export default function SettingsForm({ initialSettings: s }) {
     checkoutNote: s.checkout_note || '',
     checkoutArsEnabled: s.checkout_ars_enabled ?? true,
     checkoutUsdEnabled: s.checkout_usd_enabled ?? false,
+    publicMembershipMonthlyPriceArs: s.public_membership_monthly_price_ars ?? '',
+    publicMembershipAnnualPriceArs: s.public_membership_annual_price_ars ?? '',
     // Correo
     resendFromName: s.resend_from_name || '',
     resendFromEmail: s.resend_from_email || '',
@@ -312,6 +314,19 @@ export default function SettingsForm({ initialSettings: s }) {
               label="Dólares (USD)"
               description="Muestra los datos de la cuenta en dólares en el checkout. Requiere tener una cuenta USD configurada arriba."
             />
+          </div>
+
+          <div style={card}>
+            <h3 style={cardTitle}>Precios públicos del Club</h3>
+            <p style={cardSub}>Estos valores se usan en la landing de membresías y en el checkout. Si dejás el mensual vacío o en 0, se usa `price_ars` de la membresía pública. Si dejás el anual vacío, se calcula como mensual × 12.</p>
+            <div style={grid2}>
+              <Field label="Precio mensual público (ARS)">
+                <input style={input} type="number" min="0" value={form.publicMembershipMonthlyPriceArs} onChange={setInput('publicMembershipMonthlyPriceArs')} placeholder="Ej: 22000" />
+              </Field>
+              <Field label="Precio anual público (ARS)">
+                <input style={input} type="number" min="0" value={form.publicMembershipAnnualPriceArs} onChange={setInput('publicMembershipAnnualPriceArs')} placeholder="Ej: 264000" />
+              </Field>
+            </div>
           </div>
         </>
       )}

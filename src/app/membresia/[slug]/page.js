@@ -107,14 +107,18 @@ export default async function MembershipTierPage({ params, searchParams }) {
   }
 
   const features = Array.isArray(tier.features) ? tier.features : []
-  const paymentPlans = getPublicMembershipPaymentPlans()
+  const { data: settings } = await admin
+    .from('platform_settings')
+    .select('public_membership_monthly_price_ars, public_membership_annual_price_ars')
+    .maybeSingle()
+  const paymentPlans = getPublicMembershipPaymentPlans({ tier, settings: settings || {} })
   const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
   const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
   const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
   const checkoutHref = user ? `/checkout/${tier.slug}` : `/login?next=/checkout/${tier.slug}`
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/membresias/${slug}`}>
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=/membresias/${slug}`}>
       <section className="membership-shell">
         <div className="membership-container" style={{ paddingTop: 48 }}>
           <Link href="/membresias" className="lovable-back-link">← Volver a membresías</Link>

@@ -3,12 +3,9 @@ export const PUBLIC_MEMBERSHIP_PAYMENT_PLAN_IDS = {
   ANNUAL: 'annual',
 }
 
-const DEFAULT_MONTHLY_PRICE_ARS = 22000
-const DEFAULT_ANNUAL_PRICE_ARS = 498000
-
-function envPrice(name, fallback) {
-  const value = Number.parseInt(process.env[name] || '', 10)
-  return Number.isFinite(value) && value > 0 ? value : fallback
+function sanitizePrice(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : 0
 }
 
 export function formatPriceArs(value) {
@@ -19,7 +16,22 @@ export function formatPriceArs(value) {
   }).format(Number(value || 0))
 }
 
-export function getPublicMembershipPaymentPlans() {
+export function resolvePublicMembershipPlanPrices({ tier = {}, settings = {} } = {}) {
+  const tierMonthly = sanitizePrice(tier.price_ars)
+  const monthlyPriceArs = sanitizePrice(settings.public_membership_monthly_price_ars ?? tierMonthly)
+  const annualPriceArs = sanitizePrice(
+    settings.public_membership_annual_price_ars ?? (monthlyPriceArs > 0 ? monthlyPriceArs * 12 : 0),
+  )
+
+  return {
+    monthlyPriceArs,
+    annualPriceArs,
+  }
+}
+
+export function getPublicMembershipPaymentPlans(input = {}) {
+  const { monthlyPriceArs, annualPriceArs } = resolvePublicMembershipPlanPrices(input)
+
   return [
     {
       id: PUBLIC_MEMBERSHIP_PAYMENT_PLAN_IDS.MONTHLY,
@@ -27,7 +39,7 @@ export function getPublicMembershipPaymentPlans() {
       checkoutLabel: 'Pago mensual',
       ctaLabel: 'Activar suscripción mensual',
       description: 'Pago recurrente mensual por Mercado Pago.',
-      priceArs: envPrice('PUBLIC_MEMBERSHIP_MONTHLY_PRICE_ARS', DEFAULT_MONTHLY_PRICE_ARS),
+      priceArs: monthlyPriceArs,
       billingPeriod: 'monthly',
       paymentMode: 'subscription',
       intervalLabel: 'mes',
@@ -40,7 +52,7 @@ export function getPublicMembershipPaymentPlans() {
       checkoutLabel: 'Pago anual',
       ctaLabel: 'Pagar anual',
       description: 'Pago único por 12 meses de acceso.',
-      priceArs: envPrice('PUBLIC_MEMBERSHIP_ANNUAL_PRICE_ARS', DEFAULT_ANNUAL_PRICE_ARS),
+      priceArs: annualPriceArs,
       billingPeriod: 'annual',
       paymentMode: 'one_time',
       intervalLabel: 'pago único',
@@ -50,7 +62,7 @@ export function getPublicMembershipPaymentPlans() {
   ]
 }
 
-export function getPublicMembershipPaymentPlan(planId) {
-  const plans = getPublicMembershipPaymentPlans()
+export function getPublicMembershipPaymentPlan(planId, input = {}) {
+  const plans = getPublicMembershipPaymentPlans(input)
   return plans.find((plan) => plan.id === planId) || plans[0]
 }
