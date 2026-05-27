@@ -108,7 +108,14 @@ function FeaturesList({ features, onChange }) {
   )
 }
 
-export default function MembershipTierEditor({ tier, initialCourses, allCourses, initialGrants, initialContentItems }) {
+export default function MembershipTierEditor({
+  tier,
+  initialCourses,
+  allCourses,
+  initialGrants,
+  initialCategories,
+  initialContentItems,
+}) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState('datos')
@@ -129,6 +136,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   // Cursos y miembros
   const [courses, setCourses] = useState(initialCourses)
   const [grants, setGrants] = useState(initialGrants)
+  const [categories, setCategories] = useState(initialCategories || [])
   const [contentItems, setContentItems] = useState(initialContentItems || [])
 
   // Formulario nuevo miembro
@@ -142,7 +150,9 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   const [newContentSummary, setNewContentSummary] = useState('')
   const [newContentBody, setNewContentBody] = useState('')
   const [newContentUrl, setNewContentUrl] = useState('')
+  const [newContentCategoryId, setNewContentCategoryId] = useState('')
   const [newContentFile, setNewContentFile] = useState(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
   const [newCourseId, setNewCourseId] = useState('')
   const [newCourseTitle, setNewCourseTitle] = useState('')
   const [newCourseSubtitle, setNewCourseSubtitle] = useState('')
@@ -156,6 +166,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
   }
 
   const linkedCourseIds = useMemo(() => new Set(courses.map((c) => c.id)), [courses])
+  const categoriesById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories])
   const linkableCourses = useMemo(() => allCourses.filter((c) => !linkedCourseIds.has(c.id)), [allCourses, linkedCourseIds])
   const publishedCourseCount = courses.filter((c) => c.status === 'published').length
   const publishedContentCount = contentItems.filter((item) => item.status === 'published').length
@@ -255,9 +266,95 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
     }
   }
 
+  async function handleCreateCategory() {
+    const name = newCategoryName.trim()
+    if (!name) return
+    setBusy('create-category')
+    try {
+      const res = await fetch('/api/admin/membership-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tierId: tier.id,
+          name,
+          sortOrder: categories.length,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo crear la categoría')
+      setCategories([...categories, data.category])
+      setNewCategoryName('')
+      setNewContentCategoryId((current) => current || data.category.id)
+      showToast('Categoría creada')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al crear categoría', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  function updateCategoryLocal(id, patch) {
+    setCategories(categories.map((category) => (category.id === id ? { ...category, ...patch } : category)))
+  }
+
+  async function handleSaveCategory(category) {
+    setBusy(`category-${category.id}`)
+    try {
+      const res = await fetch(`/api/admin/membership-categories/${category.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: category.name,
+          sortOrder: category.sort_order,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar la categoría')
+      setCategories(categories.map((current) => (current.id === category.id ? data.category : current)))
+      showToast('Categoría guardada')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al guardar categoría', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleDeleteCategory(category) {
+    if (!window.confirm(`¿Eliminar la categoría "${category.name}"? Los contenidos quedarán sin categoría.`)) return
+    setBusy(`delete-category-${category.id}`)
+    try {
+      const res = await fetch(`/api/admin/membership-categories/${category.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo eliminar la categoría')
+      setCategories(categories.filter((current) => current.id !== category.id))
+      setContentItems(contentItems.map((item) => (
+        item.category_id === category.id
+          ? { ...item, category_id: null }
+          : item
+      )))
+      if (newContentCategoryId === category.id) setNewContentCategoryId('')
+      showToast('Categoría eliminada')
+      startTransition(() => router.refresh())
+    } catch (error) {
+      showToast(error.message || 'Error al eliminar categoría', 'error')
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function handleCreateContentItem() {
     const title = newContentTitle.trim()
     if (!title) return
+    if (categories.length === 0) {
+      showToast('Creá al menos una categoría antes de cargar contenido.', 'error')
+      return
+    }
+    if (!newContentCategoryId) {
+      showToast('Elegí una categoría para este contenido.', 'error')
+      return
+    }
     if ((newContentType === 'download' || newContentType === 'image') && !newContentFile && !newContentUrl.trim()) {
       showToast('Agregá un archivo o una URL para este contenido', 'error')
       return
@@ -278,6 +375,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
         formData.append('summary', newContentSummary)
         formData.append('body', newContentBody)
         formData.append('mediaUrl', newContentUrl)
+        formData.append('categoryId', newContentCategoryId)
         formData.append('sortOrder', String(contentItems.length))
         formData.append('status', 'draft')
         formData.append('file', newContentFile)
@@ -293,6 +391,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
             summary: newContentSummary,
             body: newContentBody,
             mediaUrl: newContentUrl,
+            categoryId: newContentCategoryId,
             sortOrder: contentItems.length,
             status: 'draft',
           }),
@@ -333,6 +432,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
           summary: next.summary,
           body: next.body,
           mediaUrl: next.media_url,
+          categoryId: next.category_id,
           sortOrder: next.sort_order,
           status: next.status,
         }),
@@ -642,6 +742,83 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
             moldes PDF descargables, links externos o embeds sin convertirlos en cursos.
           </p>
 
+          <div className="membership-content-create" style={{ marginBottom: 18 }}>
+            <div className="section-heading" style={{ marginBottom: 8 }}>
+              <h4>Categorías</h4>
+            </div>
+            <p style={{ marginTop: 0, color: 'var(--muted)', fontSize: 13 }}>
+              Cada recurso queda asociado a una categoría. Después las clientas la usan para filtrar el contenido.
+            </p>
+
+            <div className="editor-row">
+              <div className="editor-field">
+                <label>Nueva categoría</label>
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Ej: Moldes, clases grabadas, recursos"
+                />
+              </div>
+              <div className="editor-field">
+                <label>Acción</label>
+                <button
+                  type="button"
+                  className="admin-button"
+                  onClick={handleCreateCategory}
+                  disabled={busy === 'create-category' || !newCategoryName.trim()}
+                >
+                  {busy === 'create-category' ? 'Creando…' : '+ Crear categoría'}
+                </button>
+              </div>
+            </div>
+
+            {categories.length === 0 ? (
+              <div className="empty-state" style={{ marginTop: 10 }}>Todavía no hay categorías creadas.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+                {categories.map((category) => (
+                  <div key={category.id} className="membership-content-card" style={{ padding: 14 }}>
+                    <div className="editor-row">
+                      <div className="editor-field">
+                        <label>Nombre</label>
+                        <input
+                          value={category.name || ''}
+                          onChange={(e) => updateCategoryLocal(category.id, { name: e.target.value })}
+                        />
+                      </div>
+                      <div className="editor-field">
+                        <label>Orden</label>
+                        <input
+                          type="number"
+                          value={category.sort_order ?? 0}
+                          onChange={(e) => updateCategoryLocal(category.id, { sort_order: Number(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                    <div className="actions-row">
+                      <button
+                        type="button"
+                        className="admin-button ghost"
+                        onClick={() => handleSaveCategory(category)}
+                        disabled={busy === `category-${category.id}`}
+                      >
+                        {busy === `category-${category.id}` ? 'Guardando…' : 'Guardar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-button danger"
+                        onClick={() => handleDeleteCategory(category)}
+                        disabled={busy === `delete-category-${category.id}`}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="membership-content-create">
             <div className="section-heading" style={{ marginBottom: 8 }}>
               <h4>Nuevo contenido</h4>
@@ -667,6 +844,16 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
                 <label>Orden</label>
                 <input type="number" value={contentItems.length} disabled />
               </div>
+            </div>
+
+            <div className="editor-field">
+              <label>Categoría</label>
+              <select value={newContentCategoryId} onChange={(e) => setNewContentCategoryId(e.target.value)} disabled={categories.length === 0}>
+                <option value="">{categories.length === 0 ? 'Primero creá una categoría' : 'Elegí una categoría'}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="editor-field">
@@ -750,6 +937,7 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
                       <strong>{item.title || 'Contenido sin título'}</strong>
                       <div className="file-meta">
                         {contentTypeLabel(item.type)} · {item.status === 'published' ? 'Publicado' : item.status === 'archived' ? 'Archivado' : 'Borrador'}
+                        {categoriesById.get(item.category_id)?.name ? ` · ${categoriesById.get(item.category_id)?.name}` : ''}
                         {item.file_name ? ` · ${item.file_name} (${formatBytes(item.size_bytes)})` : ''}
                       </div>
                     </div>
@@ -774,6 +962,15 @@ export default function MembershipTierEditor({ tier, initialCourses, allCourses,
                       <select value={item.status || 'draft'} onChange={(e) => updateContentItemLocal(item.id, { status: e.target.value })}>
                         {STATUSES.map((statusOption) => (
                           <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="editor-field">
+                      <label>Categoría</label>
+                      <select value={item.category_id || ''} onChange={(e) => updateContentItemLocal(item.id, { category_id: e.target.value || null })}>
+                        <option value="">Sin categoría</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
                         ))}
                       </select>
                     </div>

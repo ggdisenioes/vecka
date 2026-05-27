@@ -1,9 +1,35 @@
 import { useEffect, useState } from 'react';
-import { useVecka, MOCK_USER_STUDENT_DATA } from '../context/VeckaContext';
+import { useVecka } from '../context/VeckaContext';
 import { useResponsive } from '../hooks/useResponsive';
 import Icon from '../components/Icon';
 import { Btn, Badge, ProgressBar, inputStyle } from '../components/Primitives';
 import { CourseCard } from '../components/Cards';
+
+function firstName(value) {
+  const name = String(value || '').trim();
+  return name ? name.split(/\s+/)[0] : 'Hola';
+}
+
+function countCourseLessons(course) {
+  if (typeof course?.lessons === 'number') return course.lessons;
+  if (course?.lessons === '∞') return 0;
+  if (Array.isArray(course?.modules)) {
+    return course.modules.reduce((sum, module) => sum + (module.lessons?.length || 0), 0);
+  }
+  return 0;
+}
+
+function membershipStartLabel(memberships = []) {
+  const values = memberships
+    .map((membership) => membership.startsAt || membership.grantedAt)
+    .filter(Boolean)
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (values.length === 0) return null;
+  return values[0].toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+}
 
 export default function CuentaPage() {
   const { user, navigate, courses, userMemberships, userPurchases, updateUserProfile, notify } = useVecka();
@@ -67,9 +93,13 @@ export default function CuentaPage() {
 
   if (!user) { navigate('home'); return null; }
 
-  const enrolledCourses = courses.filter(c => c.enrolled);
+  const accessibleCourses = courses.filter((course) => course.enrolled || course.canAccess);
+  const enrolledCourses = accessibleCourses.filter((course) => course.enrolled);
   const activeMemberships = (userMemberships || []).filter(m => m.accessStatus === 'active');
   const purchases = userPurchases || [];
+  const coursesInProgress = accessibleCourses.filter((course) => course.progress > 0 && course.progress < 100);
+  const lessonsCount = accessibleCourses.reduce((sum, course) => sum + countCourseLessons(course), 0);
+  const studentSince = membershipStartLabel(activeMemberships);
   const tabs = [
     { id: 'cursos', label: 'Mis Cursos', icon: 'book' },
     ...(activeMemberships.length > 0 ? [{ id: 'membresia', label: isMobile ? 'Membresía' : 'Mi Membresía', icon: 'star' }] : []),
@@ -89,15 +119,15 @@ export default function CuentaPage() {
               </div>
               <div>
                 <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 26 : 32, margin: 0 }}>
-                  Hola, {user.name.split(' ')[0]} 👋
+                  Hola, {firstName(user.name)} 👋
                 </h1>
                 <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'oklch(52% 0.018 50)', marginTop: 2 }}>
-                  Alumna desde {MOCK_USER_STUDENT_DATA.memberSince}
+                  {studentSince ? `Miembro desde ${studentSince}` : user.email}
                 </div>
               </div>
             </div>
             <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', gap: isMobile ? 20 : 28 }}>
-              {[[enrolledCourses.length, 'Cursos'], [MOCK_USER_STUDENT_DATA.completedLessons, 'Clases'], [purchases.length, 'Compras']].map(([val, label]) => (
+              {[[accessibleCourses.length, 'Cursos'], [lessonsCount, 'Clases'], [purchases.length, 'Compras']].map(([val, label]) => (
                 <div key={label} style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#5e9e8a' }}>{val}</div>
                   <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(55% 0.018 50)' }}>{label}</div>
@@ -121,11 +151,11 @@ export default function CuentaPage() {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: `32px ${px}` }}>
         {tab === 'cursos' && (
           <div>
-            {enrolledCourses.some(c => c.progress > 0 && c.progress < 100) && (
+            {coursesInProgress.length > 0 && (
               <div style={{ marginBottom: 36 }}>
                 <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 28, marginBottom: 18 }}>Continuá aprendiendo</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16 }}>
-                  {enrolledCourses.filter(c => c.progress > 0 && c.progress < 100).map(c => (
+                  {coursesInProgress.map(c => (
                     <div key={c.id} style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', display: 'flex', border: '1px solid oklch(90% 0.012 60)' }}>
                       <div style={{ width: 100, background: c.color, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 11, color: 'rgba(0,0,0,.35)', textAlign: 'center', padding: 8 }}>{c.title}</div>
@@ -146,11 +176,17 @@ export default function CuentaPage() {
               </div>
             )}
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 28, marginBottom: 18 }}>Todos mis talleres</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 22 }}>
-              {enrolledCourses.map(c => (
-                <CourseCard key={c.id} course={c} onClick={() => navigate('curso', { course: c })} />
-              ))}
-            </div>
+            {accessibleCourses.length === 0 ? (
+              <div style={{ background: '#fff', borderRadius: 16, padding: 28, border: '1px solid oklch(88% 0.012 60)', fontFamily: "'DM Sans', sans-serif", color: 'oklch(52% 0.018 50)' }}>
+                Todavía no tenés talleres disponibles en tu cuenta.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: isMobile ? 16 : 22 }}>
+                {accessibleCourses.map(c => (
+                  <CourseCard key={c.id} course={c} onClick={() => navigate('curso', { course: c })} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

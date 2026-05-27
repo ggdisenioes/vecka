@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
+import MembershipContentSection from './MembershipContentSection'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import {
   CONTENT_MEMBERSHIP_SLUG,
@@ -14,19 +15,6 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import '../membership.css'
 
 export const dynamic = 'force-dynamic'
-
-function RichBody({ html }) {
-  if (!html) return null
-  return <div className="article-body" dangerouslySetInnerHTML={{ __html: html }} />
-}
-
-function contentTypeLabel(type) {
-  if (type === 'download') return 'Descargable'
-  if (type === 'image') return 'Imagen'
-  if (type === 'link') return 'Link'
-  if (type === 'embed') return 'Video'
-  return 'Texto'
-}
 
 export default async function MembershipTierPage({ params, searchParams }) {
   const { slug } = await params
@@ -91,7 +79,15 @@ export default async function MembershipTierPage({ params, searchParams }) {
     .filter((course) => userIsStaff || course.status === 'published')
 
   let contentItems = []
+  let contentCategories = []
   if (hasAccess && contentTier?.id) {
+    const { data: categories } = await admin
+      .from('membership_content_categories')
+      .select('*')
+      .eq('tier_id', contentTier.id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
     let itemsQuery = admin
       .from('membership_content_items')
       .select('*')
@@ -104,6 +100,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
     }
 
     const { data: items } = await itemsQuery
+    contentCategories = categories || []
     contentItems = userIsStaff
       ? (items || [])
       : (items || []).filter((item) => canAccessMembershipContentItem(item, clubAccess))
@@ -251,46 +248,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
               ) : (
                 <>
                   {contentItems.length > 0 ? (
-                    <section className="membership-section">
-                      <h2>Contenido exclusivo</h2>
-                      <div className="membership-content-grid">
-                        {contentItems.map((item) => {
-                          const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
-                          const mediaHref = privateFileUrl || item.media_url
-                          return (
-                            <article key={item.id} className={`membership-resource-card type-${item.type || 'text'}`}>
-                              <div className="item-meta">{contentTypeLabel(item.type)}</div>
-                              <h3>{item.title}</h3>
-                              {item.summary ? <p>{item.summary}</p> : null}
-
-                              {item.type === 'image' && mediaHref ? (
-                                <img src={mediaHref} alt={item.title} className="membership-resource-image" />
-                              ) : null}
-
-                              {item.type === 'embed' && item.media_url ? (
-                                <div className="video-frame">
-                                  <iframe src={item.media_url} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-                                </div>
-                              ) : null}
-
-                              {item.body ? <RichBody html={item.body} /> : null}
-
-                              {item.type === 'download' && mediaHref ? (
-                                <a className="membership-cta secondary" href={mediaHref} target="_blank" rel="noopener noreferrer">
-                                  Descargar {item.file_name || 'archivo'}
-                                </a>
-                              ) : null}
-
-                              {item.type === 'link' && item.media_url ? (
-                                <a className="membership-cta secondary" href={item.media_url} target="_blank" rel="noopener noreferrer">
-                                  Abrir recurso
-                                </a>
-                              ) : null}
-                            </article>
-                          )
-                        })}
-                      </div>
-                    </section>
+                    <MembershipContentSection items={contentItems} categories={contentCategories} />
                   ) : null}
 
                   {courses.map((course) => {

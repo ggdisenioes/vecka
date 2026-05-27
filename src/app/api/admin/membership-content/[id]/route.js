@@ -22,6 +22,16 @@ export async function PATCH(request, { params }) {
     const { id } = await params
     const payload = await request.json().catch(() => ({}))
     const patch = {}
+    const supabase = getSupabaseAdmin()
+
+    const { data: current, error: currentError } = await supabase
+      .from('membership_content_items')
+      .select('id, tier_id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (currentError) throw currentError
+    if (!current) return jsonError('Contenido no encontrado', 404)
 
     if (payload.type !== undefined) {
       patch.type = CONTENT_TYPES.includes(payload.type) ? payload.type : 'text'
@@ -34,8 +44,24 @@ export async function PATCH(request, { params }) {
     if (payload.body !== undefined) patch.body = textValue(payload.body)
     if (payload.mediaUrl !== undefined) patch.media_url = textValue(payload.mediaUrl)
     if (payload.sortOrder !== undefined) patch.sort_order = toInteger(payload.sortOrder, 0)
+    if (payload.categoryId !== undefined) {
+      const categoryId = textValue(payload.categoryId)
+      if (!categoryId) {
+        patch.category_id = null
+      } else {
+        const { data: category, error } = await supabase
+          .from('membership_content_categories')
+          .select('id')
+          .eq('id', categoryId)
+          .eq('tier_id', current.tier_id)
+          .maybeSingle()
 
-    const supabase = getSupabaseAdmin()
+        if (error) throw error
+        if (!category) throw new Error('La categoría seleccionada no pertenece a esta membresía.')
+        patch.category_id = category.id
+      }
+    }
+
     const { data, error } = await supabase
       .from('membership_content_items')
       .update(patch)

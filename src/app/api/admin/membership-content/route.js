@@ -33,6 +33,22 @@ function textValue(value) {
   return String(value || '').trim() || null
 }
 
+async function resolveCategoryId(supabase, tierId, rawCategoryId) {
+  const categoryId = textValue(rawCategoryId)
+  if (!categoryId) return null
+
+  const { data: category, error } = await supabase
+    .from('membership_content_categories')
+    .select('id')
+    .eq('id', categoryId)
+    .eq('tier_id', tierId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!category) throw new Error('La categoría seleccionada no pertenece a esta membresía.')
+  return category.id
+}
+
 export async function GET(request) {
   const auth = await requireStaff()
   if (auth.error) return auth.error
@@ -71,6 +87,7 @@ export async function POST(request) {
       const title = requireText(formData.get('title') || file.name, 'Title')
       const fileName = file.name || 'archivo'
       const storagePath = `membership/${tierId}/${Date.now()}-${safeName(fileName)}`
+      const categoryId = await resolveCategoryId(supabase, tierId, formData.get('categoryId'))
 
       const { error: uploadError } = await supabase.storage
         .from(MEMBERSHIP_BUCKET)
@@ -90,6 +107,7 @@ export async function POST(request) {
           summary: textValue(formData.get('summary')),
           body: textValue(formData.get('body')),
           media_url: textValue(formData.get('mediaUrl')),
+          category_id: categoryId,
           bucket_name: MEMBERSHIP_BUCKET,
           storage_path: storagePath,
           file_name: fileName,
@@ -113,11 +131,13 @@ export async function POST(request) {
     const payload = await request.json().catch(() => ({}))
     const tierId = requireText(payload.tierId, 'Tier id')
     const title = requireText(payload.title || 'Contenido sin título', 'Title')
+    const categoryId = await resolveCategoryId(supabase, tierId, payload.categoryId)
 
     const { data, error } = await supabase
       .from('membership_content_items')
       .insert({
         tier_id: tierId,
+        category_id: categoryId,
         type: normalizeType(payload.type),
         title,
         summary: textValue(payload.summary),

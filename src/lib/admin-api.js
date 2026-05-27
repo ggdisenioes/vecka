@@ -107,6 +107,27 @@ export async function uniqueTierSlug(name, currentId = null) {
   }
 }
 
+export async function uniqueMembershipContentCategorySlug(tierId, name, currentId = null) {
+  const supabase = getSupabaseAdmin()
+  const base = slugify(name) || `categoria-${Date.now()}`
+  let slug = base
+  let counter = 2
+  while (true) {
+    let query = supabase
+      .from('membership_content_categories')
+      .select('id')
+      .eq('tier_id', tierId)
+      .eq('slug', slug)
+      .limit(1)
+    if (currentId) query = query.neq('id', currentId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data?.length) return slug
+    slug = `${base}-${counter}`
+    counter += 1
+  }
+}
+
 export function revalidateCourses() {
   revalidatePath('/')
   revalidatePath('/admin')
