@@ -42,10 +42,10 @@ const features = [
 ]
 
 export default async function HomePage() {
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/">
       <section className="home-hero">
         <div className="home-hero-bg" />
         <div className="home-hero-inner">

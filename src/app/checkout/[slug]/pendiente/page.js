@@ -29,12 +29,12 @@ export default async function PaymentPendingPage({ params, searchParams }) {
   const sp = await searchParams
   if (!isPublicMembershipSlug(slug)) notFound()
 
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
   const status = typeof sp?.payment === 'string' ? sp.payment : 'pending'
   const copy = statusCopy(status)
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/checkout/${slug}/pendiente`}>
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=/checkout/${slug}/pendiente`}>
       <main className="payment-pending-shell">
         <section className={`payment-pending-card ${copy.className}`}>
           <p className="summary-kicker">Mercado Pago</p>

@@ -73,11 +73,11 @@ export default function AccountScreen({ user, memberships, courses, purchases })
         </div>
         <div className="account-hero-actions">
           {user.isStaff ? (
-            <Link href="/admin" prefetch={false} className="membership-cta" style={{ width: 'fit-content' }}>
+            <Link href="/admin" prefetch={false} className="vk-button">
               Panel de control
             </Link>
           ) : null}
-          <Link href="/logout" className="membership-cta secondary" style={{ width: 'fit-content' }}>
+          <Link href="/logout" className="vk-button secondary">
             Cerrar sesión
           </Link>
         </div>
@@ -130,7 +130,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
                     </ul>
                   ) : null}
                   {membership.href ? (
-                    <Link href={membership.href} className="membership-cta" style={{ width: 'fit-content' }}>
+                    <Link href={membership.href} className="vk-button">
                       Ver membresía
                     </Link>
                   ) : null}
@@ -159,7 +159,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
                     {course.lessonCount ? <span>{metricLabel(course.lessonCount, 'clase', 'clases')}</span> : null}
                     {course.sourceLabel ? <span>{course.sourceLabel}</span> : null}
                   </div>
-                  <Link href={course.href} className="membership-cta" style={{ width: 'fit-content' }}>
+                  <Link href={course.href} className="vk-button">
                     Entrar al curso
                   </Link>
                 </article>
@@ -232,14 +232,14 @@ export default function AccountScreen({ user, memberships, courses, purchases })
             {success ? <div className="lovable-message success">{success}</div> : null}
             <div className="account-form-actions">
               {user.isStaff ? (
-                <Link href="/admin" prefetch={false} className="membership-cta" style={{ width: 'fit-content' }}>
+                <Link href="/admin" prefetch={false} className="vk-button secondary">
                   Panel de control
                 </Link>
               ) : null}
-              <button type="submit" className="lovable-button" disabled={saving}>
+              <button type="submit" className="vk-button" disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              <Link href="/logout" className="membership-cta secondary" style={{ width: 'fit-content' }}>
+              <Link href="/logout" className="vk-button secondary">
                 Cerrar sesión
               </Link>
             </div>

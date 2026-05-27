@@ -11,10 +11,10 @@ export const metadata = {
 }
 
 export default async function CoursesPage() {
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/talleres">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/talleres">
       <main className="lovable-soon">
         <p>Próximamente</p>
         <h1>Talleres online</h1>

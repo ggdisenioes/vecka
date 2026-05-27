@@ -1,53 +1,49 @@
-import LegacyApp from '@/components/legacy/LegacyApp'
-import { getLegacyFrontData } from '@/lib/legacy-front'
-import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import PublicSiteShell from '@/components/site/PublicSiteShell'
+import { ButtonLink, Card, PageHeader } from '@/components/ui/VeckaUI'
+import { getCurrentAuth } from '@/lib/auth'
+import '../membresia/membership.css'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = {
+  title: 'Checkout - VeCKA',
+  description: 'Elegí cómo continuar tu compra en VeCKA.',
+}
+
 export default async function CheckoutPage() {
-  const [data, settingsResult] = await Promise.all([
-    getLegacyFrontData(),
-    getSupabaseAdmin()
-      .from('platform_settings')
-      .select('bank_holder_name, bank_cbu, bank_alias, bank_usd_holder_name, bank_usd_cbu, bank_usd_alias, bank_contact_email, bank_contact_whatsapp, checkout_note, checkout_ars_enabled, checkout_usd_enabled')
-      .maybeSingle(),
-  ])
-
-  const s = settingsResult.data || {}
-
-  const bankInfo = {
-    holderName: s.bank_holder_name || null,
-    cbu: s.bank_cbu || null,
-    alias: s.bank_alias || null,
-    contactEmail: s.bank_contact_email || null,
-    contactWhatsapp: s.bank_contact_whatsapp || null,
-    checkoutNote: s.checkout_note || null,
-  }
-
-  const bankInfoUsd = {
-    holderName: s.bank_usd_holder_name || null,
-    cbu: s.bank_usd_cbu || null,
-    alias: s.bank_usd_alias || null,
-    contactEmail: s.bank_contact_email || null,
-    contactWhatsapp: s.bank_contact_whatsapp || null,
-    checkoutNote: s.checkout_note || null,
-  }
-
-  const acceptedCurrencies = [
-    ...(s.checkout_ars_enabled !== false ? ['ARS'] : []),
-    ...(s.checkout_usd_enabled ? ['USD'] : []),
-  ]
-  if (acceptedCurrencies.length === 0) acceptedCurrencies.push('ARS')
+  const { user, profile } = await getCurrentAuth()
 
   return (
-    <LegacyApp
-      initialCourses={data.courses}
-      initialPage="checkout"
-      initialProducts={data.products}
-      initialUser={data.user}
-      bankInfo={bankInfo}
-      bankInfoUsd={bankInfoUsd}
-      acceptedCurrencies={acceptedCurrencies}
-    />
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/checkout">
+      <main className="vk-page">
+        <div className="vk-container">
+          <PageHeader
+            kicker="Checkout"
+            title="Elegí cómo continuar"
+            lede="El checkout principal de VeCKA ahora prioriza membresías y accesos nativos. La tienda completa se habilitará en una próxima etapa."
+            actions={<ButtonLink href="/membresias">Ver membresías</ButtonLink>}
+          />
+
+          <section className="vk-action-grid">
+            <Card className="vk-stack">
+              <span className="vk-pill">Club VeCKA</span>
+              <h2 style={{ margin: 0, fontSize: 30 }}>Membresía mensual o anual</h2>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                Acceso a talleres, contenido exclusivo y comunidad desde el flujo nativo de Mercado Pago.
+              </p>
+              <ButtonLink href="/membresias">Sumarme al Club</ButtonLink>
+            </Card>
+            <Card className="vk-stack">
+              <span className="vk-pill warm">Tienda</span>
+              <h2 style={{ margin: 0, fontSize: 30 }}>Moldes y productos</h2>
+              <p style={{ margin: 0, color: 'var(--muted)' }}>
+                La tienda está en migración visual para integrarse con la nueva cuenta y navegación.
+              </p>
+              <ButtonLink href="/tienda" variant="secondary">Ir a tienda</ButtonLink>
+            </Card>
+          </section>
+        </div>
+      </main>
+    </PublicSiteShell>
   )
 }

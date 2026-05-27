@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }) {
   }
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=${encodeURIComponent(nextPath)}`}>
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=${encodeURIComponent(nextPath)}`}>
       <LoginScreen
         nextPath={nextPath}
         initialError={typeof sp?.error === 'string' ? sp.error : null}

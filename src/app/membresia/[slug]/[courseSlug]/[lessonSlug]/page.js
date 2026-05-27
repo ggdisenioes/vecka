@@ -74,7 +74,7 @@ export default async function MembershipLessonPage({ params }) {
     .order('sort_order', { ascending: true })
 
   return (
-    <PublicSiteShell user={user} loginHref={`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`}>
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`}>
       <section className="membership-shell">
         <div className="membership-container">
           <div className="breadcrumb-row">

@@ -14,14 +14,14 @@ export const metadata = {
 export default async function ChangePasswordPage({ searchParams }) {
   const sp = await searchParams
   const nextPath = getSafeInternalPath(sp?.next, '/cuenta')
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
 
   if (!user) {
     redirect(`/login?next=${encodeURIComponent('/cambiar-contrasena')}`)
   }
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/cambiar-contrasena">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/cambiar-contrasena">
       <main className="lovable-login">
         <h1>Cambiá tu contraseña</h1>
         <p className="lovable-login-subtitle">

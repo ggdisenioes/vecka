@@ -675,19 +675,19 @@
 
 /* Lovable reference public UI */
 :root {
-  --vck-bg: oklch(98.5% 0.008 90);
-  --vck-foreground: oklch(22% 0.02 60);
-  --vck-card: #fff;
-  --vck-muted: oklch(50% 0.02 70);
-  --vck-border: oklch(90% 0.012 90);
-  --vck-primary: oklch(72% 0.07 155);
-  --vck-primary-foreground: oklch(99% 0.005 95);
-  --vck-secondary: oklch(94% 0.02 145);
-  --vck-accent: oklch(86% 0.06 25);
-  --vck-accent-foreground: oklch(28% 0.06 25);
-  --vck-blush: oklch(86% 0.05 5);
-  --vck-shadow-soft: 0 10px 40px -20px oklch(40% 0.05 155 / 0.18);
-  --vck-shadow-card: 0 1px 2px oklch(40% 0.05 60 / 0.04), 0 8px 24px -12px oklch(40% 0.05 155 / 0.12);
+  --vck-bg: var(--bg-warm, #faf5f2);
+  --vck-foreground: var(--ink, #172122);
+  --vck-card: var(--surface, #fffaf5);
+  --vck-muted: var(--muted, #596567);
+  --vck-border: var(--line, #dfd2c8);
+  --vck-primary: var(--accent, #1d5f55);
+  --vck-primary-foreground: #fff;
+  --vck-secondary: var(--accent-muted, #e8f2ee);
+  --vck-accent: var(--warm-soft, #f1dfd3);
+  --vck-accent-foreground: var(--warm, #9b6148);
+  --vck-blush: var(--rose-soft, #f0d8e2);
+  --vck-shadow-soft: var(--shadow-soft, 0 10px 28px rgba(23, 33, 34, 0.06));
+  --vck-shadow-card: var(--shadow, 0 18px 40px rgba(23, 33, 34, 0.08));
 }
 
 .site-shell {
@@ -702,14 +702,14 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: oklch(98.5% 0.008 90 / 0.82);
-  border-bottom: 1px solid oklch(90% 0.012 90 / 0.6);
+  background: rgba(250, 245, 242, .86);
+  border-bottom: 1px solid rgba(223, 210, 200, .76);
   backdrop-filter: blur(14px);
 }
 
 .site-shell-header-inner {
-  max-width: 1280px;
-  min-height: 64px;
+  max-width: var(--container, 1180px);
+  min-height: 68px;
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -749,7 +749,7 @@
 .site-shell-nav {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 22px;
 }
 
 .site-shell-nav a,
@@ -761,7 +761,7 @@
 
 .site-shell-nav a:hover,
 .site-shell-footer-column a:hover {
-  color: var(--vck-foreground);
+  color: var(--accent-deep);
 }
 
 .site-shell-actions {
@@ -785,7 +785,8 @@
 }
 
 .site-shell-button.ghost {
-  background: transparent;
+  background: var(--surface);
+  border-color: var(--line);
   color: var(--vck-foreground);
 }
 
@@ -864,11 +865,11 @@
 .site-shell-footer {
   margin-top: 96px;
   border-top: 1px solid var(--vck-border);
-  background: oklch(94% 0.02 145 / 0.4);
+  background: rgba(232, 242, 238, .5);
 }
 
 .site-shell-footer-inner {
-  max-width: 1280px;
+  max-width: var(--container, 1180px);
   margin: 0 auto;
   padding: 56px 24px;
   display: grid;
@@ -901,7 +902,7 @@
 }
 
 .site-shell-footer-bottom {
-  max-width: 1280px;
+  max-width: var(--container, 1180px);
   margin: 0 auto;
   padding: 20px 24px;
   border-top: 1px solid var(--vck-border);
@@ -1228,38 +1229,45 @@
   gap: 16px;
 }
 
-.lovable-faq details {
+.lovable-faq details,
+.lovable-faq-list details {
   border: 1px solid var(--vck-border);
   border-radius: 20px;
   background: var(--vck-card);
   padding: 24px;
 }
 
-.lovable-faq details[open] {
+.lovable-faq details[open],
+.lovable-faq-list details[open] {
   box-shadow: var(--vck-shadow-card);
 }
 
-.lovable-faq summary {
+.lovable-faq summary,
+.lovable-faq-list summary {
   cursor: pointer;
   list-style: none;
   font-weight: 600;
 }
 
-.lovable-faq summary::-webkit-details-marker {
+.lovable-faq summary::-webkit-details-marker,
+.lovable-faq-list summary::-webkit-details-marker {
   display: none;
 }
 
-.lovable-faq summary span {
+.lovable-faq summary span,
+.lovable-faq-list summary span {
   float: right;
   color: var(--vck-primary);
   transition: transform 0.15s ease;
 }
 
-.lovable-faq details[open] summary span {
+.lovable-faq details[open] summary span,
+.lovable-faq-list details[open] summary span {
   transform: rotate(45deg);
 }
 
-.lovable-faq p {
+.lovable-faq p,
+.lovable-faq-list p {
   margin: 12px 0 0;
   color: var(--vck-muted);
   font-size: 14px;

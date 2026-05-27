@@ -11,10 +11,10 @@ export const metadata = {
 }
 
 export default async function TiendaPage() {
-  const { user } = await getCurrentAuth()
+  const { user, profile } = await getCurrentAuth()
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/tienda">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/tienda">
       <main className="lovable-soon">
         <p>Próximamente</p>
         <h1>Tienda VeCKA</h1>

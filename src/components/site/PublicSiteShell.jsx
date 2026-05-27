@@ -5,12 +5,15 @@ const NAV_ITEMS = [
   { href: '/membresias', label: 'Membresías' },
   { href: '/talleres', label: 'Talleres' },
   { href: '/tienda', label: 'Tienda' },
+  { href: '/sobre', label: 'Sobre VeCKA' },
+  { href: '/contacto', label: 'Contacto' },
 ]
 
 function HeaderCta({ user, userRole, loginHref }) {
   if (user) {
-    const adminHref = userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'
-    const adminLabel = userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'
+    const isStaff = userRole === 'admin' || userRole === 'editorial'
+    const adminHref = isStaff ? '/admin' : '/cuenta'
+    const adminLabel = isStaff ? 'Panel admin' : 'Mi cuenta'
 
     return (
       <Link href={adminHref} prefetch={false} className="site-shell-button ghost">
@@ -27,6 +30,8 @@ function HeaderCta({ user, userRole, loginHref }) {
 }
 
 export default function PublicSiteShell({ children, user = null, userRole = null, loginHref = '/login' }) {
+  const isStaff = userRole === 'admin' || userRole === 'editorial'
+
   return (
     <div className="site-shell">
       <header className="site-shell-header">
@@ -65,14 +70,15 @@ export default function PublicSiteShell({ children, user = null, userRole = null
               ))}
               {user ? (
                 <Link
-                  href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'}
+                  href={isStaff ? '/admin' : '/cuenta'}
                   prefetch={false}
                 >
-                  {userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'}
+                  {isStaff ? 'Panel admin' : 'Mi cuenta'}
                 </Link>
               ) : (
                 <Link href={loginHref}>Iniciar sesión</Link>
               )}
+              {user ? <Link href="/logout">Cerrar sesión</Link> : null}
               <Link href="/membresias" className="mobile-primary">Sumarme al Club</Link>
             </nav>
           </details>
@@ -100,9 +106,9 @@ export default function PublicSiteShell({ children, user = null, userRole = null
           <div className="site-shell-footer-column">
             <h4>VeCKA</h4>
             <nav aria-label="VeCKA">
-              <Link href="/">Sobre mí</Link>
+              <Link href="/sobre">Sobre VeCKA</Link>
               <Link href="/contacto">Contacto</Link>
-              <Link href="/membresias">Preguntas frecuentes</Link>
+              <Link href="/blog">Blog</Link>
             </nav>
           </div>
         </div>
