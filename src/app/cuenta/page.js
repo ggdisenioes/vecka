@@ -140,6 +140,7 @@ export default async function AccountPage() {
     name: profile?.display_name || profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
     email: user.email || profile?.email || '',
     avatar: initialsFromName(profile?.display_name || profile?.full_name || user.user_metadata?.full_name, user.email),
+    isStaff: profile?.role === 'admin' || profile?.role === 'editorial',
   }
 
   const courses = [...coursesById.values()].sort((left, right) => {
@@ -148,7 +149,7 @@ export default async function AccountPage() {
   })
 
   return (
-    <PublicSiteShell user={user} loginHref="/login?next=/cuenta">
+    <PublicSiteShell user={user} userRole={profile?.role || null} loginHref="/login?next=/cuenta">
       <AccountScreen
         user={accountUser}
         memberships={memberships}

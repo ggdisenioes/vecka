@@ -72,6 +72,11 @@ export default function AccountScreen({ user, memberships, courses, purchases })
           <p>{user.email}</p>
         </div>
         <div className="account-hero-actions">
+          {user.isStaff ? (
+            <Link href="/admin" className="membership-cta" style={{ width: 'fit-content' }}>
+              Panel de control
+            </Link>
+          ) : null}
           <Link href="/logout" className="membership-cta secondary" style={{ width: 'fit-content' }}>
             Cerrar sesión
           </Link>
@@ -226,6 +231,11 @@ export default function AccountScreen({ user, memberships, courses, purchases })
             {error ? <div className="lovable-message error">{error}</div> : null}
             {success ? <div className="lovable-message success">{success}</div> : null}
             <div className="account-form-actions">
+              {user.isStaff ? (
+                <Link href="/admin" className="membership-cta" style={{ width: 'fit-content' }}>
+                  Panel de control
+                </Link>
+              ) : null}
               <button type="submit" className="lovable-button" disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>

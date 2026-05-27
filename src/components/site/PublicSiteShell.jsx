@@ -7,11 +7,11 @@ const NAV_ITEMS = [
   { href: '/tienda', label: 'Tienda' },
 ]
 
-function HeaderCta({ user, loginHref }) {
+function HeaderCta({ user, userRole, loginHref }) {
   if (user) {
     return (
-      <Link href="/cuenta" className="site-shell-button ghost">
-        Mi cuenta
+      <Link href={userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta'} className="site-shell-button ghost">
+        {userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta'}
       </Link>
     )
   }
@@ -23,7 +23,7 @@ function HeaderCta({ user, loginHref }) {
   )
 }
 
-export default function PublicSiteShell({ children, user = null, loginHref = '/login' }) {
+export default function PublicSiteShell({ children, user = null, userRole = null, loginHref = '/login' }) {
   return (
     <div className="site-shell">
       <header className="site-shell-header">
@@ -42,7 +42,7 @@ export default function PublicSiteShell({ children, user = null, loginHref = '/l
           </nav>
 
           <div className="site-shell-actions">
-            <HeaderCta user={user} loginHref={loginHref} />
+            <HeaderCta user={user} userRole={userRole} loginHref={loginHref} />
             <Link href="/membresias" className="site-shell-button primary">
               Sumarme al Club
             </Link>
@@ -60,7 +60,9 @@ export default function PublicSiteShell({ children, user = null, loginHref = '/l
                   {item.label}
                 </Link>
               ))}
-              <Link href={user ? '/cuenta' : loginHref}>{user ? 'Mi cuenta' : 'Iniciar sesión'}</Link>
+              <Link href={user ? (userRole === 'admin' || userRole === 'editorial' ? '/admin' : '/cuenta') : loginHref}>
+                {user ? (userRole === 'admin' || userRole === 'editorial' ? 'Panel admin' : 'Mi cuenta') : 'Iniciar sesión'}
+              </Link>
               <Link href="/membresias" className="mobile-primary">Sumarme al Club</Link>
             </nav>
           </details>
