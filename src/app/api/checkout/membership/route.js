@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
-import { isPublicMembershipSlug } from '@/lib/memberships'
 import { ensureMembershipCheckoutUser } from '@/lib/membership-accounts'
 import { getPublicMembershipPaymentPlan } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
@@ -62,10 +61,6 @@ export async function POST(request) {
   const paymentPlan = getPublicMembershipPaymentPlan(payload.paymentPlanId, { tier, settings: settings || {} })
 
   if (!tier) {
-    return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
-  }
-
-  if (!isPublicMembershipSlug(tier.slug)) {
     return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
   }
 

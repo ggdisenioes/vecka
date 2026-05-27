@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
-import { isPublicMembershipSlug } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendWelcomeEmail } from '@/lib/email'
 import { revalidateMemberships } from '@/lib/admin-api'
@@ -26,7 +25,6 @@ export async function POST(request) {
     .maybeSingle()
 
   if (!tier) return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
-  if (!isPublicMembershipSlug(tier.slug)) return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
   if (!tier.trial_days || tier.trial_days <= 0) return NextResponse.json({ error: 'Esta membresía no tiene período de prueba.' }, { status: 400 })
 
   // Check if user already used a trial for this tier

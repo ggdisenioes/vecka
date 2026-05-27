@@ -3,7 +3,6 @@ import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import {
   PUBLIC_MEMBERSHIP_NAME,
-  PUBLIC_MEMBERSHIP_SLUGS,
   getClubAccessFromGrants,
 } from '@/lib/memberships'
 import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
@@ -43,7 +42,6 @@ export default async function MembresiaLandingPage() {
   const tiersQuery = getSupabaseAdmin()
     .from('membership_tiers')
     .select('id, slug, name, description, sort_order, status, price_ars, price_usd, billing_period, features, is_featured, trial_days, created_at')
-    .in('slug', PUBLIC_MEMBERSHIP_SLUGS)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -113,7 +111,7 @@ export default async function MembresiaLandingPage() {
               <h2>Sumate al Club</h2>
             </div>
             <p>
-              Una sola opción pública, con pago mensual recurrente o pago anual único por Mercado Pago.
+              Las membresías publicadas se gestionan desde admin. Lo que esté en borrador no se muestra ni se vende.
             </p>
           </div>
 
@@ -140,7 +138,7 @@ export default async function MembresiaLandingPage() {
                   <article key={tier.id} className={`lovable-tier-card${tier.is_featured ? ' featured' : ''}`}>
                     {tier.is_featured ? <span className="lovable-featured-badge">Destacada</span> : null}
                     <span className={status.className}>{status.label}</span>
-                    <h3>{PUBLIC_MEMBERSHIP_NAME}</h3>
+                    <h3>{tier.name || PUBLIC_MEMBERSHIP_NAME}</h3>
                     {tier.description ? <p>{tier.description}</p> : null}
 
                     <div className="lovable-tier-meta">

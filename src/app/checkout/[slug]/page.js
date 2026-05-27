@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth } from '@/lib/auth'
-import { PUBLIC_MEMBERSHIP_NAME, getClubAccessFromGrants, isPublicMembershipSlug } from '@/lib/memberships'
+import { getClubAccessFromGrants } from '@/lib/memberships'
 import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import MembershipCheckoutForm from './MembershipCheckoutForm'
@@ -13,10 +13,6 @@ export const dynamic = 'force-dynamic'
 export default async function MembershipCheckoutPage({ params }) {
   const { slug } = await params
   const { user, profile } = await getCurrentAuth()
-
-  if (!isPublicMembershipSlug(slug)) {
-    notFound()
-  }
 
   const admin = getSupabaseAdmin()
   const [{ data: tier }, { data: settings }] = await Promise.all([
@@ -72,7 +68,7 @@ export default async function MembershipCheckoutPage({ params }) {
 
           <aside className="lovable-order-summary">
             <p className="summary-kicker">Tu pedido</p>
-            <h2>{PUBLIC_MEMBERSHIP_NAME}</h2>
+            <h2>{tier.name}</h2>
             {tier.description ? <p className="lovable-checkout-subtitle">{tier.description}</p> : null}
 
             <div className="lovable-summary-divider" />

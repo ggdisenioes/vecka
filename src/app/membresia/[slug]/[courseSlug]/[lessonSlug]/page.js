@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
-import { getClubAccessFromGrants, isPublicMembershipSlug } from '@/lib/memberships'
+import { getClubAccessFromGrants } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import LessonVideoPlayer from './LessonVideoPlayer'
 import '../../../membership.css'
@@ -21,7 +21,6 @@ export default async function MembershipLessonPage({ params }) {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
   if (!user) redirect(`/login?next=/membresias/${slug}/${courseSlug}/${lessonSlug}`)
-  if (!isPublicMembershipSlug(slug) && !userIsStaff) notFound()
 
   // Localiza el tier (debe estar publicado).
   const { data: tier } = await admin

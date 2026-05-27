@@ -4,11 +4,8 @@ import PublicSiteShell from '@/components/site/PublicSiteShell'
 import MembershipContentSection from './MembershipContentSection'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import {
-  CONTENT_MEMBERSHIP_SLUG,
-  PUBLIC_MEMBERSHIP_NAME,
   canAccessMembershipContentItem,
   getClubAccessFromGrants,
-  isPublicMembershipSlug,
 } from '@/lib/memberships'
 import { formatPriceArs, getPublicMembershipPaymentPlans } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
@@ -25,9 +22,6 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const { user, profile } = await getCurrentAuth()
   const userIsStaff = isStaff(profile)
   const admin = getSupabaseAdmin()
-  const isPublicTierRoute = isPublicMembershipSlug(slug)
-
-  if (!isPublicTierRoute && !userIsStaff) notFound()
 
   const { data: tier } = await admin
     .from('membership_tiers')
@@ -51,13 +45,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
 
   const hasAccess = userIsStaff || clubAccess.hasAccess
 
-  const { data: contentTier } = isPublicTierRoute
-    ? await admin
-        .from('membership_tiers')
-        .select('id')
-        .eq('slug', CONTENT_MEMBERSHIP_SLUG)
-        .maybeSingle()
-    : { data: tier }
+  const contentTier = tier
 
   const { data: tierCourses } = await admin
     .from('membership_tier_courses')
@@ -126,7 +114,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
           <header className="membership-detail-hero">
             <div className="membership-detail-hero-copy">
               <span className="lovable-eyebrow">CLUB VECKA</span>
-              <h1>{isPublicTierRoute ? PUBLIC_MEMBERSHIP_NAME : tier.name}</h1>
+              <h1>{tier.name}</h1>
               {tier.description ? <p>{tier.description}</p> : null}
 
               <div className="pill-row membership-detail-pills" style={{ marginTop: 20 }}>

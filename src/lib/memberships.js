@@ -1,8 +1,6 @@
-export const PUBLIC_MEMBERSHIP_SLUG = 'nueva-membresia'
-export const PUBLIC_MEMBERSHIP_NAME = 'El Club VeCKA'
 export const CONTENT_MEMBERSHIP_SLUG = 'club-vecka-costura'
-
-export const PUBLIC_MEMBERSHIP_SLUGS = [PUBLIC_MEMBERSHIP_SLUG]
+export const PUBLIC_MEMBERSHIP_SLUG = CONTENT_MEMBERSHIP_SLUG
+export const PUBLIC_MEMBERSHIP_NAME = 'Club VeCKA'
 
 export const LEGACY_CLUB_MEMBERSHIP_SLUGS = [
   PUBLIC_MEMBERSHIP_SLUG,
@@ -25,10 +23,6 @@ const LEGACY_CONTENT_AVAILABLE_FROM = {
   14178: '2026-03-04T11:45:28.000Z',
   14375: '2026-04-06T11:43:05.000Z',
   14537: '2026-05-12T06:33:10.000Z',
-}
-
-export function isPublicMembershipSlug(slug) {
-  return PUBLIC_MEMBERSHIP_SLUGS.includes(String(slug || ''))
 }
 
 export function isLegacyClubMembershipSlug(slug) {
