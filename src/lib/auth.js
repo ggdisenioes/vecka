@@ -3,11 +3,18 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 
 export async function getCurrentAuth() {
   const supabase = await getSupabaseServer()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const [{ data: userData, error: userError }, { data: sessionData }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ])
+
+  const user = userData?.user || sessionData?.session?.user || null
 
   if (!user) {
+    return { user: null, profile: null }
+  }
+
+  if (userError && !sessionData?.session?.user) {
     return { user: null, profile: null }
   }
 
