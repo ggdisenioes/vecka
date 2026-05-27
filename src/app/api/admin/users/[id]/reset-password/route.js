@@ -18,7 +18,7 @@ export async function POST(_request, { params }) {
 
     if (!profile?.email) return jsonError('Usuario no encontrado', 404)
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vecka.com.ar'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nuevo.vecka.com.ar'
     const { error } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: profile.email,

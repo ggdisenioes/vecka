@@ -127,6 +127,91 @@ function getCheckoutMeta(meta = {}, metadata = {}) {
   }
 }
 
+async function findSubscriptionByProviderId(supabase, providerSubscriptionId) {
+  if (!providerSubscriptionId) return null
+
+  const { data } = await supabase
+    .from('membership_subscriptions')
+    .select('id, user_id, tier_id, provider_subscription_id')
+    .eq('provider', 'mercadopago')
+    .eq('provider_subscription_id', providerSubscriptionId)
+    .maybeSingle()
+
+  return data || null
+}
+
+async function upsertMembershipSubscription({
+  supabase,
+  providerSubscriptionId,
+  tierId,
+  userId,
+  status,
+  amount,
+  billingPeriod,
+  nextPaymentAt,
+  startedAt,
+  cancelledAt,
+  lastPaymentAt,
+  couponId,
+  metadata,
+}) {
+  if (!tierId || !userId) return null
+
+  const { data } = await supabase
+    .from('membership_subscriptions')
+    .upsert({
+      provider: 'mercadopago',
+      provider_subscription_id: providerSubscriptionId || null,
+      tier_id: tierId,
+      user_id: userId,
+      status: status || 'pending',
+      amount: Number(amount || 0),
+      currency: 'ARS',
+      billing_period: billingPeriod || 'monthly',
+      next_payment_at: nextPaymentAt || null,
+      started_at: startedAt || null,
+      cancelled_at: cancelledAt || null,
+      last_payment_at: lastPaymentAt || null,
+      coupon_id: couponId || null,
+      metadata: metadata || {},
+    }, { onConflict: 'provider,tier_id,user_id' })
+    .select('id, provider_subscription_id, user_id, tier_id')
+    .maybeSingle()
+
+  return data || null
+}
+
+async function recordMembershipPaymentEvent({
+  supabase,
+  providerEventId,
+  providerPaymentId,
+  providerSubscriptionId,
+  subscriptionId,
+  tierId,
+  userId,
+  amount,
+  status,
+  eventType,
+  rawPayload,
+}) {
+  await supabase
+    .from('membership_payment_events')
+    .upsert({
+      provider: 'mercadopago',
+      provider_event_id: providerEventId || null,
+      provider_payment_id: providerPaymentId || null,
+      provider_subscription_id: providerSubscriptionId || null,
+      subscription_id: subscriptionId || null,
+      tier_id: tierId || null,
+      user_id: userId || null,
+      amount: amount !== undefined ? Number(amount || 0) : null,
+      currency: 'ARS',
+      status: status || 'pending',
+      event_type: eventType || null,
+      raw_payload: rawPayload || {},
+    }, { onConflict: 'provider,provider_payment_id,event_type' })
+}
+
 async function incrementCouponUsage(supabase, couponId) {
   if (!couponId) return
 
@@ -285,7 +370,35 @@ async function handleLegacyPaymentNotification(supabase, paymentId) {
     if (!activation?.alreadyApplied) {
       await incrementCouponUsage(supabase, checkout.couponId)
     }
+
+    await recordMembershipPaymentEvent({
+      supabase,
+      providerEventId: payment.id ? `payment:${payment.id}` : null,
+      providerPaymentId: payment.id,
+      providerSubscriptionId: null,
+      subscriptionId: null,
+      tierId,
+      userId: account.userId,
+      amount,
+      status: payment.status,
+      eventType: 'payment',
+      rawPayload: payment,
+    })
   } else if (FAILED_STATUSES.has(String(payment.status || '').toLowerCase())) {
+    await recordMembershipPaymentEvent({
+      supabase,
+      providerEventId: payment.id ? `payment:${payment.id}` : null,
+      providerPaymentId: payment.id,
+      providerSubscriptionId: null,
+      subscriptionId: null,
+      tierId,
+      userId: checkout.userId || null,
+      amount: payment.transaction_amount,
+      status: payment.status,
+      eventType: 'payment',
+      rawPayload: payment,
+    })
+
     const tier = await getTier(supabase, tierId)
     const email = checkout.email
     if (email) {
@@ -320,6 +433,28 @@ async function handlePreapprovalNotification(supabase, preapprovalId) {
   }
 
   if (!userId) return
+
+  await upsertMembershipSubscription({
+    supabase,
+    providerSubscriptionId: preapproval.id || preapprovalId,
+    tierId,
+    userId,
+    status,
+    amount: preapproval.auto_recurring?.transaction_amount || checkout.amount || 0,
+    billingPeriod: checkout.billingPeriod || preapproval.metadata?.billing_period || 'monthly',
+    nextPaymentAt: preapproval.next_payment_date || null,
+    startedAt: preapproval.date_created || new Date().toISOString(),
+    cancelledAt: ['cancelled', 'expired', 'failed'].includes(status) ? new Date().toISOString() : null,
+    lastPaymentAt: null,
+    couponId: checkout.couponId,
+    metadata: {
+      customer_email: checkout.email || null,
+      customer_name: checkout.fullName || null,
+      payment_plan_id: checkout.paymentPlanId || null,
+      mercadopago_status: preapproval.status || null,
+      metadata: preapproval.metadata || {},
+    },
+  })
 
   if (['cancelled', 'paused', 'expired', 'failed'].includes(status)) {
     await supabase
@@ -377,6 +512,27 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
     const { profile } = await getTierAndProfile(supabase, tierId, account.userId)
     const approvedAt = getAuthorizedPaymentApprovedAt(authorizedPayment)
     const expiresAt = authorizedPayment.next_payment_date || addBillingPeriod(new Date(approvedAt), checkout.billingPeriod || tier.billing_period)
+    const subscription = await upsertMembershipSubscription({
+      supabase,
+      providerSubscriptionId: preapprovalId,
+      tierId,
+      userId: account.userId,
+      status: normalizeMercadoPagoSubscriptionStatus(preapproval.status),
+      amount,
+      billingPeriod: checkout.billingPeriod || tier.billing_period,
+      nextPaymentAt: preapproval.next_payment_date || authorizedPayment.next_payment_date || null,
+      startedAt: preapproval.date_created || approvedAt,
+      cancelledAt: null,
+      lastPaymentAt: approvedAt,
+      couponId: checkout.couponId,
+      metadata: {
+        customer_email: checkout.email || null,
+        customer_name: checkout.fullName || null,
+        payment_plan_id: checkout.paymentPlanId || null,
+        mercadopago_status: preapproval.status || null,
+        metadata: preapproval.metadata || {},
+      },
+    })
 
     const activation = await activateMembership({
       supabase,
@@ -403,7 +559,36 @@ async function handleAuthorizedPaymentNotification(supabase, paymentId, eventTyp
     if (!activation?.alreadyApplied) {
       await incrementCouponUsage(supabase, checkout.couponId)
     }
+
+    await recordMembershipPaymentEvent({
+      supabase,
+      providerEventId: `${eventType}:${providerPaymentId}`,
+      providerPaymentId,
+      providerSubscriptionId: preapprovalId,
+      subscriptionId: subscription?.id || null,
+      tierId,
+      userId: account.userId,
+      amount,
+      status,
+      eventType,
+      rawPayload: authorizedPayment,
+    })
   } else if (failed) {
+    const existingSubscription = await findSubscriptionByProviderId(supabase, preapprovalId)
+    await recordMembershipPaymentEvent({
+      supabase,
+      providerEventId: `${eventType}:${providerPaymentId}`,
+      providerPaymentId,
+      providerSubscriptionId: preapprovalId,
+      subscriptionId: existingSubscription?.id || null,
+      tierId,
+      userId: checkout.userId || existingSubscription?.user_id || null,
+      amount,
+      status,
+      eventType,
+      rawPayload: authorizedPayment,
+    })
+
     const account = checkout.email ? await findMembershipCheckoutUser(supabase, checkout.email) : { profile: null }
     const email = account.profile?.email || checkout.email
     if (email) {

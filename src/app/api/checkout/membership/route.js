@@ -1,9 +1,38 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAuth } from '@/lib/auth'
 import { isPublicMembershipSlug } from '@/lib/memberships'
+import { ensureMembershipCheckoutUser } from '@/lib/membership-accounts'
 import { getPublicMembershipPaymentPlan } from '@/lib/membership-pricing'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createMercadoPagoPaymentPreference, createMercadoPagoPreapproval } from '@/lib/mercadopago-subscriptions'
+
+async function upsertPendingSubscription({
+  supabase,
+  providerSubscriptionId,
+  tier,
+  userId,
+  couponId,
+  amount,
+  paymentPlan,
+  metadata,
+}) {
+  if (!providerSubscriptionId || !tier?.id || !userId) return
+
+  await supabase
+    .from('membership_subscriptions')
+    .upsert({
+      provider: 'mercadopago',
+      provider_subscription_id: providerSubscriptionId,
+      tier_id: tier.id,
+      user_id: userId,
+      status: 'pending',
+      amount: Number(amount || 0),
+      currency: 'ARS',
+      billing_period: paymentPlan?.billingPeriod || tier.billing_period || 'monthly',
+      coupon_id: couponId || null,
+      metadata: metadata || {},
+    }, { onConflict: 'provider,tier_id,user_id' })
+}
 
 export async function POST(request) {
   const { user } = await getCurrentAuth()
@@ -100,10 +129,25 @@ export async function POST(request) {
     display_name: customerName,
   }
 
+  let checkoutUserId = user?.id || null
+  if (!checkoutUserId && paymentPlan.paymentMode === 'subscription') {
+    try {
+      const checkoutAccount = await ensureMembershipCheckoutUser(supabase, {
+        userId: null,
+        email: customerEmail,
+        fullName: customerName,
+      })
+      checkoutUserId = checkoutAccount.userId
+    } catch (error) {
+      console.error('MercadoPago checkout user bootstrap error:', error)
+      return NextResponse.json({ error: 'No se pudo preparar el acceso de la alumna.' }, { status: 500 })
+    }
+  }
+
   const externalReference = JSON.stringify({
     f: paymentPlan.paymentMode === 'subscription' ? 'membership_preapproval' : 'membership_payment',
     t: tier.id,
-    u: user?.id || null,
+    u: checkoutUserId,
     e: customerEmail,
     n: customerName || null,
     c: couponId,
@@ -123,6 +167,22 @@ export async function POST(request) {
         amount: finalPrice,
         paymentPlan,
         notes,
+      })
+
+      await upsertPendingSubscription({
+        supabase,
+        providerSubscriptionId: mpData.id,
+        tier,
+        userId: checkoutUserId,
+        couponId,
+        amount: finalPrice,
+        paymentPlan,
+        metadata: {
+          customer_email: customerEmail,
+          customer_name: customerName || null,
+          payment_plan_id: paymentPlan.id,
+          notes,
+        },
       })
     } else {
       mpData = await createMercadoPagoPaymentPreference({

@@ -12,6 +12,10 @@ function siteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'https://nuevo.vecka.com.ar').replace(/\/$/, '')
 }
 
+function membershipUrl(tierSlug = '') {
+  return `${siteUrl()}/membresia/${tierSlug}`
+}
+
 function periodLabel(period) {
   return period === 'monthly' ? 'mensual' : period === 'annual' ? 'anual' : period === 'lifetime' ? 'vitalicia' : ''
 }
@@ -40,7 +44,7 @@ function baseTemplate({ title, preheader, body }) {
         <!-- Footer -->
         <tr><td style="background:#f9f5f0;padding:20px 40px;text-align:center;font-size:12px;color:#8a7a6e;">
           Vecka — Escuela de Costura Online &nbsp;·&nbsp;
-          <a href="https://vecka.com.ar" style="color:#5e9e8a;text-decoration:none;">vecka.com.ar</a>
+          <a href="${siteUrl()}" style="color:#5e9e8a;text-decoration:none;">${siteUrl().replace(/^https?:\/\//, '')}</a>
         </td></tr>
       </table>
     </td></tr>
@@ -60,7 +64,7 @@ export async function sendWelcomeEmail({ to, name, tierName, billingPeriod, expi
     <p>Tu acceso a <strong>${tierName}</strong>${period ? ` (${period})` : ''} fue activado ${expiry}.</p>
     <p>Podés empezar a explorar todo el contenido de tu membresía ahora mismo:</p>
     <p style="text-align:center;margin:28px 0;">
-      <a href="https://vecka.com.ar/membresia/${tierSlug || ''}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Ver mi membresía →</a>
+      <a href="${membershipUrl(tierSlug || '')}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Ver mi membresía →</a>
     </p>
     <p style="color:#8a7a6e;font-size:13px;">Si tenés alguna pregunta, respondé este email y te ayudamos.</p>
   `
@@ -93,7 +97,7 @@ export async function sendPaymentConfirmationEmail({ to, name, tierName, billing
       ${paymentReference ? `<tr><td style="padding:5px 0;color:#8a7a6e;">Referencia</td><td style="padding:5px 0;font-size:12px;text-align:right;">${paymentReference}</td></tr>` : ''}
     </table>
     <p style="text-align:center;margin:28px 0;">
-      <a href="https://vecka.com.ar/membresia/${tierSlug || ''}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Ir a mi membresía →</a>
+      <a href="${membershipUrl(tierSlug || '')}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Ir a mi membresía →</a>
     </p>
   `
 
@@ -158,7 +162,7 @@ export async function sendPaymentFailedEmail({ to, name, tierName, tierSlug }) {
     <p>Hola <strong>${name || 'alumna'}</strong>, lamentablemente no pudimos procesar tu pago para <strong>${tierName}</strong>.</p>
     <p>Podés intentarlo nuevamente desde la página de la membresía:</p>
     <p style="text-align:center;margin:28px 0;">
-      <a href="https://vecka.com.ar/membresia/${tierSlug || ''}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Reintentar pago →</a>
+      <a href="${membershipUrl(tierSlug || '')}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Reintentar pago →</a>
     </p>
     <p style="color:#8a7a6e;font-size:13px;">Si el problema persiste, contactanos y lo resolvemos juntas.</p>
   `
@@ -178,7 +182,7 @@ export async function sendExpiryWarningEmail({ to, name, tierName, expiresAt, ti
     <p>Hola <strong>${name || 'alumna'}</strong>, tu acceso a <strong>${tierName}</strong> vence en <strong>${daysLeft} día${daysLeft !== 1 ? 's' : ''}</strong> (${new Date(expiresAt).toLocaleDateString('es-AR')}).</p>
     <p>Para no perder el acceso a tu contenido, renová tu membresía:</p>
     <p style="text-align:center;margin:28px 0;">
-      <a href="https://vecka.com.ar/membresia/${tierSlug || ''}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Renovar membresía →</a>
+      <a href="${membershipUrl(tierSlug || '')}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Renovar membresía →</a>
     </p>
   `
 
@@ -197,7 +201,7 @@ export async function sendExpiryExpiredEmail({ to, name, tierName, tierSlug }) {
     <p>Hola <strong>${name || 'alumna'}</strong>, tu acceso a <strong>${tierName}</strong> ya no está activo.</p>
     <p>Podés renovarla en cualquier momento para retomar donde dejaste:</p>
     <p style="text-align:center;margin:28px 0;">
-      <a href="https://vecka.com.ar/membresia/${tierSlug || ''}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Renovar ahora →</a>
+      <a href="${membershipUrl(tierSlug || '')}" style="display:inline-block;padding:14px 32px;background:#5e9e8a;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;">Renovar ahora →</a>
     </p>
   `
 
