@@ -101,7 +101,6 @@ export default async function MembershipTierPage({ params, searchParams }) {
     .maybeSingle()
   const paymentPlans = getPublicMembershipPaymentPlans({ tier, settings: settings || {} })
   const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
-  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
   const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
   const checkoutHref = user ? `/checkout/${tier.slug}` : `/login?next=/checkout/${tier.slug}`
 
@@ -142,7 +141,7 @@ export default async function MembershipTierPage({ params, searchParams }) {
                   {formatPriceArs(monthlyPlan.priceArs)}
                 </div>
                 <div className="membership-detail-price-meta">
-                  ARS / mes · anual {formatPriceArs(annualPlan.priceArs)}
+                  ARS / mes
                 </div>
               </div>
               {hasAccess ? (

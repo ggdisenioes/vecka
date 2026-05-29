@@ -64,6 +64,10 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Membresía no encontrada.' }, { status: 404 })
   }
 
+  if (!paymentPlan || paymentPlan.id !== 'monthly') {
+    return NextResponse.json({ error: 'La unica opcion de pago disponible es la suscripcion mensual.' }, { status: 400 })
+  }
+
   if (!paymentPlan.priceArs || paymentPlan.priceArs <= 0) {
     return NextResponse.json({ error: 'Esta membresía no tiene precio configurado.' }, { status: 400 })
   }

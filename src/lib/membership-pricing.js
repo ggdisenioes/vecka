@@ -1,6 +1,5 @@
 export const PUBLIC_MEMBERSHIP_PAYMENT_PLAN_IDS = {
   MONTHLY: 'monthly',
-  ANNUAL: 'annual',
 }
 
 function sanitizePrice(value) {
@@ -33,7 +32,7 @@ export function resolvePublicMembershipPlanPrices({ tier = {}, settings = {} } =
 }
 
 export function getPublicMembershipPaymentPlans(input = {}) {
-  const { monthlyPriceArs, annualPriceArs } = resolvePublicMembershipPlanPrices(input)
+  const { monthlyPriceArs } = resolvePublicMembershipPlanPrices(input)
 
   return [
     {
@@ -49,23 +48,10 @@ export function getPublicMembershipPaymentPlans(input = {}) {
       totalLabel: 'Total mensual',
       accessLabel: 'Acceso mensual renovable',
     },
-    {
-      id: PUBLIC_MEMBERSHIP_PAYMENT_PLAN_IDS.ANNUAL,
-      label: 'Anual',
-      checkoutLabel: 'Pago anual',
-      ctaLabel: 'Pagar anual',
-      description: 'Pago único por 12 meses de acceso.',
-      priceArs: annualPriceArs,
-      billingPeriod: 'annual',
-      paymentMode: 'one_time',
-      intervalLabel: 'pago único',
-      totalLabel: 'Total anual',
-      accessLabel: '12 meses de acceso',
-    },
   ]
 }
 
 export function getPublicMembershipPaymentPlan(planId, input = {}) {
   const plans = getPublicMembershipPaymentPlans(input)
-  return plans.find((plan) => plan.id === planId) || plans[0]
+  return plans.find((plan) => plan.id === planId) || null
 }

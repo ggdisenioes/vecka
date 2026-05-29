@@ -43,6 +43,7 @@ export default async function MembershipCheckoutPage({ params }) {
 
   const features = Array.isArray(tier.features) ? tier.features : []
   const paymentPlans = getPublicMembershipPaymentPlans({ tier, settings: settings || {} })
+  const monthlyPlan = paymentPlans[0] || null
 
   return (
     <PublicSiteShell user={user} userRole={profile?.role || null} loginHref={`/login?next=/checkout/${slug}`}>
@@ -77,12 +78,12 @@ export default async function MembershipCheckoutPage({ params }) {
               <span>Inicio</span>
               <strong>Al acreditarse</strong>
             </div>
-            {paymentPlans.map((plan) => (
-              <div key={plan.id} className="lovable-summary-line">
-                <span>{plan.checkoutLabel}</span>
-                <strong>{formatPriceArs(plan.priceArs)} {plan.id === 'monthly' ? '/ mes' : ''}</strong>
+            {monthlyPlan ? (
+              <div className="lovable-summary-line">
+                <span>{monthlyPlan.checkoutLabel}</span>
+                <strong>{formatPriceArs(monthlyPlan.priceArs)} / mes</strong>
               </div>
-            ))}
+            ) : null}
 
             {features.length > 0 ? (
               <ul className="lovable-summary-benefits">
@@ -98,8 +99,8 @@ export default async function MembershipCheckoutPage({ params }) {
             <div className="lovable-summary-divider" />
 
             <div className="lovable-summary-total">
-              <span>Opciones</span>
-              <strong>2</strong>
+              <span>Modalidad</span>
+              <strong>Mensual</strong>
             </div>
             {Number(tier.price_usd || 0) > 0 ? (
               <p className="lovable-tier-usd" style={{ textAlign: 'right' }}>

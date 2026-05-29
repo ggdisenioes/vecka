@@ -50,7 +50,6 @@ export default async function MembresiaLandingPage() {
   const publicTier = tiers[0] || rawTiers?.[0] || null
   const paymentPlans = getPublicMembershipPaymentPlans({ tier: publicTier, settings: settings || {} })
   const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
-  const annualPlan = paymentPlans.find((plan) => plan.id === 'annual') || paymentPlans[1]
 
   let activeTierIds = new Set()
   let activeCounts = new Map()
@@ -162,9 +161,6 @@ export default async function MembresiaLandingPage() {
                         <strong>{formatPriceArs(monthlyPlan.priceArs)}</strong>
                         <span>/ mes</span>
                       </div>
-                      <p className="lovable-tier-usd">
-                        O pago anual único: {formatPriceArs(annualPlan.priceArs)}
-                      </p>
                       {Number(tier.price_usd || 0) > 0 ? (
                         <p className="lovable-tier-usd">o USD {Number(tier.price_usd).toLocaleString('es-AR')} para residentes fuera de Argentina</p>
                       ) : null}
