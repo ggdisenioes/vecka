@@ -3,18 +3,15 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 
 export async function getCurrentAuth() {
   const supabase = await getSupabaseServer()
-  const [{ data: userData, error: userError }, { data: sessionData }] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.auth.getSession(),
-  ])
 
-  const user = userData?.user || sessionData?.session?.user || null
+  // Solo getUser(). Llamar getUser y getSession en paralelo dispara dos
+  // intentos de refresh concurrentes que pisan las cookies y dejan
+  // sesiones zombi: el usuario aparece como no autenticado y el layout
+  // redirige a /login en cada navegación.
+  const { data, error } = await supabase.auth.getUser()
+  const user = data?.user || null
 
-  if (!user) {
-    return { user: null, profile: null }
-  }
-
-  if (userError && !sessionData?.session?.user) {
+  if (error || !user) {
     return { user: null, profile: null }
   }
 
