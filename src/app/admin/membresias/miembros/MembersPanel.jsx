@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import DateTimePicker from '@/components/admin/DateTimePicker'
 
 const STATUS_LABELS = { active: 'Activa', expired: 'Expirada', revoked: 'Revocada' }
 const STATUS_STYLES = {
@@ -114,7 +115,7 @@ function AddMemberModal({ tiers, onClose, onAdded }) {
           <div className="editor-row">
             <div className="editor-field">
               <label>Vencimiento <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(vacío = vitalicia)</span></label>
-              <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} disabled={loading} />
+              <DateTimePicker value={expiresAt} onChange={setExpiresAt} disabled={loading} ariaLabel="Vencimiento del acceso" />
             </div>
           </div>
           <div className="editor-field">
@@ -243,10 +244,9 @@ function MemberRow({ member, tiers, onUpdate, onDelete }) {
               <option value="revoked">Revocada</option>
             </select>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 220px' }}>
             <label style={{ fontSize: 11, color: 'var(--muted)' }}>Vencimiento (vacío = vitalicia)</label>
-            <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)}
-              style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }} />
+            <DateTimePicker value={expiresAt} onChange={setExpiresAt} ariaLabel="Vencimiento del acceso" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 160px' }}>
             <label style={{ fontSize: 11, color: 'var(--muted)' }}>Notas</label>

@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import ImageUploader from '@/components/admin/ImageUploader'
+import DateTimePicker from '@/components/admin/DateTimePicker'
 
 const CourseBuilder = dynamic(() => import('./CourseBuilder'), { ssr: false })
 
@@ -425,10 +427,10 @@ function LessonCard({ lesson, onChange, onDelete, toast }) {
         <div className="editor-row">
           <div className="editor-field">
             <label>Fecha y hora de la sesión</label>
-            <input
-              type="datetime-local"
+            <DateTimePicker
               value={lesson.liveSessionAt}
-              onChange={(event) => update({ liveSessionAt: event.target.value })}
+              onChange={(next) => update({ liveSessionAt: next })}
+              ariaLabel="Fecha y hora de la sesión"
             />
           </div>
           <div className="editor-field">
@@ -795,8 +797,14 @@ export default function CourseEditor({ initialCourse }) {
             <input value={course.duration} onChange={(event) => updateCourse({ duration: event.target.value })} />
           </div>
           <div className="editor-field">
-            <label>Imagen de portada (URL)</label>
-            <input value={course.coverImageUrl} onChange={(event) => updateCourse({ coverImageUrl: event.target.value })} />
+            <ImageUploader
+              value={course.coverImageUrl}
+              onChange={(url) => updateCourse({ coverImageUrl: url })}
+              scope="course-cover"
+              label="Imagen de portada"
+              hint="Subí la imagen que se va a mostrar en el catálogo de cursos. Recomendado 1200×675 px, máx 8 MB."
+              onError={(message) => toast.show(message, 'error')}
+            />
           </div>
           <div className="editor-field">
             <label>Precio (ARS)</label>

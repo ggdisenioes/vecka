@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import NewTierButton from './NewTierButton'
+import TiersListClient from './TiersListClient'
 import '../courses/admin-courses.css'
 
 export const dynamic = 'force-dynamic'
@@ -125,59 +126,15 @@ export default async function AdminMembershipsListPage() {
           </div>
         </section>
 
-        {(!tiers || tiers.length === 0) ? (
-          <div className="empty-state">
-            Todavía no hay niveles de membresía. Hacé clic en <strong>Nueva membresía</strong> para crear el primero.
-          </div>
-        ) : (
-          <div className="admin-grid">
-            {tiers.map((tier) => (
-              <Link
-                key={tier.id}
-                href={`/admin/membresias/${tier.id}`}
-                className="course-card"
-              >
-                <div className="title" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {tier.name}
-                  {tier.is_featured && <span style={{ fontSize: 11, background: '#cce5ff', color: '#004085', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>Destacada</span>}
-                </div>
-                {tier.price_ars > 0 && (
-                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--accent-deep)', margin: '4px 0' }}>
-                    ${tier.price_ars.toLocaleString('es-AR')} ARS
-                    <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>
-                      / {tier.billing_period === 'monthly' ? 'mes' : tier.billing_period === 'annual' ? 'año' : tier.billing_period === 'lifetime' ? 'vitalicia' : 'único'}
-                    </span>
-                  </div>
-                )}
-                <div className="meta">
-                  <span className={`status-pill ${tier.status}`}>
-                    {tier.status === 'published' ? 'Publicada' : tier.status === 'archived' ? 'Archivada' : 'Borrador'}
-                  </span>
-                  <span className={`status-pill ${courseCounts.get(tier.id) ? 'catalog' : 'draft'}`}>
-                    {courseCounts.get(tier.id) || 0} cursos
-                  </span>
-                  <span className={`status-pill ${contentCounts.get(tier.id) ? 'catalog' : 'draft'}`}>
-                    {contentCounts.get(tier.id) || 0} recursos
-                  </span>
-                  <span className={`status-pill ${publishedCourseCounts.get(tier.id) ? 'published' : 'draft'}`}>
-                    {(publishedCourseCounts.get(tier.id) || 0) + (publishedContentCounts.get(tier.id) || 0)} publicados
-                  </span>
-                  <span className="status-pill catalog">
-                    {counts.get(tier.id) || 0} {counts.get(tier.id) === 1 ? 'miembro activo' : 'miembros activos'}
-                  </span>
-                </div>
-                {tier.description && (
-                  <div className="meta" style={{ color: 'var(--muted)' }}>
-                    {tier.description.slice(0, 100)}{tier.description.length > 100 ? '…' : ''}
-                  </div>
-                )}
-                <div className="card-footer">
-                  Actualizado {tier.updated_at ? new Date(tier.updated_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <TiersListClient
+          tiers={(tiers || []).map((tier) => ({
+            ...tier,
+            course_count: courseCounts.get(tier.id) || 0,
+            content_count: contentCounts.get(tier.id) || 0,
+            published_count: (publishedCourseCounts.get(tier.id) || 0) + (publishedContentCounts.get(tier.id) || 0),
+            active_members: counts.get(tier.id) || 0,
+          }))}
+        />
       </div>
     </main>
   )

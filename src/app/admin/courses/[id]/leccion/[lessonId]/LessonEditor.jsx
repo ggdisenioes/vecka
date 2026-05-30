@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import DateTimePicker from '@/components/admin/DateTimePicker'
 
 const STATUSES = ['draft', 'published', 'archived']
 const VIDEO_PROVIDERS = ['none', 'vimeo', 'upload']
@@ -184,7 +185,7 @@ export default function LessonEditor({ lesson: initial, courseId }) {
         <div className="editor-row">
           <div className="editor-field">
             <label>Fecha y hora</label>
-            <input type="datetime-local" value={lesson.liveSessionAt} onChange={(e) => update({ liveSessionAt: e.target.value })} />
+            <DateTimePicker value={lesson.liveSessionAt} onChange={(next) => update({ liveSessionAt: next })} ariaLabel="Fecha y hora de la sesión" />
           </div>
           <div className="editor-field">
             <label>Link (Zoom / Meet)</label>

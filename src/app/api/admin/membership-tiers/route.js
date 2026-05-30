@@ -7,6 +7,7 @@ import {
   revalidateMemberships,
   toInteger,
   uniqueTierSlug,
+  uniqueMembershipContentCategorySlug,
 } from '@/lib/admin-api'
 
 const BILLING_PERIODS = ['monthly', 'annual', 'lifetime', 'one_time']
@@ -56,6 +57,19 @@ export async function POST(request) {
       .single()
 
     if (error) throw error
+
+    // Categoría por defecto para que Vero pueda cargar contenido sin paso previo.
+    const defaultCategoryName = 'General'
+    const defaultCategorySlug = await uniqueMembershipContentCategorySlug(data.id, defaultCategoryName)
+    await supabase
+      .from('membership_content_categories')
+      .insert({
+        tier_id: data.id,
+        name: defaultCategoryName,
+        slug: defaultCategorySlug,
+        sort_order: 0,
+      })
+
     revalidateMemberships()
     return NextResponse.json({ tier: data })
   } catch (error) {

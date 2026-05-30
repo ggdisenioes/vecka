@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ImageUploader from '@/components/admin/ImageUploader'
+import DateTimePicker from '@/components/admin/DateTimePicker'
 
 const STATUSES = [
   { value: 'draft', label: 'Borrador' },
@@ -150,7 +152,7 @@ export default function MembershipTierEditor({
   const [newContentSummary, setNewContentSummary] = useState('')
   const [newContentBody, setNewContentBody] = useState('')
   const [newContentUrl, setNewContentUrl] = useState('')
-  const [newContentCategoryId, setNewContentCategoryId] = useState('')
+  const [newContentCategoryId, setNewContentCategoryId] = useState(initialCategories?.[0]?.id || '')
   const [newContentFile, setNewContentFile] = useState(null)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCourseId, setNewCourseId] = useState('')
@@ -266,6 +268,21 @@ export default function MembershipTierEditor({
     }
   }
 
+  async function createCategoryRequest(name) {
+    const res = await fetch('/api/admin/membership-categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tierId: tier.id,
+        name,
+        sortOrder: categories.length,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error || 'No se pudo crear la categoría')
+    return data.category
+  }
+
   async function handleCreateCategory() {
     const name = newCategoryName.trim()
     if (!name) return
@@ -347,14 +364,6 @@ export default function MembershipTierEditor({
   async function handleCreateContentItem() {
     const title = newContentTitle.trim()
     if (!title) return
-    if (categories.length === 0) {
-      showToast('Creá al menos una categoría antes de cargar contenido.', 'error')
-      return
-    }
-    if (!newContentCategoryId) {
-      showToast('Elegí una categoría para este contenido.', 'error')
-      return
-    }
     if ((newContentType === 'download' || newContentType === 'image') && !newContentFile && !newContentUrl.trim()) {
       showToast('Agregá un archivo o una URL para este contenido', 'error')
       return
@@ -366,6 +375,22 @@ export default function MembershipTierEditor({
 
     setBusy('create-content')
     try {
+      // Si no hay categoría seleccionada, usamos la primera disponible
+      // o creamos "General" en silencio para no bloquear el flujo.
+      let categoryId = newContentCategoryId
+      let categoriesAfter = categories
+      if (!categoryId) {
+        if (categories.length > 0) {
+          categoryId = categories[0].id
+        } else {
+          const created = await createCategoryRequest('General')
+          categoriesAfter = [...categories, created]
+          setCategories(categoriesAfter)
+          categoryId = created.id
+        }
+        setNewContentCategoryId(categoryId)
+      }
+
       let res
       if (newContentFile) {
         const formData = new FormData()
@@ -375,7 +400,7 @@ export default function MembershipTierEditor({
         formData.append('summary', newContentSummary)
         formData.append('body', newContentBody)
         formData.append('mediaUrl', newContentUrl)
-        formData.append('categoryId', newContentCategoryId)
+        formData.append('categoryId', categoryId)
         formData.append('sortOrder', String(contentItems.length))
         formData.append('status', 'draft')
         formData.append('file', newContentFile)
@@ -391,7 +416,7 @@ export default function MembershipTierEditor({
             summary: newContentSummary,
             body: newContentBody,
             mediaUrl: newContentUrl,
-            categoryId: newContentCategoryId,
+            categoryId,
             sortOrder: contentItems.length,
             status: 'draft',
           }),
@@ -714,8 +739,14 @@ export default function MembershipTierEditor({
           </div>
 
           <div className="editor-field">
-            <label>Imagen de portada (URL)</label>
-            <input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." />
+            <ImageUploader
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              scope="tier-cover"
+              label="Imagen de portada"
+              hint="Subí la imagen que se va a mostrar en la página pública de esta membresía. Recomendado 1200×675 px, máx 8 MB."
+              onError={(message) => showToast(message, 'error')}
+            />
           </div>
 
           <div className="editor-field">
@@ -848,8 +879,12 @@ export default function MembershipTierEditor({
 
             <div className="editor-field">
               <label>Categoría</label>
-              <select value={newContentCategoryId} onChange={(e) => setNewContentCategoryId(e.target.value)} disabled={categories.length === 0}>
-                <option value="">{categories.length === 0 ? 'Primero creá una categoría' : 'Elegí una categoría'}</option>
+              <select value={newContentCategoryId} onChange={(e) => setNewContentCategoryId(e.target.value)}>
+                <option value="">
+                  {categories.length === 0
+                    ? 'Se creará "General" al guardar'
+                    : `Usar "${categories[0].name}" por defecto`}
+                </option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
@@ -1130,13 +1165,12 @@ export default function MembershipTierEditor({
                   style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 180px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 220px' }}>
                 <label style={{ fontSize: 12, color: 'var(--muted)' }}>Vencimiento (vacío = vitalicia)</label>
-                <input
-                  type="datetime-local"
+                <DateTimePicker
                   value={newMemberExpires}
-                  onChange={(e) => setNewMemberExpires(e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif' }}
+                  onChange={setNewMemberExpires}
+                  ariaLabel="Vencimiento del acceso"
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 160px' }}>
@@ -1191,12 +1225,10 @@ export default function MembershipTierEditor({
                       >
                         {GRANT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
-                      <input
-                        type="datetime-local"
+                      <DateTimePicker
                         value={toDatetimeLocal(g.expires_at)}
-                        onChange={(e) => handleUpdateGrant(g.user_id, { accessStatus: g.access_status, expiresAt: e.target.value || null })}
-                        title="Fecha de vencimiento"
-                        style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid var(--line, #dfd2c8)', fontFamily: 'DM Sans, sans-serif', fontSize: 13 }}
+                        onChange={(next) => handleUpdateGrant(g.user_id, { accessStatus: g.access_status, expiresAt: next || null })}
+                        ariaLabel="Vencimiento"
                       />
                       <button
                         type="button"

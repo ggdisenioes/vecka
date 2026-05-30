@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import DateTimePicker from '@/components/admin/DateTimePicker'
 
 function toDatetimeLocal(iso) {
   if (!iso) return ''
@@ -172,7 +173,7 @@ export default function TopicEditor({ topic: initial, courseId }) {
         <div className="editor-row">
           <div className="editor-field">
             <label>Fecha y hora</label>
-            <input type="datetime-local" value={topic.liveSessionAt} onChange={(e) => update({ liveSessionAt: e.target.value })} />
+            <DateTimePicker value={topic.liveSessionAt} onChange={(next) => update({ liveSessionAt: next })} ariaLabel="Fecha y hora de la sesión" />
           </div>
           <div className="editor-field">
             <label>Link</label>
