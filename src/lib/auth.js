@@ -12,10 +12,17 @@ import { getSupabaseServer } from '@/lib/supabase/server'
 export const getCurrentAuth = cache(async () => {
   const supabase = await getSupabaseServer()
 
-  const { data, error } = await supabase.auth.getUser()
-  const user = data?.user || null
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (!error) user = data?.user || null
+  } catch {
+    // Cookie corrupta o sesión inválida: tratamos como anónimo y dejamos
+    // que el layout/page redirija a /login. No queremos un 500.
+    user = null
+  }
 
-  if (error || !user) {
+  if (!user) {
     return { user: null, profile: null }
   }
 

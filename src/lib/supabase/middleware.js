@@ -18,23 +18,41 @@ export async function updateSession(request) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Ignoramos los "borrados" de cookies en middleware. Cuando
+          // Supabase no puede parsear una cookie de sesión (por ejemplo
+          // un chunk corrupto en Safari durante un prefetch RSC), llama
+          // setAll con value vacío + Max-Age=0 para limpiarla. Propagar
+          // ese borrado borra la sesión del browser y bouncea al usuario
+          // a /login en cada click. El logout real va por la Server
+          // Action /logout, que no pasa por este middleware client.
+          const writes = cookiesToSet.filter(({ value, options }) => {
+            const isEmptyValue = !value
+            const isExpired = options && (options.maxAge === 0 || options.expires?.getTime?.() <= Date.now())
+            return !(isEmptyValue || isExpired)
+          })
+          if (writes.length === 0) return
+          writes.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+          writes.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
     },
   )
 
-  // Supabase mutates the response cookies during this call when the session
-  // needs to be refreshed. If we don't await it, the updated cookies never
-  // make it into the response and the user appears logged out on the next
-  // request.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Supabase mutates the response cookies during this call when la sesión
+  // necesita refrescarse. Si no lo esperamos, las cookies actualizadas no
+  // llegan a la respuesta y el usuario aparece deslogueado en el próximo
+  // request. Atrapamos errores de parsing (cookie corrupta) para que el
+  // middleware no devuelva 500 — la página se encarga del redirect a login.
+  let user = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data?.user || null
+  } catch {
+    user = null
+  }
 
   const pathname = request.nextUrl.pathname
   const allowedPasswordChangePaths = [

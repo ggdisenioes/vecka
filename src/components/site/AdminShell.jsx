@@ -29,16 +29,16 @@ export default function AdminShell({ children, user, profile }) {
 
         <nav className="admin-app-nav" aria-label="Administración">
           {ADMIN_NAV.map((item) => (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} prefetch={false}>
               {item.label}
             </Link>
           ))}
         </nav>
 
         <div className="admin-app-sidebar-footer">
-          <Link href="/" className="admin-app-secondary-link">Ver sitio</Link>
-          <Link href="/cuenta" className="admin-app-secondary-link">Mi cuenta</Link>
-          <Link href="/logout" className="admin-app-secondary-link">Cerrar sesión</Link>
+          <Link href="/" className="admin-app-secondary-link" prefetch={false}>Ver sitio</Link>
+          <Link href="/cuenta" className="admin-app-secondary-link" prefetch={false}>Mi cuenta</Link>
+          <Link href="/logout" className="admin-app-secondary-link" prefetch={false}>Cerrar sesión</Link>
         </div>
       </aside>
 
@@ -61,13 +61,13 @@ export default function AdminShell({ children, user, profile }) {
             </summary>
             <nav aria-label="Administración móvil">
               {ADMIN_NAV.map((item) => (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} prefetch={false}>
                   {item.label}
                 </Link>
               ))}
-              <Link href="/">Ver sitio</Link>
-              <Link href="/cuenta">Mi cuenta</Link>
-              <Link href="/logout">Cerrar sesión</Link>
+              <Link href="/" prefetch={false}>Ver sitio</Link>
+              <Link href="/cuenta" prefetch={false}>Mi cuenta</Link>
+              <Link href="/logout" prefetch={false}>Cerrar sesión</Link>
             </nav>
           </details>
         </header>
