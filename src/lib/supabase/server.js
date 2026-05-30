@@ -14,9 +14,16 @@ export async function getSupabaseServer() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
+          // Server Components no pueden escribir cookies. El middleware se
+          // encarga del refresh real; acá ignoramos el error en silencio
+          // para que el getUser() del componente no quede sin sesión.
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // ignored — refresh handled by middleware
+          }
         },
       },
     },
