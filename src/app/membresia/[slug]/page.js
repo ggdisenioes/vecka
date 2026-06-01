@@ -133,48 +133,44 @@ export default async function MembershipTierPage({ params, searchParams }) {
             </div>
           </header>
 
-          <div className="membership-summary-row">
-            <section className="membership-detail-card membership-summary-card">
-              <p className="summary-kicker">Tu membresía</p>
-              <div className="membership-detail-price">
-                <div className="membership-detail-price-value">
-                  {formatPriceArs(monthlyPlan.priceArs)}
+          {!hasAccess ? (
+            <div className="membership-summary-row">
+              <section className="membership-detail-card membership-summary-card">
+                <p className="summary-kicker">Tu membresía</p>
+                <div className="membership-detail-price">
+                  <div className="membership-detail-price-value">
+                    {formatPriceArs(monthlyPlan.priceArs)}
+                  </div>
+                  <div className="membership-detail-price-meta">
+                    ARS / mes
+                  </div>
                 </div>
-                <div className="membership-detail-price-meta">
-                  ARS / mes
-                </div>
-              </div>
-              {hasAccess ? (
-                <Link className="membership-detail-primary" href={directAccessHref}>
-                  Ir a la membresía →
-                </Link>
-              ) : (
                 <Link className="membership-detail-primary" href={checkoutHref}>
                   Sumarme ahora →
                 </Link>
-              )}
-            </section>
+              </section>
 
-            <section className="membership-detail-card membership-summary-card">
-              <h3>Estado</h3>
-              <p>{hasAccess ? 'Tenés acceso a esta membresía.' : 'Todavía no tenés acceso activo.'}</p>
-              <div className="membership-detail-meta">
-                <div><strong>{courses.length}</strong> talleres incluidos</div>
-                <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
-              </div>
-            </section>
+              <section className="membership-detail-card membership-summary-card">
+                <h3>Estado</h3>
+                <p>Todavía no tenés acceso activo.</p>
+                <div className="membership-detail-meta">
+                  <div><strong>{courses.length}</strong> talleres incluidos</div>
+                  <div><strong>{contentItems.length}</strong> recursos exclusivos</div>
+                </div>
+              </section>
 
-            <section className="membership-detail-card membership-summary-card">
-              <h3>Beneficios</h3>
-              {features.length > 0 ? (
-                <ul className="membership-detail-list">
-                  {features.slice(0, 4).map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
-                </ul>
-              ) : (
-                <p>No hay beneficios cargados todavía.</p>
-              )}
-            </section>
-          </div>
+              <section className="membership-detail-card membership-summary-card">
+                <h3>Beneficios</h3>
+                {features.length > 0 ? (
+                  <ul className="membership-detail-list">
+                    {features.slice(0, 4).map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
+                  </ul>
+                ) : (
+                  <p>No hay beneficios cargados todavía.</p>
+                )}
+              </section>
+            </div>
+          ) : null}
 
           {userIsStaff ? (
             <div className="membership-admin-banner" style={{ marginTop: 24 }}>
