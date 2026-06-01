@@ -2,13 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import MembershipAgenda from '@/components/club/MembershipAgenda'
 
 function metricLabel(count, singular, plural) {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
-export default function AccountScreen({ user, memberships, courses, purchases, agendaEvents = [] }) {
+export default function AccountScreen({ user, memberships, courses, purchases }) {
   const [fullName, setFullName] = useState(user.name || '')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -99,12 +98,6 @@ export default function AccountScreen({ user, memberships, courses, purchases, a
         </article>
       </section>
 
-      {agendaEvents.length > 0 ? (
-        <section style={{ marginBottom: 24 }}>
-          <MembershipAgenda events={agendaEvents} />
-        </section>
-      ) : null}
-
       <div className="account-grid">
         <section className="membership-section">
           <h2>Membresías activas</h2>
@@ -138,7 +131,7 @@ export default function AccountScreen({ user, memberships, courses, purchases, a
                   ) : null}
                   {membership.href ? (
                     <Link href={membership.href} prefetch={false} className="vk-button">
-                      Ver membresía
+                      Ingresar al Club VeCKA
                     </Link>
                   ) : null}
                 </article>

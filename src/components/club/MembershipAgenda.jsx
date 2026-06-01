@@ -73,11 +73,16 @@ export default function MembershipAgenda({ events = [] }) {
 
   return (
     <div className="club-agenda">
+      <div className="club-agenda-heading">
+        <span className="club-agenda-eyebrow">Tu agenda</span>
+        <h2>Qué se viene en el Club</h2>
+      </div>
+
       {/* Barra horizontal: Agenda del Mes | Próximos acontecimientos */}
       <div className="club-agenda-bar">
         <section className="club-agenda-panel">
           <header className="club-agenda-head">
-            <h3>Agenda del mes</h3>
+            <h3><span className="club-agenda-ic" aria-hidden="true">🗓</span> Agenda del mes</h3>
             <span className="club-agenda-month">{monthName}</span>
           </header>
           {monthEvents.length === 0 ? (
@@ -109,7 +114,7 @@ export default function MembershipAgenda({ events = [] }) {
 
         <section className="club-agenda-panel">
           <header className="club-agenda-head">
-            <h3>Próximos acontecimientos</h3>
+            <h3><span className="club-agenda-ic" aria-hidden="true">✨</span> Próximos acontecimientos</h3>
           </header>
           {upcoming.length === 0 ? (
             <p className="club-agenda-empty">Pronto vamos a anunciar nuevas fechas.</p>
