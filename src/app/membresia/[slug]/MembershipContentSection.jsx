@@ -3,14 +3,14 @@
 import { useMemo, useState } from 'react'
 
 const MONTH_SUBTITLES = {
-  'mi-club': 'Cosé con Propósito',
-  'noviembre': 'Vestido Bohemio',
-  'diciembre': 'Traje de baño',
-  'enero': '¡Enero libre! Mini Tote Bag',
-  'febrero': 'Conjunto deportivo',
-  'marzo': 'Camisa clásica',
-  'abril': 'Campera Bomber',
-  'mayo': 'Trench Corto',
+  'mi-club': 'Bienvenida al Club · Cosé desde Cero',
+  'noviembre': 'Vestido Bohemio · talles 38 al 58',
+  'diciembre': 'Traje de baño · talles 38 al 58',
+  'enero': 'Mini Tote Bag · proyecto especial',
+  'febrero': 'Conjunto deportivo · talles 38 al 58',
+  'marzo': 'Camisa clásica · talles 38 al 58',
+  'abril': 'Campera Bomber · talles 38 al 58',
+  'mayo': 'Trench Corto · próximamente',
 }
 
 export default function MembershipContentSection({ items, categories }) {
@@ -21,8 +21,7 @@ export default function MembershipContentSection({ items, categories }) {
 
   const [activeId, setActiveId] = useState(() => {
     if (sortedCats.length === 0) return 'all'
-    // default: last category (most recent)
-    return sortedCats[sortedCats.length - 1].id
+    return sortedCats[0].id
   })
 
   const filteredItems = useMemo(() => {
