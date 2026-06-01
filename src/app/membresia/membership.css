@@ -739,6 +739,228 @@
   color: #1d5f55;
 }
 
+/* ============================================================
+   CLUB VECKA — AGENDA
+   ============================================================ */
+
+.club-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Barra horizontal: dos paneles lado a lado */
+.club-agenda-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.club-agenda-panel {
+  background: #fff;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 16px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.club-agenda-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.club-agenda-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink, #172122);
+}
+.club-agenda-month {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #1d5f55;
+  background: #e8f5f1;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.club-agenda-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted, #596567);
+}
+
+.club-agenda-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.club-agenda-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.club-agenda-item.is-past {
+  opacity: 0.5;
+}
+.club-agenda-date {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #fffaf3;
+  border: 1px solid var(--line, #dfd2c8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.club-agenda-date strong {
+  font-size: 17px;
+  color: var(--ink, #172122);
+}
+.club-agenda-date small {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--muted, #596567);
+  margin-top: 2px;
+}
+.club-agenda-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.club-agenda-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink, #172122);
+  line-height: 1.3;
+}
+.club-agenda-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted, #596567);
+  text-transform: capitalize;
+}
+.club-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Próxima clase en vivo (full width) */
+.club-next-live {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, #1d5f55 0%, #2a7d6f 100%);
+  border-radius: 18px;
+  padding: 22px 26px;
+  color: #fff;
+}
+.club-next-live-info { min-width: 0; }
+.club-next-live-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.club-next-live-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+.club-next-live-when {
+  margin: 4px 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+  text-transform: capitalize;
+}
+.club-next-live-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+.club-next-live-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.club-countdown {
+  display: flex;
+  gap: 10px;
+}
+.club-countdown span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.club-countdown strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.club-live-now {
+  font-size: 16px;
+  font-weight: 700;
+  animation: clubPulse 1.4s ease-in-out infinite;
+}
+@keyframes clubPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.club-next-live-cta {
+  background: #fff;
+  color: #1d5f55;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.club-next-live-cta:hover {
+  background: #f0faf7;
+}
+
+@media (max-width: 720px) {
+  .club-agenda-bar {
+    grid-template-columns: 1fr;
+  }
+  .club-next-live {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .club-next-live-action {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
 /* ============================================================ */
 
 .membership-locked {

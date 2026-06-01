@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ImageUploader from '@/components/admin/ImageUploader'
 import DateTimePicker from '@/components/admin/DateTimePicker'
+import AgendaPanel from './AgendaPanel'
 
 const STATUSES = [
   { value: 'draft', label: 'Borrador' },
@@ -117,6 +118,7 @@ export default function MembershipTierEditor({
   initialGrants,
   initialCategories,
   initialContentItems,
+  initialAgendaEvents,
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -654,6 +656,7 @@ export default function MembershipTierEditor({
         {[
           { id: 'datos', label: 'Datos del plan' },
           { id: 'contenido', label: `Contenido exclusivo (${contentItems.length})` },
+          { id: 'agenda', label: `Agenda (${(initialAgendaEvents || []).length})` },
           { id: 'cursos', label: `Cursos opcionales (${courses.length})` },
           { id: 'miembros', label: `Miembros (${activeCount} activos)` },
         ].map((tab) => (
@@ -1056,6 +1059,17 @@ export default function MembershipTierEditor({
               ))}
             </div>
           )}
+        </section>
+      )}
+
+      {/* TAB: AGENDA */}
+      {activeTab === 'agenda' && (
+        <section className="admin-card editor-section">
+          <div className="section-heading">
+            <h2>Agenda del Club</h2>
+            <p>Cargá clases en vivo futuras y publicaciones de contenido programadas. Las socias con acceso las ven en la página de la membresía.</p>
+          </div>
+          <AgendaPanel tierId={tier.id} initialEvents={initialAgendaEvents || []} />
         </section>
       )}
 

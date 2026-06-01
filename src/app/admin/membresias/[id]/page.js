@@ -87,6 +87,12 @@ export default async function AdminMembershipTierPage({ params }) {
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
+  const { data: agendaEvents } = await supabase
+    .from('membership_agenda_events')
+    .select('*')
+    .eq('tier_id', id)
+    .order('starts_at', { ascending: true })
+
   return (
     <main className="admin-shell">
       <div className="admin-container">
@@ -120,6 +126,7 @@ export default async function AdminMembershipTierPage({ params }) {
           initialGrants={grantsHydrated}
           initialCategories={contentCategories || []}
           initialContentItems={contentItems || []}
+          initialAgendaEvents={agendaEvents || []}
         />
       </div>
     </main>

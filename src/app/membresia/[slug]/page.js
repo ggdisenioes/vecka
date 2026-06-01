@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import MembershipContentSection from './MembershipContentSection'
+import MembershipAgenda from './MembershipAgenda'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import {
   canAccessMembershipContentItem,
@@ -108,6 +109,16 @@ export default async function MembershipTierPage({ params, searchParams }) {
       : (items || []).filter((item) => canAccessMembershipContentItem(item, clubAccess))
   }
 
+  let agendaEvents = []
+  if (hasAccess && contentTier?.id) {
+    const { data: events } = await admin
+      .from('membership_agenda_events')
+      .select('*')
+      .eq('tier_id', contentTier.id)
+      .order('starts_at', { ascending: true })
+    agendaEvents = events || []
+  }
+
   const features = Array.isArray(tier.features) ? tier.features : []
   const { data: settings } = await admin
     .from('platform_settings')
@@ -206,6 +217,8 @@ export default async function MembershipTierPage({ params, searchParams }) {
               Recibimos tu solicitud de suscripción. El acceso se activa automáticamente cuando Mercado Pago acredita el primer pago.
             </div>
           ) : null}
+
+          {hasAccess ? <MembershipAgenda events={agendaEvents} /> : null}
 
           <div className="membership-detail-grid membership-detail-grid-full">
             <div className="membership-detail-main">
