@@ -78,7 +78,7 @@ export default function PublicSiteShell({ children, user = null, userRole = null
               ) : (
                 <Link href={loginHref}>Iniciar sesión</Link>
               )}
-              {user ? <Link href="/logout">Cerrar sesión</Link> : null}
+              {user ? <Link href="/logout" prefetch={false}>Cerrar sesión</Link> : null}
               <Link href="/membresias" className="mobile-primary">Sumarme al Club</Link>
             </nav>
           </details>

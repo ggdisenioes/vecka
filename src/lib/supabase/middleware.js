@@ -18,30 +18,30 @@ export async function updateSession(request) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // En prefetch requests (Safari y Next.js RSC), una cookie parcial
-          // o corrupta hace que Supabase llame setAll con value='' + maxAge=0
-          // para borrar la sesión. Si propagamos ese borrado, el browser
-          // pierde la sesión aunque el usuario siga logueado en otras tabs.
-          // Para prefetch filtramos los borrados; para requests reales los
-          // permitimos para que el refresh de token funcione correctamente
-          // (si no, chunks de sesión viejos quedan y corrompen la lectura).
-          const isPrefetch =
-            request.headers.get('next-router-prefetch') === '1' ||
-            request.headers.get('purpose') === 'prefetch' ||
-            request.headers.get('x-middleware-prefetch') === '1'
+          // Race condition de refresh token: cuando el access token está
+          // vencido y llegan varios requests casi simultáneos (típicamente
+          // el prefetch del Link + la navegación real), todos traen el mismo
+          // refresh token. El primero lo usa y lo rota; los demás fallan al
+          // refrescar y Supabase responde llamando setAll SOLO con borrados
+          // (value='' + maxAge=0) para limpiar la sesión. Si propagamos ese
+          // borrado, pisamos las cookies buenas que escribió el request que
+          // sí refrescó, y el usuario aparece deslogueado (se arregla al
+          // recargar). La regla: si el lote es 100% borrados, lo ignoramos
+          // (refresh fallido); si trae al menos un valor real, lo aplicamos
+          // entero (refresh exitoso que además limpia chunks viejos). El
+          // logout real escribe sus cookies en /logout/route.js, no acá.
+          const isDeletion = ({ value, options }) => {
+            const isEmptyValue = !value
+            const isExpired = options && (options.maxAge === 0 || options.expires?.getTime?.() <= Date.now())
+            return isEmptyValue || isExpired
+          }
 
-          const writes = isPrefetch
-            ? cookiesToSet.filter(({ value, options }) => {
-                const isEmptyValue = !value
-                const isExpired = options && (options.maxAge === 0 || options.expires?.getTime?.() <= Date.now())
-                return !(isEmptyValue || isExpired)
-              })
-            : cookiesToSet
+          const hasRealWrite = cookiesToSet.some((cookie) => !isDeletion(cookie))
+          if (!hasRealWrite) return
 
-          if (writes.length === 0) return
-          writes.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
-          writes.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
     },

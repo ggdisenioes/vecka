@@ -58,6 +58,23 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
     return data?.role || 'student'
   }
 
+  // El cliente de @supabase/ssr escribe la cookie de sesión de forma
+  // asíncrona (vía onAuthStateChange) después de que signInWithPassword
+  // resuelve. Si hacemos window.location.assign de inmediato, la navegación
+  // dura aborta esa escritura pendiente y el servidor recibe el request sin
+  // cookie → renderiza al usuario como deslogueado (se "arregla" al recargar).
+  // Esperamos a que la cookie sb-*-auth-token exista antes de navegar.
+  async function waitForSessionCookie(timeoutMs = 4000) {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      if (typeof document !== 'undefined' && /(^|;\s*)sb-[^=]*-auth-token(\.\d+)?=/.test(document.cookie)) {
+        return true
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    return false
+  }
+
   async function handleLogin(email, password) {
     const supabase = getSupabaseBrowser()
     let result = await supabase.auth.signInWithPassword({ email, password })
@@ -86,6 +103,9 @@ export default function LoginScreen({ nextPath = '/', initialError = null, initi
     if (!userId) {
       throw new Error('No se pudo recuperar la sesión.')
     }
+
+    // Garantizamos que la cookie de sesión esté persistida antes de navegar.
+    await waitForSessionCookie()
 
     if (result.data?.user?.user_metadata?.requires_password_change) {
       window.location.assign(`/cambiar-contrasena?next=${encodeURIComponent(nextPath)}`)

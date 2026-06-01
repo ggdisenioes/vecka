@@ -77,7 +77,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
               Panel de control
             </Link>
           ) : null}
-          <Link href="/logout" className="vk-button secondary">
+          <Link href="/logout" prefetch={false} className="vk-button secondary">
             Cerrar sesión
           </Link>
         </div>
@@ -130,7 +130,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
                     </ul>
                   ) : null}
                   {membership.href ? (
-                    <Link href={membership.href} className="vk-button">
+                    <Link href={membership.href} prefetch={false} className="vk-button">
                       Ver membresía
                     </Link>
                   ) : null}
@@ -239,7 +239,7 @@ export default function AccountScreen({ user, memberships, courses, purchases })
               <button type="submit" className="vk-button" disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
-              <Link href="/logout" className="vk-button secondary">
+              <Link href="/logout" prefetch={false} className="vk-button secondary">
                 Cerrar sesión
               </Link>
             </div>
