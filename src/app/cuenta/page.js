@@ -149,6 +149,17 @@ export default async function AccountPage() {
     status: purchaseStatusLabel(grant),
   }))
 
+  // Agenda del Club (eventos globales) para socias con membresía activa.
+  let agendaEvents = []
+  if (memberships.length > 0) {
+    const { data: events } = await admin
+      .from('membership_agenda_events')
+      .select('*')
+      .is('tier_id', null)
+      .order('starts_at', { ascending: true })
+    agendaEvents = events || []
+  }
+
   const accountUser = {
     id: user.id,
     name: profile?.display_name || profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
@@ -169,6 +180,7 @@ export default async function AccountPage() {
         memberships={memberships}
         courses={courses}
         purchases={purchases}
+        agendaEvents={agendaEvents}
       />
     </PublicSiteShell>
   )
