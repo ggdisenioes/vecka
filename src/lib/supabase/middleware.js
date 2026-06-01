@@ -18,23 +18,29 @@ export async function updateSession(request) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Ignoramos los "borrados" de cookies en middleware. Cuando
-          // Supabase no puede parsear una cookie de sesión (por ejemplo
-          // un chunk corrupto en Safari durante un prefetch RSC), llama
-          // setAll con value vacío + Max-Age=0 para limpiarla. Propagar
-          // ese borrado borra la sesión del browser y bouncea al usuario
-          // a /login en cada click. El logout real va por la Server
-          // Action /logout, que no pasa por este middleware client.
-          const writes = cookiesToSet.filter(({ value, options }) => {
-            const isEmptyValue = !value
-            const isExpired = options && (options.maxAge === 0 || options.expires?.getTime?.() <= Date.now())
-            return !(isEmptyValue || isExpired)
-          })
+          // En prefetch requests (Safari y Next.js RSC), una cookie parcial
+          // o corrupta hace que Supabase llame setAll con value='' + maxAge=0
+          // para borrar la sesión. Si propagamos ese borrado, el browser
+          // pierde la sesión aunque el usuario siga logueado en otras tabs.
+          // Para prefetch filtramos los borrados; para requests reales los
+          // permitimos para que el refresh de token funcione correctamente
+          // (si no, chunks de sesión viejos quedan y corrompen la lectura).
+          const isPrefetch =
+            request.headers.get('next-router-prefetch') === '1' ||
+            request.headers.get('purpose') === 'prefetch' ||
+            request.headers.get('x-middleware-prefetch') === '1'
+
+          const writes = isPrefetch
+            ? cookiesToSet.filter(({ value, options }) => {
+                const isEmptyValue = !value
+                const isExpired = options && (options.maxAge === 0 || options.expires?.getTime?.() <= Date.now())
+                return !(isEmptyValue || isExpired)
+              })
+            : cookiesToSet
+
           if (writes.length === 0) return
           writes.forEach(({ name, value }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request,
-          })
+          response = NextResponse.next({ request })
           writes.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
