@@ -520,6 +520,180 @@
   border: 1px solid var(--line, #dfd2c8);
 }
 
+/* ============================================================
+   CLUB VECKA — MONTH TABS + CONTENT LAYOUT
+   ============================================================ */
+
+.club-month-tabs-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin: -28px -28px 0;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line, #dfd2c8);
+}
+.club-month-tabs-wrap::-webkit-scrollbar { display: none; }
+
+.club-month-tabs {
+  display: flex;
+  gap: 0;
+  min-width: max-content;
+}
+
+.club-month-tab {
+  padding: 14px 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted, #596567);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.club-month-tab:hover { color: var(--ink, #172122); }
+.club-month-tab.active {
+  color: #1d5f55;
+  border-bottom-color: #5e9e8a;
+  font-weight: 700;
+}
+
+.club-month-header {
+  padding: 22px 0 8px;
+}
+.club-month-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink, #172122);
+}
+.club-month-subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted, #596567);
+}
+
+.club-content-block {
+  margin-top: 22px;
+}
+.club-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted, #596567);
+  margin: 0 0 14px;
+}
+
+/* Video grid — 2 cols on desktop, 1 on mobile */
+.club-video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+.club-video-card {
+  background: #fffefb;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.club-video-frame {
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.club-video-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+.club-video-meta {
+  padding: 12px 16px 14px;
+}
+.club-video-title {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink, #172122);
+}
+.club-video-summary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted, #596567);
+}
+
+.club-text-card {
+  background: #fffaf3;
+  border: 1px dashed var(--line, #dfd2c8);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+}
+
+/* Downloads grid */
+.club-downloads-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.club-download-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #fffefb;
+  border: 1px solid var(--line, #dfd2c8);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink, #172122);
+  transition: background 0.12s, border-color 0.12s;
+}
+.club-download-card:hover {
+  background: #f0faf7;
+  border-color: #5e9e8a;
+}
+.club-download-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e8f5f1;
+  color: #1d5f55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.club-download-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.club-download-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.club-download-desc {
+  font-size: 12px;
+  color: var(--muted, #596567);
+}
+.club-download-action {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d5f55;
+  white-space: nowrap;
+}
+
+/* ============================================================ */
+
 .membership-locked {
   background: #fffefb;
   border: 1px dashed var(--line, #dfd2c8);

@@ -2,133 +2,148 @@
 
 import { useMemo, useState } from 'react'
 
-function RichBody({ html }) {
-  if (!html) return null
-  return <div className="article-body" dangerouslySetInnerHTML={{ __html: html }} />
-}
-
-function contentTypeLabel(type) {
-  if (type === 'download') return 'Descargable'
-  if (type === 'image') return 'Imagen'
-  if (type === 'link') return 'Link'
-  if (type === 'embed') return 'Video'
-  return 'Texto'
+const MONTH_SUBTITLES = {
+  'mi-club': 'Cosé con Propósito',
+  'noviembre': 'Vestido Bohemio',
+  'diciembre': 'Traje de baño',
+  'enero': '¡Enero libre! Mini Tote Bag',
+  'febrero': 'Conjunto deportivo',
+  'marzo': 'Camisa clásica',
+  'abril': 'Campera Bomber',
+  'mayo': 'Trench Corto',
 }
 
 export default function MembershipContentSection({ items, categories }) {
-  const [activeCategory, setActiveCategory] = useState('all')
+  const sortedCats = useMemo(
+    () => [...(categories || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    [categories]
+  )
 
-  const availableCategories = useMemo(() => {
-    const categoryMap = new Map((categories || []).map((category) => [category.id, category]))
-    const counts = new Map()
-    let uncategorizedCount = 0
-
-    for (const item of items || []) {
-      if (item.category_id && categoryMap.has(item.category_id)) {
-        counts.set(item.category_id, (counts.get(item.category_id) || 0) + 1)
-      } else {
-        uncategorizedCount += 1
-      }
-    }
-
-    const result = []
-    for (const category of categories || []) {
-      const count = counts.get(category.id) || 0
-      if (count > 0) result.push({ id: category.id, name: category.name, count })
-    }
-    if (uncategorizedCount > 0) {
-      result.push({ id: 'uncategorized', name: 'Sin categoría', count: uncategorizedCount })
-    }
-    return result
-  }, [categories, items])
+  const [activeId, setActiveId] = useState(() => {
+    if (sortedCats.length === 0) return 'all'
+    // default: last category (most recent)
+    return sortedCats[sortedCats.length - 1].id
+  })
 
   const filteredItems = useMemo(() => {
-    if (activeCategory === 'all') return items || []
-    if (activeCategory === 'uncategorized') {
-      return (items || []).filter((item) => !item.category_id)
-    }
-    return (items || []).filter((item) => item.category_id === activeCategory)
-  }, [activeCategory, items])
+    if (activeId === 'all') return items || []
+    return (items || []).filter((item) => item.category_id === activeId)
+  }, [activeId, items])
+
+  const videos = filteredItems.filter((i) => i.type === 'embed')
+  const downloads = filteredItems.filter((i) => i.type === 'download')
+  const others = filteredItems.filter((i) => i.type !== 'embed' && i.type !== 'download')
+
+  const activeCat = sortedCats.find((c) => c.id === activeId)
+  const subtitle = activeCat ? MONTH_SUBTITLES[activeCat.slug] : null
+
+  if ((items || []).length === 0) {
+    return (
+      <div className="membership-locked">Aún no hay contenido publicado. Volvé pronto.</div>
+    )
+  }
 
   return (
-    <section className="membership-section">
-      <div className="membership-section-header">
-        <div>
-          <h2>Contenido exclusivo</h2>
-          <p className="item-meta" style={{ marginTop: 6 }}>
-            Filtrá por categoría para encontrar más rápido lo que necesitás.
-          </p>
-        </div>
-      </div>
-
-      {availableCategories.length > 0 ? (
-        <div className="membership-filter-row">
-          <button
-            type="button"
-            className={`membership-filter-chip${activeCategory === 'all' ? ' active' : ''}`}
-            onClick={() => setActiveCategory('all')}
-          >
-            Todo <span>{items.length}</span>
-          </button>
-          {availableCategories.map((category) => (
+    <section className="membership-section" style={{ paddingTop: 0 }}>
+      {/* Month tabs — scrollable horizontal row */}
+      <div className="club-month-tabs-wrap">
+        <div className="club-month-tabs">
+          {sortedCats.map((cat) => (
             <button
-              key={category.id}
+              key={cat.id}
               type="button"
-              className={`membership-filter-chip${activeCategory === category.id ? ' active' : ''}`}
-              onClick={() => setActiveCategory(category.id)}
+              className={`club-month-tab${activeId === cat.id ? ' active' : ''}`}
+              onClick={() => setActiveId(cat.id)}
             >
-              {category.name} <span>{category.count}</span>
+              {cat.name}
             </button>
           ))}
         </div>
-      ) : null}
+      </div>
+
+      {/* Active month header */}
+      {activeCat && (
+        <div className="club-month-header">
+          <h2 className="club-month-title">{activeCat.name}</h2>
+          {subtitle && <p className="club-month-subtitle">{subtitle}</p>}
+        </div>
+      )}
 
       {filteredItems.length === 0 ? (
         <div className="membership-locked" style={{ marginTop: 12 }}>
-          No hay contenido en esta categoría todavía.
+          No hay contenido en esta sección todavía.
         </div>
       ) : (
-        <div className="membership-content-grid">
-          {filteredItems.map((item) => {
-            const privateFileUrl = item.storage_path ? `/api/membership-content/${item.id}` : null
-            const mediaHref = privateFileUrl || item.media_url
-            const category = categories.find((entry) => entry.id === item.category_id)
-            return (
-              <article key={item.id} className={`membership-resource-card type-${item.type || 'text'}`}>
-                <div className="item-meta">
-                  {contentTypeLabel(item.type)}
-                  {category?.name ? ` · ${category.name}` : ''}
-                </div>
-                <h3>{item.title}</h3>
-                {item.summary ? <p>{item.summary}</p> : null}
-
-                {item.type === 'image' && mediaHref ? (
-                  <img src={mediaHref} alt={item.title} className="membership-resource-image" />
-                ) : null}
-
-                {item.type === 'embed' && item.media_url ? (
-                  <div className="video-frame">
-                    <iframe src={item.media_url} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+        <>
+          {/* Videos / Clases en Vivo */}
+          {videos.length > 0 && (
+            <div className="club-content-block">
+              <h3 className="club-block-title">Clases</h3>
+              <div className="club-video-grid">
+                {videos.map((item) => (
+                  <div key={item.id} className="club-video-card">
+                    <div className="club-video-frame">
+                      <iframe
+                        src={item.media_url}
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        title={item.title}
+                      />
+                    </div>
+                    <div className="club-video-meta">
+                      <p className="club-video-title">{item.title}</p>
+                      {item.summary && <p className="club-video-summary">{item.summary}</p>}
+                    </div>
                   </div>
-                ) : null}
+                ))}
+              </div>
+            </div>
+          )}
 
-                {item.body ? <RichBody html={item.body} /> : null}
+          {/* Text items (Mayo "próximamente", etc.) */}
+          {others.length > 0 && (
+            <div className="club-content-block">
+              {others.map((item) => (
+                <div key={item.id} className="club-text-card">
+                  <p className="club-video-title">{item.title}</p>
+                  {item.summary && <p className="club-video-summary">{item.summary}</p>}
+                </div>
+              ))}
+            </div>
+          )}
 
-                {item.type === 'download' && mediaHref ? (
-                  <a className="membership-cta secondary" href={mediaHref} target="_blank" rel="noopener noreferrer">
-                    Descargar {item.file_name || 'archivo'}
+          {/* PDFs / Descargas */}
+          {downloads.length > 0 && (
+            <div className="club-content-block">
+              <h3 className="club-block-title">Moldes y materiales</h3>
+              <div className="club-downloads-grid">
+                {downloads.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.media_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="club-download-card"
+                  >
+                    <span className="club-download-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <polyline points="9 15 12 18 15 15"/>
+                      </svg>
+                    </span>
+                    <div className="club-download-info">
+                      <span className="club-download-name">{item.title}</span>
+                      {item.summary && <span className="club-download-desc">{item.summary}</span>}
+                    </div>
+                    <span className="club-download-action">Descargar PDF</span>
                   </a>
-                ) : null}
-
-                {item.type === 'link' && item.media_url ? (
-                  <a className="membership-cta secondary" href={item.media_url} target="_blank" rel="noopener noreferrer">
-                    Abrir recurso
-                  </a>
-                ) : null}
-              </article>
-            )
-          })}
-        </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   )
