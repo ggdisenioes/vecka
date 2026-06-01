@@ -40,6 +40,20 @@ export default async function MembershipTierPage({ params, searchParams }) {
       .select('tier_id, access_status, expires_at, granted_at, starts_at, grant_type, membership_tiers(slug, billing_period, price_ars, features, description)')
       .eq('user_id', user.id)
     clubAccess = getClubAccessFromGrants(data || [])
+    // Direct check: does this user have an active grant for THIS specific tier?
+    // This works for any tier, not just legacy slugs.
+    if (!clubAccess.hasAccess) {
+      const now = new Date()
+      const directGrant = (data || []).find(
+        (g) =>
+          g.tier_id === tier.id &&
+          g.access_status === 'active' &&
+          (!g.expires_at || new Date(g.expires_at) > now)
+      )
+      if (directGrant) {
+        clubAccess = { hasAccess: true, isFounder: false, grant: directGrant, grants: [directGrant] }
+      }
+    }
     grant = clubAccess.grant
   }
 

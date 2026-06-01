@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import PublicSiteShell from '@/components/site/PublicSiteShell'
 import AccountScreen from './AccountScreen'
 import { getCurrentAuth } from '@/lib/auth'
-import { buildPublicMembershipSummary, getClubAccessFromGrants } from '@/lib/memberships'
+import { getClubAccessFromGrants } from '@/lib/memberships'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import '../membresia/membership.css'
 
@@ -121,11 +121,25 @@ export default async function AccountPage() {
     })
   }
 
-  const clubAccess = getClubAccessFromGrants(activeGrants)
-  const memberships = buildPublicMembershipSummary(clubAccess).map((membership) => ({
-    ...membership,
-    href: `/membresias/${membership.tierSlug}`,
-  }))
+  // Build memberships directly from ALL active grants so any tier the admin
+  // assigns shows up in Mi Cuenta, not just the hardcoded legacy slugs.
+  const memberships = activeGrants
+    .filter((g) => g.membership_tiers?.slug)
+    .map((g) => ({
+      id: g.id,
+      tierId: g.tier_id,
+      tierSlug: g.membership_tiers.slug,
+      tierName: g.membership_tiers.name || 'Membresía VeCKA',
+      description: g.membership_tiers.description || '',
+      features: Array.isArray(g.membership_tiers.features) ? g.membership_tiers.features : [],
+      billingPeriod: g.membership_tiers.billing_period || null,
+      priceArs: Number(g.membership_tiers.price_ars || 0),
+      grantedAt: g.granted_at || null,
+      startsAt: g.starts_at || null,
+      expiresAt: g.expires_at || null,
+      accessStatus: g.access_status,
+      href: `/membresias/${g.membership_tiers.slug}`,
+    }))
 
   const purchases = (purchasesResult.data || []).map((grant) => ({
     id: grant.payment_reference ? String(grant.payment_reference) : `MEM-${String(grant.id || '').slice(0, 8)}`,
