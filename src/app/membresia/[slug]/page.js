@@ -123,8 +123,10 @@ export default async function MembershipTierPage({ params, searchParams }) {
   const features = Array.isArray(tier.features) ? tier.features : []
   const { data: settings } = await admin
     .from('platform_settings')
-    .select('public_membership_monthly_price_ars, public_membership_annual_price_ars')
+    .select('public_membership_monthly_price_ars, public_membership_annual_price_ars, club_agenda_visible, club_next_live_visible')
     .maybeSingle()
+  const showAgenda = settings?.club_agenda_visible ?? true
+  const showNextLive = settings?.club_next_live_visible ?? true
   const paymentPlans = getPublicMembershipPaymentPlans({ tier, settings: settings || {} })
   const monthlyPlan = paymentPlans.find((plan) => plan.id === 'monthly') || paymentPlans[0]
   const directAccessHref = courses.length > 0 ? `/membresias/${tier.slug}/${courses[0].slug}` : `/membresias/${tier.slug}`
@@ -219,7 +221,9 @@ export default async function MembershipTierPage({ params, searchParams }) {
             </div>
           ) : null}
 
-          {hasAccess ? <MembershipAgenda events={agendaEvents} /> : null}
+          {hasAccess ? (
+            <MembershipAgenda events={agendaEvents} showAgenda={showAgenda} showNextLive={showNextLive} />
+          ) : null}
 
           <div className="membership-detail-grid membership-detail-grid-full">
             <div className="membership-detail-main">

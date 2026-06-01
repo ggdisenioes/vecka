@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const EVENT_TYPE_OPTIONS = [
   { value: 'live_class', label: 'Clase en vivo' },
@@ -16,7 +16,11 @@ function formatDateTime(value) {
   if (!value) return ''
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })
+  return d.toLocaleString('es-AR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  })
 }
 
 // Convierte un ISO a value usable por <input type="datetime-local"> en hora local.
@@ -44,6 +48,10 @@ export default function AgendaPanel({ tierId = null, initialEvents = [] }) {
   const [editingId, setEditingId] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // Evitamos mismatch de hidratación: el split próximos/pasados y el formato
+  // de fechas dependen del entorno, así que computamos recién al montar.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   function resetForm() {
     setForm(EMPTY_FORM)
@@ -207,20 +215,26 @@ export default function AgendaPanel({ tierId = null, initialEvents = [] }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }}>
       {/* Lista de eventos */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <div>
-          <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Próximos ({upcoming.length})</h3>
-          {upcoming.length === 0 ? (
-            <p style={{ color: '#596567', fontSize: 14 }}>No hay eventos programados todavía.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{upcoming.map(renderRow)}</div>
-          )}
-        </div>
+        {!mounted ? (
+          <p style={{ color: '#596567', fontSize: 14 }}>Cargando agenda…</p>
+        ) : (
+          <>
+            <div>
+              <h3 style={{ margin: '0 0 10px', fontSize: 15 }}>Próximos ({upcoming.length})</h3>
+              {upcoming.length === 0 ? (
+                <p style={{ color: '#596567', fontSize: 14 }}>No hay eventos programados todavía.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{upcoming.map(renderRow)}</div>
+              )}
+            </div>
 
-        {past.length > 0 && (
-          <div>
-            <h3 style={{ margin: '0 0 10px', fontSize: 15, color: '#596567' }}>Pasados ({past.length})</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{past.map(renderRow)}</div>
-          </div>
+            {past.length > 0 && (
+              <div>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15, color: '#596567' }}>Pasados ({past.length})</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{past.map(renderRow)}</div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

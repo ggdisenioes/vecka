@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentAuth, isStaff } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import AgendaPanel from '../[id]/AgendaPanel'
+import AgendaVisibility from './AgendaVisibility'
 import '../../courses/admin-courses.css'
 
 export const dynamic = 'force-dynamic'
@@ -14,11 +15,17 @@ export default async function AdminAgendaPage() {
 
   const supabase = getSupabaseAdmin()
 
-  const { data: events } = await supabase
-    .from('membership_agenda_events')
-    .select('*')
-    .is('tier_id', null)
-    .order('starts_at', { ascending: true })
+  const [{ data: events }, { data: settings }] = await Promise.all([
+    supabase
+      .from('membership_agenda_events')
+      .select('*')
+      .is('tier_id', null)
+      .order('starts_at', { ascending: true }),
+    supabase
+      .from('platform_settings')
+      .select('club_agenda_visible, club_next_live_visible')
+      .maybeSingle(),
+  ])
 
   return (
     <main className="admin-shell">
@@ -38,6 +45,10 @@ export default async function AdminAgendaPage() {
         </header>
 
         <section className="admin-card editor-section">
+          <AgendaVisibility
+            initialAgendaVisible={settings?.club_agenda_visible ?? true}
+            initialNextLiveVisible={settings?.club_next_live_visible ?? true}
+          />
           <AgendaPanel initialEvents={events || []} />
         </section>
       </div>

@@ -49,6 +49,10 @@ export async function PATCH(request) {
     // Acceso
     if (payload.courseAccessModel !== undefined) patch.course_access_model = payload.courseAccessModel || 'enrollment'
 
+    // Club: visibilidad de la agenda y la próxima clase en vivo
+    if (payload.clubAgendaVisible !== undefined) patch.club_agenda_visible = Boolean(payload.clubAgendaVisible)
+    if (payload.clubNextLiveVisible !== undefined) patch.club_next_live_visible = Boolean(payload.clubNextLiveVisible)
+
     const { error } = await supabase.from('platform_settings').update(patch).neq('id', '00000000-0000-0000-0000-000000000000')
     if (error) throw error
     return NextResponse.json({ ok: true })

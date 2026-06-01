@@ -7,28 +7,40 @@ const MONTHS = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]
 
+// Fijamos la zona horaria a Argentina para que server (UTC) y browser
+// formateen igual y no haya mismatch de hidratación.
+const TZ = 'America/Argentina/Buenos_Aires'
+
 function typeMeta(type) {
   if (type === 'live_class') return { label: 'Clase en vivo', dot: '#1d5f55' }
   if (type === 'content_release') return { label: 'Nuevo contenido', dot: '#5b3f79' }
   return { label: 'Evento', dot: '#a8763e' }
 }
 
-function fmtDay(d) {
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+function fmtDayNum(d) {
+  return d.toLocaleDateString('es-AR', { day: '2-digit', timeZone: TZ })
+}
+function fmtMonthShort(d) {
+  return d.toLocaleDateString('es-AR', { month: 'short', timeZone: TZ })
 }
 function fmtTime(d) {
-  return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
 }
 function fmtFull(d) {
-  return d.toLocaleString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: TZ })
 }
 
 function Countdown({ target }) {
-  const [now, setNow] = useState(() => Date.now())
+  // now arranca en null: en SSR y el primer paint del cliente no renderizamos
+  // el valor (evita mismatch de hidratación), y se completa al montar.
+  const [now, setNow] = useState(null)
   useEffect(() => {
+    setNow(Date.now())
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  if (now === null) return <div className="club-countdown" aria-hidden="true" />
 
   const diff = Math.max(0, target - now)
   const live = diff === 0
@@ -49,7 +61,7 @@ function Countdown({ target }) {
   )
 }
 
-export default function MembershipAgenda({ events = [] }) {
+export default function MembershipAgenda({ events = [], showAgenda = true, showNextLive = true }) {
   // Normalizamos a objetos con Date y filtramos cancelados.
   const parsed = useMemo(() => {
     return (events || [])
@@ -59,7 +71,12 @@ export default function MembershipAgenda({ events = [] }) {
       .sort((a, b) => a.start - b.start)
   }, [events])
 
-  const [nowRef] = useState(() => new Date())
+  // Calculamos "ahora" recién al montar en el cliente para evitar mismatch
+  // de hidratación (el mes/fechas dependen de la zona horaria del entorno).
+  const [nowRef, setNowRef] = useState(null)
+  useEffect(() => { setNowRef(new Date()) }, [])
+
+  if (!nowRef) return null
   const now = nowRef.getTime()
 
   const monthName = MONTHS[nowRef.getMonth()]
@@ -67,12 +84,16 @@ export default function MembershipAgenda({ events = [] }) {
     (e) => e.start.getMonth() === nowRef.getMonth() && e.start.getFullYear() === nowRef.getFullYear()
   )
   const upcoming = parsed.filter((e) => e.start.getTime() >= now)
-  const nextLive = upcoming.find((e) => e.event_type === 'live_class')
+  const nextLive = showNextLive ? upcoming.find((e) => e.event_type === 'live_class') : null
 
   if (parsed.length === 0) return null
+  // Si el admin ocultó ambos bloques, no renderizamos nada.
+  if (!showAgenda && !nextLive) return null
 
   return (
     <div className="club-agenda">
+      {showAgenda && (
+        <>
       <div className="club-agenda-heading">
         <span className="club-agenda-eyebrow">Tu agenda</span>
         <h2>Qué se viene en el Club</h2>
@@ -95,8 +116,8 @@ export default function MembershipAgenda({ events = [] }) {
                 return (
                   <li key={e.id} className={`club-agenda-item${isPast ? ' is-past' : ''}`}>
                     <span className="club-agenda-date">
-                      <strong>{e.start.toLocaleDateString('es-AR', { day: '2-digit' })}</strong>
-                      <small>{e.start.toLocaleDateString('es-AR', { month: 'short' })}</small>
+                      <strong>{fmtDayNum(e.start)}</strong>
+                      <small>{fmtMonthShort(e.start)}</small>
                     </span>
                     <span className="club-agenda-body">
                       <span className="club-agenda-title">{e.title}</span>
@@ -125,8 +146,8 @@ export default function MembershipAgenda({ events = [] }) {
                 return (
                   <li key={e.id} className="club-agenda-item">
                     <span className="club-agenda-date">
-                      <strong>{e.start.toLocaleDateString('es-AR', { day: '2-digit' })}</strong>
-                      <small>{e.start.toLocaleDateString('es-AR', { month: 'short' })}</small>
+                      <strong>{fmtDayNum(e.start)}</strong>
+                      <small>{fmtMonthShort(e.start)}</small>
                     </span>
                     <span className="club-agenda-body">
                       <span className="club-agenda-title">{e.title}</span>
@@ -142,8 +163,10 @@ export default function MembershipAgenda({ events = [] }) {
           )}
         </section>
       </div>
+        </>
+      )}
 
-      {/* Próxima clase en vivo (full width, solo si existe) */}
+      {/* Próxima clase en vivo (full width, solo si existe y está habilitada) */}
       {nextLive && (
         <section className="club-next-live">
           <div className="club-next-live-info">
