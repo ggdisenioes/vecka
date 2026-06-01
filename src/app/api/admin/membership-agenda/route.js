@@ -34,15 +34,21 @@ export async function GET(request) {
 
   const url = new URL(request.url)
   const tierId = url.searchParams.get('tierId')
-  if (!tierId) return jsonError('tierId is required')
 
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
+  let query = supabase
     .from('membership_agenda_events')
     .select('*')
-    .eq('tier_id', tierId)
     .order('starts_at', { ascending: true })
 
+  // Sin tierId → agenda global del Club (tier_id null).
+  if (tierId) {
+    query = query.eq('tier_id', tierId)
+  } else {
+    query = query.is('tier_id', null)
+  }
+
+  const { data, error } = await query
   if (error) return jsonError(error.message)
   return NextResponse.json({ events: data || [] })
 }
@@ -53,7 +59,8 @@ export async function POST(request) {
 
   try {
     const payload = await request.json().catch(() => ({}))
-    const tierId = requireText(payload.tierId, 'Tier id')
+    // tierId es opcional: si no viene, el evento es global del Club.
+    const tierId = textValue(payload.tierId)
     const title = requireText(payload.title, 'Título')
     const startsAt = toIso(payload.startsAt)
     if (!startsAt) throw new Error('La fecha y hora de inicio es obligatoria.')

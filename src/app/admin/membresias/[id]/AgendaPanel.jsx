@@ -38,7 +38,7 @@ const EMPTY_FORM = {
   description: '',
 }
 
-export default function AgendaPanel({ tierId, initialEvents = [] }) {
+export default function AgendaPanel({ tierId = null, initialEvents = [] }) {
   const [events, setEvents] = useState(initialEvents)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
@@ -84,7 +84,7 @@ export default function AgendaPanel({ tierId, initialEvents = [] }) {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tierId,
+          ...(tierId ? { tierId } : {}),
           title: form.title,
           eventType: form.eventType,
           startsAt: form.startsAt,

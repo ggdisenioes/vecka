@@ -4,6 +4,7 @@ const ADMIN_NAV = [
   { href: '/admin', label: 'Panel' },
   { href: '/admin/courses', label: 'Cursos' },
   { href: '/admin/membresias', label: 'Membresías' },
+  { href: '/admin/membresias/agenda', label: 'Agenda del Club' },
   { href: '/admin/membresias/miembros', label: 'Miembros' },
   { href: '/admin/membresias/cupones', label: 'Cupones' },
   { href: '/admin/usuarios', label: 'Usuarios' },

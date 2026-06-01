@@ -110,11 +110,12 @@ export default async function MembershipTierPage({ params, searchParams }) {
   }
 
   let agendaEvents = []
-  if (hasAccess && contentTier?.id) {
+  if (hasAccess) {
+    // Agenda global del Club (tier_id null) + eventos específicos del tier.
     const { data: events } = await admin
       .from('membership_agenda_events')
       .select('*')
-      .eq('tier_id', contentTier.id)
+      .or(`tier_id.is.null,tier_id.eq.${contentTier?.id}`)
       .order('starts_at', { ascending: true })
     agendaEvents = events || []
   }
