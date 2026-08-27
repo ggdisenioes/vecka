@@ -31,8 +31,147 @@ function formatDate(str) {
   try { return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return str; }
 }
 
+const CATEGORIES = ['Moldes Digitales', 'Moldes Impresos', 'Mercería VeCKA'];
+const FORMAT_BY_CAT = {
+  'Moldes Digitales': 'PDF',
+  'Moldes Impresos': 'Papel',
+  'Mercería VeCKA': 'Físico',
+};
+const BADGES = ['', 'Nuevo', 'Top ventas', 'Molde del mes', 'Oferta'];
+const EMPTY = { title: '', category: 'Moldes Digitales', subcategory: '', price: '', priceUSD: '', format: 'PDF', sizes: '', color: '#f4e4d4', badge: '', active: true };
+
+function ProductModal({ product, onClose, onSaved, notify }) {
+  const isEdit = Boolean(product);
+  const [form, setForm] = useState(product ? { ...product, priceUSD: product.priceUSD ?? product.price_usd ?? '' } : EMPTY);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleCategoryChange = (cat) => {
+    setForm(f => ({ ...f, category: cat, format: FORMAT_BY_CAT[cat] || 'PDF' }));
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.price) return notify('Completá título y precio', 'error');
+    setSaving(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        category: form.category,
+        subcategory: form.subcategory || null,
+        price: Number(form.price),
+        price_usd: form.priceUSD ? Number(form.priceUSD) : null,
+        format: form.format,
+        sizes: form.sizes || null,
+        color: form.color,
+        badge: form.badge || null,
+        active: isEdit ? Boolean(form.active) : true,
+      };
+      let saved;
+      if (isEdit) {
+        saved = await api.updateProduct(product.id, payload);
+      } else {
+        saved = await api.createProduct(payload);
+      }
+      if (pdfFile && form.format === 'PDF') {
+        await api.uploadProductPdf(saved.id, pdfFile);
+      }
+      notify(isEdit ? 'Producto actualizado' : 'Producto creado');
+      onSaved();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const iStyle = { ...inputStyle, width: '100%', boxSizing: 'border-box' };
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000 }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#fff', borderRadius: 18, padding: '28px 28px 24px', width: 'min(520px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto', zIndex: 1001, boxShadow: '0 20px 70px rgba(0,0,0,.22)' }}>
+        <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, margin: '0 0 20px' }}>{isEdit ? 'Editar producto' : 'Nuevo producto'}</h3>
+        <div style={{ display: 'grid', gap: 14 }}>
+          <div>
+            <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Título *</label>
+            <input style={iStyle} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Nombre del producto" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Categoría *</label>
+              <select style={{ ...iStyle, appearance: 'none' }} value={form.category} onChange={e => handleCategoryChange(e.target.value)}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Subcategoría</label>
+              <input style={iStyle} value={form.subcategory} onChange={e => set('subcategory', e.target.value)} placeholder="ej. Indumentaria Femenina" />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Precio ARS *</label>
+              <input type="number" style={iStyle} value={form.price} onChange={e => set('price', e.target.value)} placeholder="1800" />
+            </div>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Precio USD</label>
+              <input type="number" style={iStyle} value={form.priceUSD} onChange={e => set('priceUSD', e.target.value)} placeholder="2.00" step="0.01" />
+            </div>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Formato</label>
+              <select style={{ ...iStyle, appearance: 'none' }} value={form.format} onChange={e => set('format', e.target.value)}>
+                {['PDF', 'Papel', 'Físico'].map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Talles / Medidas</label>
+              <input style={iStyle} value={form.sizes} onChange={e => set('sizes', e.target.value)} placeholder="XS-XXL" />
+            </div>
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Badge</label>
+              <select style={{ ...iStyle, appearance: 'none' }} value={form.badge} onChange={e => set('badge', e.target.value)}>
+                {BADGES.map(b => <option key={b} value={b}>{b || '— Sin badge —'}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 6 }}>Color de tarjeta</label>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: form.color, border: '1px solid oklch(88% 0.012 60)', flexShrink: 0 }} />
+              <input type="color" value={form.color} onChange={e => set('color', e.target.value)} style={{ width: 44, height: 44, border: 'none', padding: 0, cursor: 'pointer', background: 'none' }} />
+              <input style={{ ...iStyle, maxWidth: 110 }} value={form.color} onChange={e => set('color', e.target.value)} placeholder="#f4e4d4" maxLength={7} />
+            </div>
+          </div>
+          {form.format === 'PDF' && (
+            <div>
+              <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(50% 0.018 50)', display: 'block', marginBottom: 4 }}>Archivo PDF</label>
+              {isEdit && product.pdf_filename && (
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: '#3d6b5e', marginBottom: 6 }}>Actual: {product.pdf_filename} ✓</div>
+              )}
+              <input type="file" accept="application/pdf" onChange={e => setPdfFile(e.target.files[0] || null)} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12 }} />
+            </div>
+          )}
+          {isEdit && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} />
+              Producto activo (visible en la tienda)
+            </label>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+          <Btn variant="ghost" size="sm" onClick={onClose}>Cancelar</Btn>
+          <Btn size="sm" onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear producto'}</Btn>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function AdminPage() {
-  const { user, navigate, courses, products, fmt, notify } = useVecka();
+  const { user, navigate, courses, products, refreshProducts, fmt, notify } = useVecka();
   const { isMobile } = useResponsive();
   const [section, setSection] = useState('overview');
 
@@ -43,6 +182,10 @@ export default function AdminPage() {
 
   // Users state
   const [users, setUsers] = useState(null);
+
+  // Products state
+  const [allProducts, setAllProducts] = useState(null);
+  const [productModal, setProductModal] = useState(null);
 
   if (!user || user.role !== 'admin') { navigate('home'); return null; }
 
@@ -70,9 +213,34 @@ export default function AdminPage() {
     api.users().then(setUsers).catch(() => {});
   };
 
+  const loadAllProducts = () => {
+    api.allProducts()
+      .then(data => setAllProducts(data.map(p => ({ ...p, priceUSD: p.price_usd }))))
+      .catch(() => notify('Error cargando productos', 'error'));
+  };
+
+  const handleProductSaved = () => {
+    setProductModal(null);
+    loadAllProducts();
+    refreshProducts();
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('¿Desactivar este producto?')) return;
+    try {
+      await api.deleteProduct(id);
+      notify('Producto desactivado');
+      loadAllProducts();
+      refreshProducts();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
   useEffect(() => {
     if (section === 'orders' || section === 'overview') loadOrders();
     if (section === 'students') loadUsers();
+    if (section === 'products') loadAllProducts();
   }, [section]);
 
   const handleUpdateOrder = async () => {
@@ -250,28 +418,51 @@ export default function AdminPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 24 : 30, margin: 0 }}>Productos</h2>
-              <Btn icon="plus" size="sm" onClick={() => notify('Editor de productos — próximamente')}>Nuevo</Btn>
+              <Btn icon="plus" size="sm" onClick={() => setProductModal('new')}>Nuevo producto</Btn>
             </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {products.map(p => (
-                <div key={p.id} style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid oklch(88% 0.012 60)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: p.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(52% 0.018 50)' }}>
-                      {p.subcategory} · {p.format === 'PDF' ? '📄 Digital' : p.format === 'Papel' || p.format === 'Físico' ? '📦 Físico' : p.format}
+
+            {/* Modal crear / editar producto */}
+            {productModal && (
+              <ProductModal
+                product={productModal === 'new' ? null : productModal}
+                onClose={() => setProductModal(null)}
+                onSaved={handleProductSaved}
+                notify={notify}
+              />
+            )}
+
+            {!allProducts && <div style={{ textAlign: 'center', padding: 40, fontFamily: "'DM Sans', sans-serif", color: 'oklch(55% 0.018 50)' }}>Cargando...</div>}
+            {allProducts && (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {allProducts.map(p => (
+                  <div key={p.id} style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: `1px solid ${p.active ? 'oklch(88% 0.012 60)' : 'oklch(92% 0.01 60)'}`, display: 'flex', alignItems: 'center', gap: 12, opacity: p.active ? 1 : 0.55 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 8, background: p.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</span>
+                        {!p.active && <Badge color="#888" bg="#eee">Inactivo</Badge>}
+                        {p.badge && <Badge color="#5e6e9e" bg="#e8ecf8">{p.badge}</Badge>}
+                      </div>
+                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: 'oklch(52% 0.018 50)', marginTop: 2 }}>
+                        {p.subcategory || p.category} ·{' '}
+                        {p.format === 'PDF' ? '📄 Digital' : '📦 Físico'}{' '}
+                        {p.pdf_filename
+                          ? <span style={{ color: '#3d6b5e' }}>· PDF cargado ✓</span>
+                          : p.format === 'PDF' ? <span style={{ color: '#c0392b' }}>· Sin PDF aún</span>
+                          : null}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, color: '#5e9e8a', flexShrink: 0 }}>
+                      ${Number(p.price).toLocaleString('es-AR')}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <Btn size="sm" variant="outline" onClick={() => setProductModal(p)}>Editar</Btn>
+                      {p.active && <Btn size="sm" variant="ghost" onClick={() => handleDeleteProduct(p.id)}>Desactivar</Btn>}
                     </div>
                   </div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, color: '#5e9e8a', flexShrink: 0 }}>{fmt(p.price, p.priceUSD)}</div>
-                  <Btn size="sm" variant="ghost" onClick={() => notify('Editor próximamente')}>Editar</Btn>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 16, background: '#f0faf5', borderRadius: 10, padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#3d6b5e' }}>
-              📄 Para que los moldes digitales sean descargables, subí los PDFs al servidor en:<br />
-              <code style={{ background: '#d4f0e6', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>backend/uploads/pdfs/product_101.pdf</code><br />
-              (reemplazá 101 por el ID del producto correspondiente)
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
