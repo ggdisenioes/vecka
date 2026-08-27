@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
-const requireAuth = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { createPreference } = require('../services/mercadopago');
 
 const router = express.Router();

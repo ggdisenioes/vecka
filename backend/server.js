@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const ordersRoutes = require('./routes/orders');
 const downloadsRoutes = require('./routes/downloads');
 const webhooksRoutes = require('./routes/webhooks');
+const productsRoutes = require('./routes/products');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/downloads', downloadsRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/products', productsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) =>

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-module.exports = function requireAuth(req, res, next) {
+function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No autorizado' });
@@ -13,4 +13,11 @@ module.exports = function requireAuth(req, res, next) {
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
-};
+}
+
+function requireAdmin(req, res, next) {
+  if (req.userRole !== 'admin') return res.status(403).json({ error: 'Acceso denegado' });
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin };

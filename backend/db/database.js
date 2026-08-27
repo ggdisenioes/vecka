@@ -72,6 +72,23 @@ db.exec(`
     created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
   );
+
+  CREATE TABLE IF NOT EXISTS products (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    title        TEXT    NOT NULL,
+    category     TEXT    NOT NULL,
+    subcategory  TEXT,
+    price        INTEGER NOT NULL,
+    price_usd    REAL,
+    format       TEXT    NOT NULL,
+    sizes        TEXT,
+    color        TEXT    NOT NULL DEFAULT '#f4e4d4',
+    badge        TEXT,
+    pdf_filename TEXT,
+    active       INTEGER NOT NULL DEFAULT 1,
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Seed admin user on first boot
@@ -87,5 +104,34 @@ function seedAdmin() {
   console.log(`✅ Admin creado: ${email}`);
 }
 seedAdmin();
+
+function seedProducts() {
+  const count = db.prepare('SELECT COUNT(*) as c FROM products').get().c;
+  if (count > 0) return;
+
+  const insert = db.prepare(`
+    INSERT INTO products (title, category, subcategory, price, price_usd, format, sizes, color, badge, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const products = [
+    ['Molde Remera Básica Adulto', 'Moldes Digitales', 'Indumentaria Femenina', 1800, 2, 'PDF', 'XS-XXL', '#f4e4d4', null, 1],
+    ['Molde Vestido Camisero', 'Moldes Digitales', 'Indumentaria Femenina', 2200, 2.5, 'PDF', 'XS-XXL', '#e8d5e8', 'Nuevo', 2],
+    ['Molde Pantalón Palazzo', 'Moldes Digitales', 'Indumentaria Femenina', 2000, 2, 'PDF', 'XS-XXL', '#d4e8d4', null, 3],
+    ['Molde Body Bebé 0-24m', 'Moldes Digitales', 'Bebés y Niños', 1500, 1.5, 'PDF', '0-24m', '#d4e8e8', 'Top ventas', 4],
+    ['Molde Remera Infantil Colegial', 'Moldes Digitales', 'Bebés y Niños', 1600, 1.6, 'PDF', '2-16', '#e8ead4', 'Molde del mes', 5],
+    ['Molde Bolso Bucket', 'Moldes Digitales', 'Accesorios', 1400, 1.5, 'PDF', 'Único', '#f0e4d8', null, 6],
+    ['Kit Costuras Básicas — Papel', 'Moldes Impresos', 'Moldes Impresos', 5500, 6, 'Papel', 'XS-XXL', '#ecdfd4', null, 7],
+    ['Set Agujas Schmetz x10', 'Mercería VeCKA', 'Mercería', 3200, 3.5, 'Físico', 'Surtido', '#f4e4d4', null, 8],
+    ['Kit Entretelas Surtidas', 'Mercería VeCKA', 'Mercería', 4800, 5, 'Físico', '50cm x 100cm', '#e4ecd4', null, 9],
+  ];
+
+  const insertMany = db.transaction(() => {
+    products.forEach(p => insert.run(...p));
+  });
+  insertMany();
+  console.log('✅ Productos iniciales cargados');
+}
+seedProducts();
 
 module.exports = db;

@@ -134,6 +134,7 @@ export function VeckaProvider({ children }) {
   const [authModal, setAuthModal] = useState(null);
   const [notification, setNotification] = useState(null);
   const [paymentReturn, setPaymentReturn] = useState(null); // { status, orderId }
+  const [liveProducts, setLiveProducts] = useState(null);
 
   // Persistir carrito
   useEffect(() => {
@@ -149,6 +150,17 @@ export function VeckaProvider({ children }) {
       .catch(() => localStorage.removeItem('vecka_token'))
       .finally(() => setAuthLoading(false));
   }, []);
+
+  // Cargar productos desde API (con fallback al array estático)
+  const refreshProducts = () => {
+    api.products()
+      .then(data => {
+        setLiveProducts(data.map(p => ({ ...p, priceUSD: p.price_usd })));
+      })
+      .catch(() => {}); // silently fall back to static PRODUCTS
+  };
+
+  useEffect(() => { refreshProducts(); }, []);
 
   // Detectar retorno de MercadoPago o token de descarga
   useEffect(() => {
@@ -259,7 +271,8 @@ export function VeckaProvider({ children }) {
       notification,
       selectedCourse, setSelectedCourse,
       courses: COURSES,
-      products: PRODUCTS,
+      products: liveProducts ?? PRODUCTS,
+      refreshProducts,
       paymentReturn, setPaymentReturn,
       fmt, notify,
     }}>

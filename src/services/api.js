@@ -36,6 +36,26 @@ export const api = {
   updateOrderStatus: (id, status, tracking_number) =>
     request(`/api/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, tracking_number }) }),
 
+  // Products
+  products: () => request('/api/products'),
+  allProducts: () => request('/api/products/all'),
+  createProduct: (data) =>
+    request('/api/products', { method: 'POST', body: JSON.stringify(data) }),
+  updateProduct: (id, data) =>
+    request(`/api/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProduct: (id) =>
+    request(`/api/products/${id}`, { method: 'DELETE' }),
+  uploadProductPdf: (id, file) => {
+    const token = localStorage.getItem('vecka_token');
+    const fd = new FormData();
+    fd.append('pdf', file);
+    return fetch(`${API}/api/products/${id}/pdf`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    }).then(r => r.json().then(d => { if (!r.ok) throw new Error(d.error || 'Error'); return d; }));
+  },
+
   // Downloads
   downloadUrl: (token) => `${API}/api/downloads/${token}`,
 };
